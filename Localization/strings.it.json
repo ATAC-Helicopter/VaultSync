@@ -1914,5 +1914,14 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Controlla ogni file generato. Percorsi, credenziali, token e segreti vengono rimossi o pseudonimizzati. Le sezioni opzionali possono essere escluse.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Includi diagnostica ripulita",
   "Settings.Advanced.SupportBundle.Telemetry": "Includi telemetria locale anonimizzata",
-  "Settings.Advanced.SupportBundle.Size": "Dimensione massima non compressa: {0:0.0} MB. I contenuti vengono ripuliti prima dell’esportazione."
+  "Settings.Advanced.SupportBundle.Size": "Dimensione massima non compressa: {0:0.0} MB. I contenuti vengono ripuliti prima dell’esportazione.",
+  "Settings.Destinations.RemoveCredential": "Rimuovi credenziale",
+  "Update.Installer.RelaunchFailed": "Aggiornamento installato, ma VaultSync non è riuscito a riavviarsi automaticamente. Apri VaultSync dal menu delle applicazioni.",
+  "Recovery.Loading": "Caricamento dello stato di ripristino...",
+  "Recovery.Checking": "Verifica dei progetti, della recenza dei backup, dei criteri di verifica e della disponibilità delle destinazioni.",
+  "Guide.Checking": "Verifica della configurazione…",
+  "Update.Installer.ReadyToRestart": "Aggiornamento pronto. VaultSync si riavvierà con la nuova versione.",
+  "Update.Installer.Installed": "Aggiornamento installato. VaultSync si chiuderà per consentire un avvio corretto della nuova versione.",
+  "Recovery.Coverage.Hours": "{0} h",
+  "Recovery.Coverage.Days": "{0} g"
 }

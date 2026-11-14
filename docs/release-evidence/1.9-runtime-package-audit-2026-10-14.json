@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "/Users/flavio/Developer/VaultSync.nosync/src/VaultSync.Core/VaultSync.Core.csproj"
+    },
+    {
+      "path": "/Users/flavio/Developer/VaultSync.nosync/src/VaultSync.CLI/VaultSync.CLI.csproj"
+    },
+    {
+      "path": "/Users/flavio/Developer/VaultSync.nosync/src/VaultSync.UI/VaultSync.UI.csproj"
+    },
+    {
+      "path": "/Users/flavio/Developer/VaultSync.nosync/tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj"
+    },
+    {
+      "path": "/Users/flavio/Developer/VaultSync.nosync/benchmarks/VaultSync.Benchmarks/VaultSync.Benchmarks.csproj"
+    }
+  ]
+}

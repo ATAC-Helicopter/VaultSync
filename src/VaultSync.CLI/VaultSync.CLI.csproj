@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\VaultSync.Core\VaultSync.Core.csproj" />
@@ -21,11 +21,11 @@
     <PackageId>vaultsync.cli</PackageId>
 
     <!-- Version info -->
-    <Version>1.8.9</Version>
-    <PackageVersion>1.8.9</PackageVersion>
-    <AssemblyVersion>1.8.9.0</AssemblyVersion>
-    <FileVersion>1.8.9.0</FileVersion>
-    <AssemblyInformationalVersion>1.8.9</AssemblyInformationalVersion>
+    <Version>1.9.4</Version>
+    <PackageVersion>1.9.4</PackageVersion>
+    <AssemblyVersion>1.9.4.0</AssemblyVersion>
+    <FileVersion>1.9.4.0</FileVersion>
+    <AssemblyInformationalVersion>1.9.4</AssemblyInformationalVersion>
     <!-- Package info -->
     <Authors>Flavio Giacchetti</Authors>
     <Company>Flavio Giacchetti</Company>

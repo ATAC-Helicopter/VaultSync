@@ -80,6 +80,19 @@ namespace VaultSync.CLI.Config
 
         public static string GetDefaultDbPath() => ConfigStore.GetDefaultDbPath();
 
+        public static string ResolveDbForInspection(string? overridePath)
+        {
+            if (!string.IsNullOrWhiteSpace(overridePath))
+                return ExpandUserPath(overridePath);
+            AppConfig config = AppConfigStore.ReadForInspection();
+            if (!string.IsNullOrWhiteSpace(config.DbPath))
+                return ExpandUserPath(config.DbPath);
+            LegacyCliConfig? legacy = TryLoadLegacy();
+            return legacy is not null && !string.IsNullOrWhiteSpace(legacy.Database)
+                ? ExpandUserPath(legacy.Database)
+                : AppConfigStore.GetDefaultDbPathForInspection();
+        }
+
         public static string ExpandUserPath(string path)
         {
             ArgumentNullException.ThrowIfNull(path);
