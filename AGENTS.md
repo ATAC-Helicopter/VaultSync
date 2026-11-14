@@ -11,12 +11,12 @@ Keep work scoped to the request and current branch. Preserve existing C#/.NET/Av
 - Never write to or destructively test real sources, backups, destinations, host disks, or user data without explicit authorization. Use disposable fixtures for recovery checks. A synthetic test or successful build is not proof of installed recovery or release qualification.
 - Preserve backup/restore semantics, data formats, cancellation, failure handling, and security boundaries. Localize changed user-facing strings in all maintained locales; follow `docs/LOCALIZATION.md`.
 - Respect protected branches, review/CI gates, release signing (`docs/RELEASE_SIGNING.md`), and required evidence. Do not merge, publish, or claim support without qualification.
-- Reuse the owning issue and canonical `VS-`/`BUG-` ID for meaningful work. Update relevant release/changelog/tracking records; use the existing `./dev` workflow where available.
+- Reuse the owning issue and canonical `VS-`/`BUG-` ID for meaningful work. Update relevant release/changelog/tracking records; use `./dev` when available. Classification and merge policies are in `docs/ENGINEERING_WORKFLOW.md`: preserve commits with merge commits on non-Stable branches; on Stable use first-parent release merge commits only.
 
 ## Verification and handoff
 - Review the diff. For docs/format-only changes, skip code tests unless a specific gate requires them.
 - For behavior changes, run the smallest relevant tests and affected build/check at a meaningful checkpoint. Broaden for shared/core changes, migrations, security, release gates, or failures; avoid default full-suite runs and redundant retries.
-- Keep tool output bounded. Report changes, exact checks run or skipped, and remaining risks. Never claim an unrun check passed.
+- Keep tool output bounded. Report changes, exact checks run or skipped, and remaining risks. A passing test summary is not an accepted build if the process exits nonzero; serialize MSBuild when outputs collide. Never claim an unrun check passed.
 
 ## Active 1.9.0 recovery work
 `work/1.9-roadmap-realignment` is the assembled 1.9.0 head and sole draft release PR #736 into `Dev`; `release/1.9.0` is a protected release identity, not the active preparation tree. Use `docs/RELEASE_1.9.0.md`, `docs/RELEASE_FAMILY_1.9.md` and the relevant recovery protocol as needed. Keep later 1.9.x features out of this binary.
