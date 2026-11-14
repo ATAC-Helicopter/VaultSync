@@ -1,0 +1,47 @@
+{
+  "project_prefix": "VS",
+  "project_number": 7,
+  "project_owner": "ATAC-Helicopter",
+  "default_pr_base": "Dev",
+  "planning_files": [
+    "ROADMAP.md",
+    "CHANGELOG.md"
+  ],
+  "types": {
+    "bug": {
+      "id_prefix": "BUG",
+      "family_digits": 3,
+      "branch_prefix": "fix",
+      "labels": ["kind:bug", "bug"],
+      "release_category": "Fixed"
+    },
+    "feature": {
+      "id_prefix": "VS",
+      "family_digits": 2,
+      "branch_prefix": "feat",
+      "labels": ["kind:feature", "enhancement"],
+      "release_category": "Added"
+    },
+    "change": {
+      "id_prefix": "VS",
+      "family_digits": 2,
+      "branch_prefix": "change",
+      "labels": ["kind:change"],
+      "release_category": "Changed"
+    },
+    "security": {
+      "id_prefix": "VS",
+      "family_digits": 2,
+      "branch_prefix": "security",
+      "labels": ["kind:security", "security"],
+      "release_category": "Security"
+    },
+    "maintenance": {
+      "id_prefix": "VS",
+      "family_digits": 2,
+      "branch_prefix": "chore",
+      "labels": ["kind:maintenance", "maintenance"],
+      "release_category": "Maintenance"
+    }
+  }
+}
