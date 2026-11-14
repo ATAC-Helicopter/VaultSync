@@ -19,6 +19,16 @@ policy is also documented in `CONTRIBUTING.md` and the corresponding
   Isolate hotfixes in reviewed branches; leave release PRs Draft until all
   gates are satisfied.
 
+## GitHub ruleset enforcement — manual owner action
+
+As audited on 2026-11-14, the repository has:
+- **Stable**: [merge-only release-spine ruleset](https://github.com/ATAC-Helicopter/VaultSync/rules/21286364), already allows only `merge`.
+- **Dev and release/***: [history-preservation ruleset](https://github.com/ATAC-Helicopter/VaultSync/rules/21286363), already allows only `merge`.
+- **UI**: [linear-history ruleset](https://github.com/ATAC-Helicopter/VaultSync/rules/21286365) currently allows **only squash/rebase** and requires linear history. This conflicts with the policy of preserving all commits on non-Stable branches. The repository owner must edit that ruleset: disable **Require linear history**, select **Allow merge commits** as the only merge method, and keep required review/thread protections. Do not remove protection merely to work around the conflict.
+- Other unprotected preparation branches need maintainers to select **Create a merge commit** manually unless a dedicated ruleset is configured without preventing ordinary development pushes.
+
+Repository ruleset updates require admin permission and are **not** completed by changing this documentation. Verify live rulesets before stating the policy is fully enforced.
+
 ## Mandatory issue, PR and Project classification
 
 - Use the canonical work ID (`VS-xxxx` or `BUG-xxxxx`) and link to
