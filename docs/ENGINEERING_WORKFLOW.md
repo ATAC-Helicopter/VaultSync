@@ -12,8 +12,11 @@ and [security](../SECURITY.md).
 - **Stable:** one *real merge commit* per qualified release or emergency hotfix
   on Stable's **first-parent history**. No direct feature/fix commits, rebase,
   fast-forward or force push. Git's complete DAG still exposes incoming
-  commits under that merge. Getting literally one commit in the entire history
-  would require squashing, which is *not* a merge commit.
+  commits under that merge. View the one-merge-per-release spine using
+  `git log --first-parent --oneline Stable`. Getting literally one commit
+  in the entire history would require GitHub's **Squash and merge**,
+  which is *not* a real merge commit. The default mainline here is `Stable`,
+  not a separate branch named `main`.
 - For 1.9.0, independent fixes target `work/1.9-roadmap-realignment` and
   enter `Dev` through the single consolidated release PR #736. Later releases
   retain their own sole preparation PR and predecessor integration gates.
@@ -56,12 +59,16 @@ and [security](../SECURITY.md).
 3. Use a detached **worktree**, disposable data and the exact reviewed SHA.
    Respect the pinned SDK in `global.json`; install it side-by-side rather
    than changing that pin to bypass a test.
-4. Run the smallest relevant test filter first. Only broaden to affected
-   build, full core suite, or native Windows/macOS/Linux qualification when
-   scope or release/safety gate requires it. Docs-only changes need relevant
-   formatting, linkage and script tests; do not run unrelated full suites.
-5. Record command, SDK, OS, SHA, pass/fail counts, exclusions, and remaining
-   risks. Re-review if the head changes, then merge using the target policy.
+4. Run the smallest relevant test filter first. If multiple MSBuild project
+   paths share output files, force serial compilation with `-m:1` and
+   `-p:BuildInParallel=false` rather than deleting unknown build output.
+   Only broaden to affected build, full core suite or native Windows/macOS/Linux
+   qualification when scope or release/safety gate requires it.
+   Docs-only changes need relevant formatting/linkage/script tests.
+5. Record command, **process exit code** (not only xUnit pass count), SDK,
+   OS, SHA, pass/fail counts, exclusions, and remaining risks. A passing
+   test summary with a failed build is not a passing verification. Re-review
+   if the head changes, then merge using the target policy.
 
 ### Example: PR #849 (rsync cleanup)
 
@@ -76,7 +83,7 @@ dotnet --version
 dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj \
   --configuration Release \
   --filter 'FullyQualifiedName~RsyncRunnerTests' \
-  -warnaserror -p:UseSharedCompilation=false
+  -m:1 -p:BuildInParallel=false -p:UseSharedCompilation=false -warnaserror
 ```
 
 The reviewed PR #849 head is `817d9e0d` as of 2026-11-14. The SDK
