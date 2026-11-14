@@ -1914,5 +1914,14 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Перевірте кожен створений файл. Шляхи, облікові дані, токени й секрети видаляються або псевдонімізуються. Необов’язкові розділи можна виключити.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Додати очищену діагностику",
   "Settings.Advanced.SupportBundle.Telemetry": "Додати анонімізовану локальну телеметрію",
-  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом."
+  "Settings.Advanced.SupportBundle.Size": "Максимальний розмір без стиснення: {0:0.0} МБ. Вміст очищається перед експортом.",
+  "Settings.Destinations.RemoveCredential": "Видалити облікові дані",
+  "Update.Installer.RelaunchFailed": "Оновлення встановлено, але VaultSync не вдалося перезапустити автоматично. Відкрийте VaultSync із меню застосунків.",
+  "Recovery.Loading": "Завантаження стану готовності до відновлення...",
+  "Recovery.Checking": "Перевірка проєктів, давності резервних копій, правил перевірки та доступності місць призначення.",
+  "Guide.Checking": "Перевірка налаштувань…",
+  "Update.Installer.ReadyToRestart": "Оновлення готове. VaultSync перезапуститься з новою версією.",
+  "Update.Installer.Installed": "Оновлення встановлено. VaultSync закриється, щоб нова версія могла запуститися коректно.",
+  "Recovery.Coverage.Hours": "{0} год",
+  "Recovery.Coverage.Days": "{0} д"
 }

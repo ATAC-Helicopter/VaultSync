@@ -1,0 +1,69 @@
+# VaultSync 1.9.3 — Offsite Protection
+
+Stage: planned, unscheduled. Target date: Unscheduled.
+Branch: `release/1.9.3`; predecessor integration candidate: `1.9.2`.
+Current published stable remains 1.8.9. No predecessor compatibility or native
+product functionality is qualified by creation of this branch.
+
+Owning work IDs: `VS-1921`, `VS-1922`, `VS-1923`, `VS-1924`, `VS-1925`, `VS-1926`, `VS-1927`.
+BSC architecture gate VS-1981/1982 applies to 1.9.6 and later only.
+
+See [family contract and stable gates](RELEASE_FAMILY_1.9.md) and
+[canonical scope/status](../ROADMAP.md). Before promotion, integrate the qualified
+predecessor, verify actual functionality and all version/packaging consumers,
+record a reviewed target date, and complete native release evidence.
+
+## Changelog protocol — 2026-10-04
+
+Own development notes use one explicit-target `Unreleased` section and standard
+Keep a Changelog categories. Published history is backfilled without rewriting
+tags/assets. Original inherited development notes remain in the evidence ledger;
+they do not establish shipped predecessor features. Run scripts/changelog.py check
+and scripts/validate_development.sh contracts before updating the owning PR.
+
+Current preparation: `work/1.9.3-changelog-protocol` / #753. Protected release identity stays `release/1.9.3`. See the family preparation-head map.
+
+## Repository tracking — 2026-10-07
+
+VS-1980/#673 distributes the shared helper from #759/#758. Use `./dev adopt` for existing owning issues and `./dev status` before pushes; reuse this release's preparation PR. Allocating IDs requires a complete remote audit. This tooling does not qualify product or release gates.
+
+## Shared compact changelog standard — 2026-10-12
+
+VS-1980/#673 distributes short descriptions (aim 8–14 words; ceiling 22) and adjacent entries without blank separators. AGENTS.md, CONTRIBUTING.md and the automated validator agree; headings retain spacing. No sibling unreleased features or release metadata are imported.
+
+Shared release standard (2026-10-13): VS-1980/#673 adopts mandatory provenance
+signing under [the policy](RELEASE_SIGNING.md), including updater manifests and
+patches, retained offline proof and exact workflow/ref/commit verification. This
+changes release validation only; native publisher signing remains owned by
+VS-1902/#113 in 1.9.0. This release retains its own feature scope and metadata.
+
+Shared localization standard (2026-10-13): VS-1980/#673 adopts the mandatory
+[UI localization contract](LOCALIZATION.md), source/catalog checks in required CI
+and before packaging, plus shared existing-desktop text repairs from
+BUG-19030/#785 (owned by 1.9.0). Maintained locales and cached language-change
+behavior are covered. This release retains its metadata and feature scope;
+static checks do not establish native-speaker or rendered platform qualification.
+
+Reused release packages must also have unchanged `Localization/` source inputs;
+translation-only changes require rebuilding the qualified source run.
+
+
+## Shared runtime security — 2026-10-14
+
+VS-1997/#787 raises the shared SDK to 10.0.402, the .NET runtime floor and
+coordinated Microsoft packages to 10.0.13. Every included framework is audited;
+optional unserviced frameworks cannot hide behind an updated NETCore. This
+preparation head retains its own features, release metadata and sole draft PR.
+See [runtime security](RUNTIME_SECURITY.md) and
+[this head's validation](release-evidence/1.9.3-runtime-2026-10-14.md).
+Historical 1.9.0 artifact evidence does not qualify this release's native
+upgrades, recovery or publication gates.
+
+## Shared issue and Project lifecycle — 2026-10-15
+
+VS-1980/#673 adds `./dev audit --release 1.9.3` before tracked pushes;
+BUG-19033/#792 preserves canonical adoption priorities. Issue creation/adoption,
+Project status and traceable dates, incremental evidence and release-gated
+closure follow AGENTS.md and WORK_TRACKING.md. This shared tooling does not
+import another release's application features or qualify product gates.
+Evidence: [current checks](release-evidence/1.9.3-tracking-2026-10-15.md).

@@ -1914,5 +1914,14 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "তৈরি হওয়া প্রতিটি ফাইল পর্যালোচনা করুন। পাথ, পরিচয়পত্র, টোকেন ও গোপন তথ্য সরানো বা ছদ্মনামকরণ করা হয়। ঐচ্ছিক অংশ বাদ দেওয়া যায়।",
   "Settings.Advanced.SupportBundle.Diagnostics": "পরিশোধিত ডায়াগনস্টিক অন্তর্ভুক্ত করুন",
   "Settings.Advanced.SupportBundle.Telemetry": "বেনামী স্থানীয় টেলিমেট্রি অন্তর্ভুক্ত করুন",
-  "Settings.Advanced.SupportBundle.Size": "সর্বোচ্চ আনকম্প্রেসড আকার: {0:0.0} MB। রপ্তানির আগে বিষয়বস্তু পরিশোধিত হয়।"
+  "Settings.Advanced.SupportBundle.Size": "সর্বোচ্চ আনকম্প্রেসড আকার: {0:0.0} MB। রপ্তানির আগে বিষয়বস্তু পরিশোধিত হয়।",
+  "Settings.Destinations.RemoveCredential": "পরিচয়পত্র সরান",
+  "Update.Installer.RelaunchFailed": "আপডেট ইনস্টল হয়েছে, কিন্তু VaultSync স্বয়ংক্রিয়ভাবে পুনরায় চালু হতে পারেনি। অ্যাপের মেনু থেকে VaultSync খুলুন।",
+  "Recovery.Loading": "পুনরুদ্ধারের প্রস্তুতির অবস্থা লোড হচ্ছে...",
+  "Recovery.Checking": "প্রকল্প, ব্যাকআপের সাম্প্রতিকতা, যাচাই নীতি এবং গন্তব্যের প্রাপ্যতা পরীক্ষা হচ্ছে।",
+  "Guide.Checking": "আপনার সেটআপ পরীক্ষা হচ্ছে…",
+  "Update.Installer.ReadyToRestart": "আপডেট প্রস্তুত। VaultSync নতুন সংস্করণে পুনরায় চালু হবে।",
+  "Update.Installer.Installed": "আপডেট ইনস্টল হয়েছে। নতুন সংস্করণ সঠিকভাবে চালু করতে VaultSync বন্ধ হবে।",
+  "Recovery.Coverage.Hours": "{0} ঘণ্টা",
+  "Recovery.Coverage.Days": "{0} দিন"
 }

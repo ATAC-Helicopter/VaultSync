@@ -1914,5 +1914,14 @@
   "Settings.Advanced.SupportBundle.ReviewDescription": "Xem lại từng tệp được tạo. Đường dẫn, thông tin đăng nhập, mã thông báo và bí mật được xóa hoặc đặt bí danh. Có thể loại trừ các phần tùy chọn.",
   "Settings.Advanced.SupportBundle.Diagnostics": "Bao gồm chẩn đoán đã làm sạch",
   "Settings.Advanced.SupportBundle.Telemetry": "Bao gồm dữ liệu đo từ xa cục bộ đã ẩn danh",
-  "Settings.Advanced.SupportBundle.Size": "Kích thước tối đa chưa nén: {0:0.0} MB. Nội dung được làm sạch trước khi xuất."
+  "Settings.Advanced.SupportBundle.Size": "Kích thước tối đa chưa nén: {0:0.0} MB. Nội dung được làm sạch trước khi xuất.",
+  "Settings.Destinations.RemoveCredential": "Xóa thông tin xác thực",
+  "Update.Installer.RelaunchFailed": "Đã cài đặt bản cập nhật nhưng VaultSync không thể tự khởi động lại. Hãy mở VaultSync từ menu ứng dụng.",
+  "Recovery.Loading": "Đang tải trạng thái sẵn sàng khôi phục...",
+  "Recovery.Checking": "Đang kiểm tra dự án, độ mới của bản sao lưu, chính sách xác minh và khả năng truy cập đích.",
+  "Guide.Checking": "Đang kiểm tra cấu hình…",
+  "Update.Installer.ReadyToRestart": "Bản cập nhật đã sẵn sàng. VaultSync sẽ khởi động lại với phiên bản mới.",
+  "Update.Installer.Installed": "Đã cài đặt bản cập nhật. VaultSync sẽ đóng để phiên bản mới khởi động đúng cách.",
+  "Recovery.Coverage.Hours": "{0} giờ",
+  "Recovery.Coverage.Days": "{0} ngày"
 }
