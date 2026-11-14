@@ -2,6 +2,10 @@
 ## [1.8.10] - Unreleased
 ### Security
 - [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
+### Fixed
+- [BUG-19001] Require explicit confirmation for noninteractive CLI project removal; retain source and stored backups.
+- [BUG-19027] Read JSON preset mappings independently of property-name capitalization.
+- [BUG-19029] Unmount the actual SMB share root, not a nested destination folder.
 ### Changed
 - [VS-1997] Refresh test tooling and pinned CI actions, and align the managed and native rendering packages; cross-platform compatibility qualification remains pending.
 

@@ -133,7 +133,8 @@ public class FilterService
     private static Dictionary<string, string> ReadPresetIndex(string indexPath)
     {
         string json = File.ReadAllText(indexPath);
-        PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
+        PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (PresetInfo preset in (index?.Presets ?? [])
                      .Where(preset => !string.IsNullOrWhiteSpace(preset.Id) &&

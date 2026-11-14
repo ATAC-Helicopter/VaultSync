@@ -5,11 +5,32 @@ This is a **pre-release preparation**, not a published update or announcement th
 ## Source and isolation
 
 - Source: published `v1.8.9` stable line, branch `release/1.8.10` created from `Stable`.
-- Scope: serviced .NET 10 LTS runtime/SDK packages and qualified dependency updates only.
+- Scope: serviced .NET 10 LTS runtime/SDK packages, qualified dependency updates, and isolated regressions verified on the exact shipped 1.8.9 code baseline.
 - Source release identity: `1.8.10`; previous stable: `1.8.9` (2026-09-16).
 - Target planning date: 2026-11-14, not a commitment to release without evidence.
 - No 1.9 recovery features, disk-cloning APIs, format migrations, or unrelated behavior changes.
 - Do not add embargoed vulnerability details to public commits, logs, CI, or issue discussions. Coordinate private reports under SECURITY.md.
+
+## Scoped, not-yet-qualified 1.9.0 bug backports
+
+Each of the three production files was **blob-identical** across the published
+`v1.8.9`, `Dev`, and this candidate *before* its update. The backports are
+scoped to old behavior, not the wider 1.9 implementation:
+
+- `BUG-19001`: refuse `remove-project --quiet` and redirected stdin unless
+  `--yes` is present, before touching the database; keep normal interactive
+  confirmation and explicit opt-in deletion.
+- `BUG-19027`: deserialize existing preset index property names with
+  case-insensitive JSON matching; do not import 1.9 preset-store redesigns.
+- `BUG-19029`: resolve macOS nested SMB destination paths to their verified
+  share-mount root before unmount; reject mere sibling-prefix matches.
+
+The changes have targeted disposable regression tests. They remain pending
+independent **exact-SHA** Linux/Windows/macOS build/test validation and the
+native macOS nested-SMB manual test. The reporter's separate rsync cleanup
+PR #849 (`BUG-19047`) stays outside this backport until its independent
+single-threaded build/test exits successfully. The Draft filter-refresh PR
+#850 (`BUG-19048`) is not imported. Private advisory work stays isolated.
 
 ## Pending release gates
 
