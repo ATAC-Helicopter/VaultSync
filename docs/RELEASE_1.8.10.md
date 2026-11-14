@@ -29,11 +29,19 @@ scoped to old behavior, not the wider 1.9 implementation:
 - `BUG-19029`: resolve macOS nested SMB destination paths to their verified
   share-mount root before unmount; reject mere sibling-prefix matches.
 
+- `BUG-19047` / Refs #843: retain rsync exclusion-file cleanup ownership
+  through failed process startup and normal exits, with a test-owned path
+  instead of global temporary-directory scanning. Backported narrowly from
+  [Ameen's PR #849](https://github.com/ATAC-Helicopter/VaultSync/pull/849);
+  contributor credit remains `@ameenalqershi`.
+
 The changes have targeted disposable regression tests. They remain pending
 independent **exact-SHA** Linux/Windows/macOS build/test validation and the
-native macOS nested-SMB manual test. The reporter's separate rsync cleanup
-PR #849 (`BUG-19047`) stays outside this backport until its independent
-single-threaded build/test exits successfully. The Draft filter-refresh PR
+native macOS nested-SMB manual test. The independent Fedora test of PR #849 reported 3/3 passing cases but an
+MSBuild output-file collision and nonzero build exit. Do not treat this as
+complete until a separate serialized exact-head build/test succeeds or the
+release CI independently verifies the same backported change. The Draft
+filter-refresh PR
 #850 (`BUG-19048`) is not imported. Private advisory work stays isolated.
 
 ## Pending release gates
