@@ -266,6 +266,9 @@ appimage_tool_sha256="df3baf5ca5facbecfc2f3fa6713c29ab9cefa8fd8c1eac5d283b79cab3
 appimage_tool_url="https://github.com/AppImage/AppImageKit/releases/download/${appimage_tool_version}/obsolete-appimagetool-x86_64.AppImage"
 tool_dir="$(mktemp -d)"
 appdir="$(mktemp -d)"
+# mktemp creates a private directory. Its mode becomes the AppImage's root
+# directory mode, so the packaged application must be traversable by users.
+chmod 755 "$appdir"
 
 appimage_tool="${tool_dir}/appimagetool-x86_64.AppImage"
 curl -fsSL "$appimage_tool_url" -o "$appimage_tool"
@@ -282,6 +285,7 @@ mkdir -p \
   "${appdir}/usr/share/metainfo"
 
 cp -a "${publish_dir}/." "${appdir}/usr/bin/"
+chmod +x "${appdir}/usr/bin/VaultSync.UI"
 appimage_app_id="io.github.atachelicopter.vaultsync"
 cp "${publish_dir}/Assets/vaultsync-tray.png" "${appdir}/usr/share/icons/hicolor/256x256/apps/${appimage_app_id}.png"
 cp "${publish_dir}/Assets/vaultsync-tray.png" "${appdir}/${appimage_app_id}.png"

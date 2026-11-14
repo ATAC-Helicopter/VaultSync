@@ -54,3 +54,13 @@ Compensating controls are mandatory for supported releases:
 Release-asset digests protect against corruption and substitution outside the
 official release account. They do not replace independent signing if the GitHub
 account or release process itself is compromised.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](docs/RELEASE_SIGNING.md).

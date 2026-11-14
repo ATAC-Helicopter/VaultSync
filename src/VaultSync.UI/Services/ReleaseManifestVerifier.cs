@@ -36,7 +36,18 @@ namespace VaultSync.UI.Services
     internal static partial class ReleaseManifestVerifier
     {
         internal const string ManifestName = "vaultsync-release-manifest.json";
-        private const string OfficialRepository = "ATAC-Helicopter/VaultSync";
+        private const string LegacyRepository = "ATAC-Helicopter/VaultSync";
+        private const string OrganizationRepository = "FGLabs-dev/VaultSync";
+
+        // Both names refer to the same repository across the planned owner transfer.
+        // Keep historical manifests valid without trusting arbitrary GitHub repositories.
+        internal static bool IsOfficialRepository(string? repository) =>
+            string.Equals(repository, LegacyRepository, StringComparison.Ordinal) ||
+            string.Equals(repository, OrganizationRepository, StringComparison.Ordinal);
+
+        internal static bool IsOfficialAssetUrl(string? url, string tag, string name) =>
+            string.Equals(url, $"https://github.com/{LegacyRepository}/releases/download/{tag}/{Uri.EscapeDataString(name)}", StringComparison.Ordinal) ||
+            string.Equals(url, $"https://github.com/{OrganizationRepository}/releases/download/{tag}/{Uri.EscapeDataString(name)}", StringComparison.Ordinal);
         private const int SupportedSchemaVersion = 1;
         private static readonly HashSet<string> s_platforms = ["windows", "macos", "linux"];
         private static readonly HashSet<string> s_architectures = ["x64", "arm64"];
@@ -105,7 +116,7 @@ namespace VaultSync.UI.Services
             }
 
             return
-                   string.Equals(release.Repository, OfficialRepository, StringComparison.Ordinal) &&
+                   IsOfficialRepository(release.Repository) &&
                    string.Equals(release.Tag, releaseTag, StringComparison.Ordinal) &&
                    string.Equals($"v{release.Version}", releaseTag, StringComparison.Ordinal) &&
                    string.Equals(release.Channel, expectedChannel, StringComparison.Ordinal) &&
@@ -158,10 +169,9 @@ namespace VaultSync.UI.Services
                 return false;
             }
 
-            string expectedUrl = $"https://github.com/{OfficialRepository}/releases/download/{releaseTag}/{Uri.EscapeDataString(name)}";
             string? digest = GitHubUpdateService.TryParseSha256Digest(publishedAsset.Digest);
-            return string.Equals(asset.DownloadUrl, expectedUrl, StringComparison.Ordinal) &&
-                   string.Equals(publishedAsset.DownloadUrl, expectedUrl, StringComparison.Ordinal) &&
+            return IsOfficialAssetUrl(asset.DownloadUrl, releaseTag, name) &&
+                   IsOfficialAssetUrl(publishedAsset.DownloadUrl, releaseTag, name) &&
                    publishedAsset.Size == asset.SizeBytes &&
                    string.Equals(digest, asset.Sha256, StringComparison.OrdinalIgnoreCase);
         }
