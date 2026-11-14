@@ -2,6 +2,21 @@
 
 This document defines the current release packaging flow.
 
+## Stable promotion and patch-release safety
+
+All non-Stable PRs use **Create a merge commit** and retain original commits.
+The Stable branch has **one qualified release/hotfix merge commit on the
+first-parent history** per promotion; Git's full graph still contains the
+source commits, so this is not squash. No direct Stable feature/fix commits,
+rebase, fast-forward or force-push. Do not confuse `Squash and merge` with
+an actual merge commit.
+
+The 1.8.10 preparation isolates already-shipped 1.8.9 code regressions from
+future 1.9 features and from the private embargoed advisory fix. Candidates
+need exact SHA approval, cross-platform builds, native package tests,
+runtime servicing, updater/rollback, provenance and security qualification
+before stable promotion. See [engineering workflow](ENGINEERING_WORKFLOW.md).
+
 ## Release cadence
 
 - Minor releases target seven days and have a fourteen-day maximum from the
@@ -16,7 +31,7 @@ This document defines the current release packaging flow.
 - The published stable is `1.8.9` (2026-09-16). Planned maintenance patch `1.8.10` targets 2026-11-14 subject to all platform and release gates; see `docs/RELEASE_1.8.10.md`.
 
 ## Prerequisites
-- .NET 10 SDK
+- Serviced .NET 10 SDK pinned by `global.json` (currently 10.0.404)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
 - The current public stable release is `1.8.9`.

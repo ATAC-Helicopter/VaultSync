@@ -31,6 +31,8 @@ Use this page as the primary index for all project documentation.
   [Video production guide](video/recording-guide.md)
 
 ## Contribution and Governance
+- Maintainer workflow, branch merge policy, label/Project gates, targeted tests
+  and private security review: [Engineering workflow](ENGINEERING_WORKFLOW.md)
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
 - Security policy: [SECURITY](../SECURITY.md)
 - Privacy overview: [Privacy](PRIVACY.md)

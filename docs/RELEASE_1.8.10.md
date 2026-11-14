@@ -2,6 +2,10 @@
 
 This is a **pre-release preparation**, not a published update or announcement that any unverified fix has shipped.
 
+For the mandatory branch policy, independent test evidence and complete
+release gate, use [engineering workflow](ENGINEERING_WORKFLOW.md). No public
+advisory disclosure is authorized by adding a backport or passing a build.
+
 ## Source and isolation
 
 - Source: published `v1.8.9` stable line, branch `release/1.8.10` created from `Stable`.
