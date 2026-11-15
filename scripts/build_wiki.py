@@ -23,19 +23,26 @@ def convert_url(value: str, filename: str) -> str:
         return value
 
     parsed = urlsplit(value)
-    if parsed.scheme or not parsed.path:
+    if parsed.scheme or parsed.netloc or not parsed.path:
         return value
+
+    # GitHub Wiki links must never access arbitrary absolute filesystem paths.
+    if posixpath.isabs(parsed.path) or "\\" in parsed.path:
+        raise ValueError(f"{filename}: absolute or unsafe linked path: {value}")
 
     relative = posixpath.normpath(
         posixpath.join("docs/wiki", parsed.path)
     )
-
-    if relative.startswith("../") or relative == "..":
+    if relative == ".." or relative.startswith("../") or posixpath.isabs(relative):
         raise ValueError(f"{filename}: path escapes repository: {value}")
 
     source_file = ROOT / relative
     if not source_file.is_file():
         raise ValueError(f"{filename}: missing linked file: {relative}")
+
+    # Do not follow a checked-in symlink outside the repository.
+    if not source_file.resolve(strict=True).is_relative_to(ROOT.resolve(strict=True)):
+        raise ValueError(f"{filename}: linked file escapes repository: {value}")
 
     if relative.startswith("docs/wiki/") and relative.endswith(".md"):
         page = quote(source_file.stem)
