@@ -22,6 +22,10 @@ def convert_url(value: str, filename: str) -> str:
     if value.startswith(("#", "//")):
         return value
 
+    # urlsplit interprets Windows drive prefixes as URL schemes.
+    if re.match(r"^[A-Za-z]:[\\/]", value):
+        raise ValueError(f"{filename}: absolute or unsafe linked path: {value}")
+
     parsed = urlsplit(value)
     if parsed.scheme or parsed.netloc or not parsed.path:
         return value
