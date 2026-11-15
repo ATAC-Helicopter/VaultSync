@@ -1,0 +1,77 @@
+
+name: Publish GitHub Wiki
+
+on:
+  push:
+    branches:
+      - Stable
+    paths:
+      - "docs/wiki/**"
+      - "scripts/build_wiki.py"
+      - ".github/workflows/publish-wiki.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vaultsync-wiki-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/Stable'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build wiki pages
+        run: |
+          python3 scripts/build_wiki.py "$RUNNER_TEMP/wiki-output"
+
+      - name: Clone GitHub Wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+          git -c "http.https://github.com/.extraheader=$header" \
+            clone "https://github.com/${GITHUB_REPOSITORY}.wiki.git" \
+            "$RUNNER_TEMP/wiki-repository"
+
+      - name: Publish changed pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          wiki="$RUNNER_TEMP/wiki-repository"
+
+          cp "$RUNNER_TEMP"/wiki-output/*.md "$wiki/"
+
+          git -C "$wiki" add -- '*.md'
+
+          if git -C "$wiki" diff --cached --quiet; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+
+          git -C "$wiki" config user.name "github-actions[bot]"
+          git -C "$wiki" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git -C "$wiki" commit -m "docs: sync wiki from Stable"
+
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+          git -C "$wiki" \
+            -c "http.https://github.com/.extraheader=$header" \
+            push origin HEAD
+
+          echo "GitHub Wiki synchronized."
