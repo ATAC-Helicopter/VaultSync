@@ -91,7 +91,8 @@ jobs:
           if [ "${DISCORD_DEVLOG_PUBLISH_LATEST:-false}" = "true" ]; then
             args+=(--publish-latest)
           fi
-          python3 scripts/discord_devlog_notify.py "${args[@]}"
+          cd "$RUNNER_TEMP"
+          python3 "$GITHUB_WORKSPACE/scripts/discord_devlog_notify.py" "${args[@]}"
       - name: Store cursor on separate tracking branch
         env:
           STATE_BRANCH: automation/vaultsync-devlog-state

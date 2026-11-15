@@ -3,7 +3,7 @@ import json
 import os
 import sys
 import tempfile
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 import unittest
 from pathlib import Path
 from io import StringIO
@@ -26,6 +26,16 @@ def fixture(*items):
             f"<pubDate>Tue, 10 Nov 2026 20:00:00 GMT</pubDate></item>"
         )
     return ("<rss><channel>" + "".join(out) + "</channel></rss>").encode()
+
+
+@contextmanager
+def working_directory(path):
+    previous = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(previous)
 
 
 class FakeResponse:
@@ -179,11 +189,11 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "_send_discord_request", return_value=(
                     200, "application/json", b'{"id":"123456789012345678"}')) as sender,
                 patch.object(sys, "argv", ["notifier"]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook,
-                                        "RUNNER_TEMP": root}, clear=True),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook}, clear=True),
                 redirect_stdout(StringIO()),
             ):
-                mod.main()
+                with working_directory(root):
+                    mod.main()
             result = json.loads(output.read_text())
             self.assertEqual(result["last_guid"], new)
             self.assertEqual(result["last_sent_guid"], new)
@@ -200,10 +210,11 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
                 patch.object(sys, "argv", ["notifier", "--dry-run"]),
-                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
+                patch.dict(os.environ, {}, clear=True),
                 redirect_stdout(StringIO()) as messages,
             ):
-                mod.main()
+                with working_directory(root):
+                    mod.main()
             self.assertIn("https://fglabs.dev/devlog/new", messages.getvalue())
             self.assertEqual(opener.call_count, 1)
             self.assertFalse(output.exists())
@@ -217,11 +228,11 @@ class DiscordDevlogTests(unittest.TestCase):
                              return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
                 patch.object(sys, "argv", ["notifier"]),
                 patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK":
-                           "https://discord.com/api/webhooks/123456789012345678/token",
-                           "RUNNER_TEMP": root}, clear=True),
+                           "https://discord.com/api/webhooks/123456789012345678/token"}, clear=True),
                 redirect_stdout(StringIO()),
             ):
-                mod.main()
+                with working_directory(root):
+                    mod.main()
             self.assertEqual(json.loads(output.read_text())["last_guid"],
                              "https://fglabs.dev/devlog/new")
             self.assertEqual(opener.call_count, 1)
@@ -233,10 +244,11 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(fixture(("new", "VaultSync")))),
                 patch.object(sys, "argv", ["notifier"]),
-                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
+                patch.dict(os.environ, {}, clear=True),
             ):
-                with self.assertRaisesRegex(ValueError, "Missing DISCORD_DEVLOG_WEBHOOK"):
-                    mod.main()
+                with working_directory(root):
+                    with self.assertRaisesRegex(ValueError, "Missing DISCORD_DEVLOG_WEBHOOK"):
+                        mod.main()
             self.assertFalse(output.exists())
 
     def test_main_does_not_advance_cursor_after_post_failure(self):
@@ -251,11 +263,11 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "_send_discord_request", return_value=(
                     403, "application/json", b'{"code":50013}')),
                 patch.object(sys, "argv", ["notifier"]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url,
-                                        "RUNNER_TEMP": root}, clear=True),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url}, clear=True),
             ):
-                with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
-                    mod.main()
+                with working_directory(root):
+                    with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
+                        mod.main()
             self.assertFalse(output.exists())
             self.assertEqual(json.loads(state.read_text())["last_guid"],
                              "https://fglabs.dev/devlog/old")
@@ -268,10 +280,11 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(b"x" * 2_000_001)),
                 patch.object(sys, "argv", ["notifier", "--dry-run"]),
-                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
+                patch.dict(os.environ, {}, clear=True),
             ):
-                with self.assertRaisesRegex(ValueError, "RSS larger than expected"):
-                    mod.main()
+                with working_directory(root):
+                    with self.assertRaisesRegex(ValueError, "RSS larger than expected"):
+                        mod.main()
             self.assertFalse(output.exists())
 
     def test_discord_retries_rate_limits_and_preserves_confirmed_id(self):
