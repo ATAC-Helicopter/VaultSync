@@ -1,5 +1,5 @@
 ﻿# Changelog
-## [1.8.10] - Unreleased
+## [1.8.10] - 2026-11-15
 ### Security
 - [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
 ### Added
@@ -1168,7 +1168,7 @@
 - [BUG-13057] Manual/auto metadata refresh now updates UI lists immediately.
 - [BUG-13058] Backup retention and cleanup now respect destination paths and skip unrelated directories; interrupted backups are
   cleaned safely.
-- [BUG-13059] Backup status cards no longer duplicate speed/ETA, support cancelling/deleting states, and avoid auto-scroll 
+- [BUG-13059] Backup status cards no longer duplicate speed/ETA, support cancelling/deleting states, and avoid auto-scroll
   jumps.
 - [BUG-13060] Dashboard storage totals, per-project segments, and donut tooltips now match actual stored data.
 - [BUG-13061] Backups page right panel/history styling cleaned up with clearer hierarchy.
