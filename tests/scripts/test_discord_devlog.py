@@ -167,8 +167,8 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_posts_pending_article_and_saves_cursor(self):
         with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "state.json"
-            output = Path(root) / "after.json"
+            state = Path(root) / "discord-devlog-state.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             old = "https://fglabs.dev/devlog/old"
             new = "https://fglabs.dev/devlog/new"
             state.write_text(json.dumps({"last_guid": old, "last_sent_guid": old}))
@@ -178,9 +178,9 @@ class DiscordDevlogTests(unittest.TestCase):
                     fixture(("new", "VaultSync"), ("old", "VaultSync")))) as feed,
                 patch.object(mod, "_send_discord_request", return_value=(
                     200, "application/json", b'{"id":"123456789012345678"}')) as sender,
-                patch.object(sys, "argv", ["notifier", "--state", str(state),
-                                            "--output-state", str(output)]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook}, clear=True),
+                patch.object(sys, "argv", ["notifier"]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook,
+                                        "RUNNER_TEMP": root}, clear=True),
                 redirect_stdout(StringIO()),
             ):
                 mod.main()
@@ -193,15 +193,14 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_dry_run_never_posts_or_writes(self):
         with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "state.json"
-            output = Path(root) / "after.json"
+            state = Path(root) / "discord-devlog-state.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             state.write_text('{"last_guid":"https://fglabs.dev/devlog/old"}')
             with (
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
-                patch.object(sys, "argv", ["notifier", "--state", str(state),
-                                            "--output-state", str(output), "--dry-run"]),
-                patch.dict(os.environ, {}, clear=True),
+                patch.object(sys, "argv", ["notifier", "--dry-run"]),
+                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
                 redirect_stdout(StringIO()) as messages,
             ):
                 mod.main()
@@ -211,14 +210,15 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_initial_run_seeds_without_sending_history(self):
         with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "not-yet-created.json"
-            output = Path(root) / "after.json"
+            state = Path(root) / "discord-devlog-state.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             with (
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
-                patch.object(sys, "argv", ["notifier", "--state", str(state), "--output-state", str(output)]),
+                patch.object(sys, "argv", ["notifier"]),
                 patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK":
-                           "https://discord.com/api/webhooks/123456789012345678/token"}, clear=True),
+                           "https://discord.com/api/webhooks/123456789012345678/token",
+                           "RUNNER_TEMP": root}, clear=True),
                 redirect_stdout(StringIO()),
             ):
                 mod.main()
@@ -228,13 +228,12 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_refuses_missing_webhook_and_keeps_state(self):
         with tempfile.TemporaryDirectory() as root:
-            output = Path(root) / "after.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             with (
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(fixture(("new", "VaultSync")))),
-                patch.object(sys, "argv", ["notifier", "--state", str(Path(root) / "missing.json"),
-                                            "--output-state", str(output)]),
-                patch.dict(os.environ, {}, clear=True),
+                patch.object(sys, "argv", ["notifier"]),
+                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
             ):
                 with self.assertRaisesRegex(ValueError, "Missing DISCORD_DEVLOG_WEBHOOK"):
                     mod.main()
@@ -242,8 +241,8 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_does_not_advance_cursor_after_post_failure(self):
         with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "before.json"
-            output = Path(root) / "after.json"
+            state = Path(root) / "discord-devlog-state.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             state.write_text('{"last_guid":"https://fglabs.dev/devlog/old"}')
             url = "https://discord.com/api/webhooks/123456789012345678/fixture"
             with (
@@ -251,9 +250,9 @@ class DiscordDevlogTests(unittest.TestCase):
                     fixture(("new", "VaultSync"), ("old", "VaultSync")))),
                 patch.object(mod, "_send_discord_request", return_value=(
                     403, "application/json", b'{"code":50013}')),
-                patch.object(sys, "argv", ["notifier", "--state", str(state),
-                                            "--output-state", str(output)]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url}, clear=True),
+                patch.object(sys, "argv", ["notifier"]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url,
+                                        "RUNNER_TEMP": root}, clear=True),
             ):
                 with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
                     mod.main()
@@ -264,12 +263,12 @@ class DiscordDevlogTests(unittest.TestCase):
 
     def test_main_rejects_oversize_feed_before_writing_cursor(self):
         with tempfile.TemporaryDirectory() as root:
-            output = Path(root) / "after.json"
+            output = Path(root) / "discord-devlog-new-state.json"
             with (
                 patch.object(mod, "urlopen",
                              return_value=FakeResponse(b"x" * 2_000_001)),
-                patch.object(sys, "argv", ["notifier", "--state", str(Path(root) / "missing.json"),
-                                            "--output-state", str(output), "--dry-run"]),
+                patch.object(sys, "argv", ["notifier", "--dry-run"]),
+                patch.dict(os.environ, {"RUNNER_TEMP": root}, clear=True),
             ):
                 with self.assertRaisesRegex(ValueError, "RSS larger than expected"):
                     mod.main()

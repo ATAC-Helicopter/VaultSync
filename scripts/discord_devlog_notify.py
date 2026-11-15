@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import tempfile
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -161,13 +162,12 @@ def post_discord(webhook, payload):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--state", required=True)
-    parser.add_argument("--output-state", required=True)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--publish-latest", action="store_true",
                         help="Publish the latest already-baselined article once")
     args = parser.parse_args()
-    prior = Path(args.state)
+    state_dir = Path(os.getenv("RUNNER_TEMP", tempfile.gettempdir()))
+    prior = state_dir / "discord-devlog-state.json"
     state = json.loads(prior.read_text()) if prior.is_file() and prior.stat().st_size else {}
     request = Request(FEED, headers={"User-Agent": "VaultSyncDiscordNotifier/1.0"})
     with urlopen(request, timeout=25) as response:
@@ -189,7 +189,7 @@ def main():
     for item, payload in zip(pending, messages):
         msgid = post_discord(webhook, payload)
         print("Posted", item["guid"], "as", msgid)
-    output = Path(args.output_state)
+    output = state_dir / "discord-devlog-new-state.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     state["last_guid"] = cursor
     if pending:

@@ -87,10 +87,7 @@ jobs:
             echo "::notice::No Discord devlog webhook configured; no publication or cursor update."
             exit 0
           fi
-          args=(
-            --state "$RUNNER_TEMP/discord-devlog-state.json"
-            --output-state "$RUNNER_TEMP/discord-devlog-new-state.json"
-          )
+          args=()
           if [ "${DISCORD_DEVLOG_PUBLISH_LATEST:-false}" = "true" ]; then
             args+=(--publish-latest)
           fi
