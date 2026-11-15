@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 METADATA_PATH = REPO_ROOT / "release/release-metadata.json"
 PUBLIC_METADATA_NAME = "release-metadata.json"
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
+CHANGELOG_VERSION_HEADING_RE = r"^## \[([^]]+)\] - (?:Unreleased|\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})"
 
 
 def resolve_within(root: Path, candidate: Path, purpose: str) -> Path:
@@ -108,7 +109,7 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
         "src/VaultSync.CLI/VaultSync.CLI.csproj": (r"<Version>([^<]+)</Version>", version),
         "installer/VaultSyncInstaller.iss": (r'#define MyAppVersion "([^"]+)"', version),
         "packaging/VaultSync.Store/Package.appxmanifest": (r'Version="([^"]+)"', str(store["packageVersion"])),
-        "CHANGELOG.md": (r"^## \[([^]]+)\] - (?:Unreleased|\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})", version),
+        "CHANGELOG.md": (CHANGELOG_VERSION_HEADING_RE, version),
         "docs/WHATS_NEW.md": (r"^## \[([^]]+)\]", version),
     }
     for relative, (pattern, wanted) in expected.items():
