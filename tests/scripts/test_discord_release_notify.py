@@ -1,8 +1,11 @@
 import json
 import os
+import subprocess
+import sys
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts import discord_release_notify as mod
@@ -87,6 +90,23 @@ class DiscordReleaseTests(unittest.TestCase):
         self.assertIn("pre-release", payload["content"])
         self.assertEqual(payload["embeds"][0]["description"],
                          "VaultSync v1.8.10-rc.1 is now available.")
+
+    def test_cli_entrypoint_imports_shared_sender(self):
+        # Reproduce the GitHub Actions command without sending a Discord message.
+        script = Path(__file__).resolve().parents[2] / "scripts" / "discord_release_notify.py"
+        env = os.environ.copy()
+        env.pop("DISCORD_RELEASE_WEBHOOK", None)
+        process = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=script.parents[1],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("Missing DISCORD_RELEASE_WEBHOOK", process.stderr)
+        self.assertNotIn("ModuleNotFoundError", process.stderr)
 
     def test_main_posts_release_and_requires_webhook(self):
         release = {"tag": "v1.8.10", "name": "VaultSync 1.8.10", "body": "Notes",
