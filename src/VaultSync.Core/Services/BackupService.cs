@@ -557,6 +557,9 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
+        // Reject overlapping project/backup trees before scanning or using cached preflight.
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+
         backupRoot = Path.GetFullPath(backupRoot);
         if (!Directory.Exists(backupRoot))
         {
@@ -921,6 +924,11 @@ public sealed class BackupService(
 
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
+
+        // Refuse unsafe destinations before creating folders, snapshots or backup metadata.
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+        if (!string.IsNullOrWhiteSpace(preferredFinalBackupRoot))
+            BackupSafetyService.EnsureSafeBackupRoot(project, preferredFinalBackupRoot);
 
         AppConfig configSnapshot = _configStore.Load();
         BackupEncryptionConfig encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
