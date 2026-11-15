@@ -6,7 +6,7 @@ import os
 import re
 import time
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree as ET
@@ -22,6 +22,11 @@ PATH = re.compile(r"^/devlog/[a-z0-9][a-z0-9-]*$")
 
 
 def read_feed(xml):
+    # The first-party RSS feed never uses DTDs/entities. Reject XML
+    # declarations which could introduce entity expansion or external references.
+    upper = xml.upper()
+    if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
+        raise ValueError("RSS document type and entity declarations are not allowed")
     root = ET.fromstring(xml)
     if root.tag != "rss":
         raise ValueError("Expected RSS")
@@ -95,7 +100,10 @@ def post_discord(webhook, payload):
 
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     for attempt in range(3):
-        request = Request(webhook + "?wait=true", data=data, method="POST",
+        # Never use the incoming URL as the HTTP destination. Only the
+        # validated webhook path is retained; the HTTPS origin is fixed.
+        request = Request("https://discord.com" + url.path + "?wait=true",
+                          data=data, method="POST",
                           headers={"Content-Type": "application/json",
                                    "Accept": "application/json",
                                    "User-Agent": DISCORD_USER_AGENT})
@@ -131,6 +139,9 @@ def post_discord(webhook, payload):
                 f"Discord webhook rejected HTTP {error.code}: {detail}; "
                 "webhook URL and response body intentionally omitted"
             ) from None
+        except (URLError, OSError):
+            # Network exceptions may contain their request URL (the secret token).
+            raise RuntimeError("Discord webhook network failure; destination omitted") from None
 
 
 def main():

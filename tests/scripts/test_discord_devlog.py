@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from io import BytesIO, StringIO
 from unittest.mock import patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 path = Path(__file__).resolve().parents[2] / "scripts" / "discord_devlog_notify.py"
 spec = importlib.util.spec_from_file_location("discord_devlog_notify", path)
@@ -321,4 +321,32 @@ class DiscordDevlogTests(unittest.TestCase):
     def test_rejects_bad_rss_root(self):
         with self.assertRaisesRegex(ValueError, "Expected RSS"):
             mod.read_feed(b"<html><p>not an RSS feed</p></html>")
+
+    def test_discord_canonical_origin_for_legacy_webhook(self):
+        url = "https://discordapp.com/api/webhooks/123456789012345678/fixture"
+        with patch.object(mod, "urlopen",
+                          return_value=FakeResponse(b'{"id":"123456789012345678"}')) as opener:
+            self.assertEqual(mod.post_discord(url, {"content": "test"}),
+                             "123456789012345678")
+        request = opener.call_args.args[0]
+        self.assertTrue(request.full_url.startswith(
+            "https://discord.com/api/webhooks/123456789012345678/"))
+        self.assertNotIn("discordapp.com", request.full_url)
+
+    def test_webhook_transport_errors_do_not_log_token(self):
+        url = "https://discord.com/api/webhooks/123456789012345678/privatefixture"
+        with patch.object(mod, "urlopen",
+                          side_effect=URLError("network failed for " + url)):
+            with self.assertRaisesRegex(RuntimeError, "network failure") as failure:
+                mod.post_discord(url, {"content": "test"})
+        self.assertNotIn("privatefixture", str(failure.exception))
+
+    def test_feed_rejects_doctype_and_entity_declarations(self):
+        for xml in [
+            b'<!DOCTYPE rss [<!ENTITY a "bad">]><rss><channel/></rss>',
+            b'<!doctype rss><rss><channel/></rss>',
+        ]:
+            with self.subTest(xml=xml):
+                with self.assertRaisesRegex(ValueError, "declarations are not allowed"):
+                    mod.read_feed(xml)
 
