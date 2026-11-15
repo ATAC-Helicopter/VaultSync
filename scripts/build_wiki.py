@@ -109,10 +109,14 @@ def convert_document(contents: str, filename: str) -> str:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: build_wiki.py OUTPUT_DIRECTORY")
+    if len(sys.argv) != 1:
+        raise SystemExit("Usage: build_wiki.py")
 
-    output = Path(sys.argv[1])
+    # This is generated output, never a caller-selected filesystem location.
+    # A fixed repo-local directory prevents arbitrary writes from CLI input.
+    output = ROOT / ".wiki-sync-rendered"
+    if output.is_symlink():
+        raise ValueError("Refusing a symlinked Wiki output directory")
     output.mkdir(parents=True, exist_ok=True)
 
     pages = sorted(SOURCE.glob("*.md"))

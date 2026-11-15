@@ -112,9 +112,9 @@ class WikiPublishingTests(unittest.TestCase):
         (self.source / "FAQ.md").write_text(
             "[Home](Home.md)\n", encoding="utf-8"
         )
-        output = Path(self.temp.name) / "publish"
+        output = self.root / ".wiki-sync-rendered"
         capture = StringIO()
-        with patch.object(sys, "argv", ["build_wiki.py", str(output)]):
+        with patch.object(sys, "argv", ["build_wiki.py"]):
             with redirect_stdout(capture):
                 build_wiki.main()
         self.assertIn("Prepared 2 GitHub Wiki pages", capture.getvalue())
@@ -125,12 +125,20 @@ class WikiPublishingTests(unittest.TestCase):
 
     def test_main_rejects_missing_source_pages(self) -> None:
         (self.source / "Home.md").unlink()
-        with patch.object(sys, "argv", ["build_wiki.py", str(Path(self.temp.name) / "out")]):
+        with patch.object(sys, "argv", ["build_wiki.py"]):
             with self.assertRaisesRegex(SystemExit, "No wiki pages found"):
                 build_wiki.main()
 
-    def test_main_requires_output_argument(self) -> None:
+    def test_main_rejects_symlinked_output(self) -> None:
+        elsewhere = Path(self.temp.name) / "elsewhere"
+        elsewhere.mkdir()
+        (self.root / ".wiki-sync-rendered").symlink_to(elsewhere, target_is_directory=True)
         with patch.object(sys, "argv", ["build_wiki.py"]):
+            with self.assertRaisesRegex(ValueError, "symlinked Wiki output"):
+                build_wiki.main()
+
+    def test_main_rejects_arbitrary_output_argument(self) -> None:
+        with patch.object(sys, "argv", ["build_wiki.py", "/tmp/unsafe"]):
             with self.assertRaisesRegex(SystemExit, "Usage: build_wiki.py"):
                 build_wiki.main()
 

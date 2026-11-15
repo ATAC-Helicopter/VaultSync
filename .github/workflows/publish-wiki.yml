@@ -32,7 +32,7 @@ jobs:
 
       - name: Build wiki pages
         run: |
-          python3 scripts/build_wiki.py "$RUNNER_TEMP/wiki-output"
+          python3 scripts/build_wiki.py
 
       - name: Clone GitHub Wiki
         env:
@@ -54,7 +54,7 @@ jobs:
 
           wiki="$RUNNER_TEMP/wiki-repository"
 
-          cp "$RUNNER_TEMP"/wiki-output/*.md "$wiki/"
+          cp "$GITHUB_WORKSPACE"/.wiki-sync-rendered/*.md "$wiki/"
 
           git -C "$wiki" add -- '*.md'
 
