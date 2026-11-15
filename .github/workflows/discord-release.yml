@@ -3,6 +3,10 @@ name: VaultSync release to Discord
 on:
   release:
     types: [published]
+  # One-time replacement of the v1.8.10 announcement. Removed after successful delivery.
+  push:
+    branches: [feature/release-role-mentions]
+    paths: [".github/workflows/discord-release.yml"]
   workflow_dispatch:
     inputs:
       tag:
@@ -39,13 +43,13 @@ jobs:
         run: python3 -m py_compile scripts/discord_release_notify.py scripts/discord_devlog_notify.py
 
   notify:
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Publish release notification
         env:
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
-          DISCORD_REPLACE_MESSAGE_ID: ${{ inputs.replace_message_id || '' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v1.8.10' }}
+          DISCORD_REPLACE_MESSAGE_ID: ${{ github.event_name == 'push' && '1571589463170224189' || inputs.replace_message_id || '' }}
         run: python3 scripts/discord_release_notify.py
