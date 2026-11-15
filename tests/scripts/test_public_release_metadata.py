@@ -63,7 +63,7 @@ class PublicReleaseMetadataTests(unittest.TestCase):
         for heading in ("## [1.8.10] - 2026-11-15", "## [1.8.10] - 15.11.2026"):
             with self.subTest(heading=heading), tempfile.TemporaryDirectory() as root:
                 (Path(root) / "CHANGELOG.md").write_text(
-                    "# Changelog\\n" + heading + "\\n## [1.8.8] - 02.09.2026\\n",
+                    "# Changelog\n" + heading + "\n## [1.8.8] - 02.09.2026\n",
                     encoding="utf-8",
                 )
                 self.assertEqual(
