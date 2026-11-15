@@ -81,7 +81,12 @@ public static class BackupSafetyService
 
         var source = NormalizeDirectoryPath(projectRoot);
         var target = NormalizeDirectoryPath(backupRoot);
+        EnsureSeparatedRoots(source, target);
+        EnsureSeparatedRoots(ResolveDirectoryAliases(source), ResolveDirectoryAliases(target));
+    }
 
+    private static void EnsureSeparatedRoots(string source, string target)
+    {
         if (IsSameOrChildPath(source, target))
         {
             throw new InvalidOperationException(
@@ -95,6 +100,55 @@ public static class BackupSafetyService
                 "Unsafe backup destination: the project root is inside the backup location. " +
                 "Choose a backup location outside the project tree.");
         }
+    }
+
+    private static string ResolveDirectoryAliases(string path, int linkDepth = 0)
+    {
+        if (linkDepth > 40)
+            throw new InvalidOperationException("Unsafe backup destination: too many directory links.");
+
+        string full = Path.GetFullPath(path);
+        string current = Path.GetPathRoot(full)!;
+        foreach (string component in full[current.Length..].Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, component);
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(current);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                continue;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new InvalidOperationException("Unsafe backup destination: directory could not be resolved.", ex);
+            }
+
+            if ((attributes & FileAttributes.ReparsePoint) == 0)
+                continue;
+
+            try
+            {
+                string? target = new DirectoryInfo(current).LinkTarget;
+                if (target is null)
+                    throw new IOException("Directory link target could not be resolved.");
+                current = ResolveDirectoryAliases(
+                    Path.IsPathRooted(target) ? target : Path.Combine(Path.GetDirectoryName(current)!, target),
+                    linkDepth + 1);
+                if (!Directory.Exists(current))
+                    throw new IOException("Directory link target is not accessible.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new InvalidOperationException("Unsafe backup destination: directory link could not be resolved.", ex);
+            }
+        }
+
+        return current;
     }
 
     public static bool IsReservedPath(string projectRoot, string fullPath)
@@ -213,10 +267,15 @@ public static class BackupSafetyService
                          StringSplitOptions.RemoveEmptyEntries))
             {
                 current = Path.Combine(current, component);
-                if (!File.Exists(current) && !Directory.Exists(current))
+                try
+                {
+                    if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                        return false;
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+                {
                     break;
-                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                    return false;
+                }
             }
 
             fullPath = candidate;

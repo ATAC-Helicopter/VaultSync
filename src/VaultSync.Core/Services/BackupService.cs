@@ -82,6 +82,7 @@ public sealed class BackupService(
     private sealed class ArchiveBackupRequest
     {
         public required Project Project { get; init; }
+        public required string BackupRoot { get; init; }
         public required string DestinationDirectory { get; init; }
         public long TotalBytes { get; init; }
         public int TotalFiles { get; init; }
@@ -233,7 +234,7 @@ public sealed class BackupService(
     {
         try
         {
-            string markerPath = Path.Combine(backupFolder, fileName);
+            string markerPath = ResolveBackupWritePath(backupFolder, fileName);
             File.WriteAllText(markerPath, contents);
         }
         catch (Exception ex)
@@ -246,7 +247,7 @@ public sealed class BackupService(
     {
         try
         {
-            string markerPath = Path.Combine(backupFolder, fileName);
+            string markerPath = ResolveBackupWritePath(backupFolder, fileName);
             if (File.Exists(markerPath))
                 File.Delete(markerPath);
         }
@@ -257,7 +258,7 @@ public sealed class BackupService(
     }
 
     private static string GetArchiveResumeCheckpointPath(string backupFolder)
-        => Path.Combine(backupFolder, ArchiveResumeCheckpointFileName);
+        => ResolveBackupWritePath(backupFolder, ArchiveResumeCheckpointFileName);
 
     private static void WriteArchiveResumeCheckpoint(string backupFolder, ArchiveResumeCheckpoint checkpoint)
     {
@@ -556,6 +557,8 @@ public sealed class BackupService(
             throw new InvalidOperationException("Project.RootPath is not set.");
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
+
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
 
         backupRoot = Path.GetFullPath(backupRoot);
         if (!Directory.Exists(backupRoot))
@@ -922,6 +925,11 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+
+        if (!string.IsNullOrWhiteSpace(preferredFinalBackupRoot))
+            BackupSafetyService.EnsureSafeBackupRoot(project, preferredFinalBackupRoot);
+
         AppConfig configSnapshot = _configStore.Load();
         BackupEncryptionConfig encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
         BackupEncryptionPolicyResolver.ResolvedPolicy resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
@@ -985,7 +993,7 @@ public sealed class BackupService(
 
         // Project-specific backup root: <backupRoot>/project-slug/
         string projectSlug = Slugify(project.Name);
-        string projectBackupRoot = Path.Combine(backupRoot, projectSlug);
+        string projectBackupRoot = ResolveBackupWritePath(backupRoot, projectSlug);
         Directory.CreateDirectory(projectBackupRoot);
 
         // Optional low-disk protection: check free space on the backup target volume
@@ -1012,6 +1020,7 @@ public sealed class BackupService(
         DateTime timestamp = DateTime.UtcNow;
         string folderName = timestamp.ToString("yyyy-MM-dd_HH-mm-ss");
         string backupFolder = GetAvailableBackupFolder(projectBackupRoot, folderName);
+        backupFolder = ResolveBackupWritePath(backupRoot, Path.GetRelativePath(backupRoot, backupFolder));
         Directory.CreateDirectory(backupFolder);
         WriteMarkerFile(backupFolder, InProgressMarkerFileName, $"started:{DateTime.UtcNow:O}");
         string backupRootUsed = backupRoot;
@@ -1121,6 +1130,8 @@ public sealed class BackupService(
         try
         {
             linkedToken.ThrowIfCancellationRequested();
+            BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+            backupFolder = ResolveBackupWritePath(backupRoot, Path.GetRelativePath(backupRoot, backupFolder));
 
             if (useArchiveMode)
             {
@@ -1130,6 +1141,7 @@ public sealed class BackupService(
                 ArchiveBackupResult archiveResult = await RunArchiveBackupAsync(new ArchiveBackupRequest
                 {
                     Project = project,
+                    BackupRoot = backupRoot,
                     DestinationDirectory = backupFolder,
                     TotalBytes = totalBytes,
                     TotalFiles = totalFilesForProgress,
@@ -1194,6 +1206,8 @@ public sealed class BackupService(
             // succeeds (albeit more slowly).
             Console.WriteLine($"[BackupService] Backup phase failed for '{project.Name}', falling back to managed copy. Exception: {ex}");
 
+            BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+            backupFolder = ResolveBackupWritePath(backupRoot, Path.GetRelativePath(backupRoot, backupFolder));
             totalBytes = await Task.Run(() =>
             {
                 long bytes = 0;
@@ -1221,10 +1235,12 @@ public sealed class BackupService(
             {
                 if (Directory.Exists(preferredFinalBackupRoot))
                 {
-                    string destProjectRoot = Path.Combine(preferredFinalBackupRoot, projectSlug);
+                    BackupSafetyService.EnsureSafeBackupRoot(project, preferredFinalBackupRoot);
+                    string destProjectRoot = ResolveBackupWritePath(preferredFinalBackupRoot, projectSlug);
                     Directory.CreateDirectory(destProjectRoot);
 
-                    string destFolder = Path.Combine(destProjectRoot, Path.GetFileName(backupFolder));
+                    string destFolder = ResolveBackupWritePath(
+                        preferredFinalBackupRoot, Path.Combine(projectSlug, Path.GetFileName(backupFolder)));
                     if (Directory.Exists(destFolder))
                         Directory.Delete(destFolder, recursive: true);
 
@@ -1749,6 +1765,7 @@ public sealed class BackupService(
     private static async Task<ArchiveBackupResult> RunArchiveBackupAsync(ArchiveBackupRequest request)
     {
         Project project = request.Project;
+        string backupRoot = request.BackupRoot;
         string destDir = request.DestinationDirectory;
         long totalBytes = request.TotalBytes;
         int totalFiles = request.TotalFiles;
@@ -1819,8 +1836,11 @@ public sealed class BackupService(
         }
 
         // 3. Prepare destination and local temp folder.
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+        workingDestDir = ResolveBackupWritePath(backupRoot, Path.GetRelativePath(backupRoot, workingDestDir));
         Directory.CreateDirectory(workingDestDir);
-        string finalArchivePath = Path.Combine(workingDestDir, artifactFileName);
+        string finalArchivePath = ResolveBackupWritePath(
+            backupRoot, Path.GetRelativePath(backupRoot, Path.Combine(workingDestDir, artifactFileName)));
 
         string localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(localTempRoot);
@@ -2075,6 +2095,9 @@ public sealed class BackupService(
 
                 try
                 {
+                    BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+                    finalArchivePath = ResolveBackupWritePath(
+                        backupRoot, Path.GetRelativePath(backupRoot, finalArchivePath));
                     using (var src = new FileStream(
                                localArchive,
                                FileMode.Open,
@@ -2246,6 +2269,11 @@ public sealed class BackupService(
                 }
             }
 
+            BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+            workingDestDir = ResolveBackupWritePath(
+                backupRoot, Path.GetRelativePath(backupRoot, workingDestDir));
+            finalArchivePath = ResolveBackupWritePath(
+                backupRoot, Path.GetRelativePath(backupRoot, finalArchivePath));
             await EnsureDestinationWriteReadyAsync(workingDestDir, ct);
 
             if (preferParallelUpload && zipSize >= bufferSize * 8L)
@@ -2283,7 +2311,8 @@ public sealed class BackupService(
             if (encryptBeforeUpload)
             {
                 string localMetadataPath = Path.Combine(localTempRoot, BackupArchiveCryptoService.MetadataFileName);
-                string destinationMetadataPath = Path.Combine(workingDestDir, BackupArchiveCryptoService.MetadataFileName);
+                string destinationMetadataPath = ResolveBackupWritePath(
+                    backupRoot, Path.GetRelativePath(backupRoot, Path.Combine(workingDestDir, BackupArchiveCryptoService.MetadataFileName)));
                 File.Copy(localMetadataPath, destinationMetadataPath, overwrite: true);
             }
             RemoveArchiveResumeCheckpoint(workingDestDir);
@@ -2757,7 +2786,7 @@ public sealed class BackupService(
 
     private static async Task EnsureDestinationWriteReadyAsync(string destDir, CancellationToken ct)
     {
-        string probePath = Path.Combine(destDir, ".vaultsync_upload_probe");
+        string probePath = ResolveBackupWritePath(destDir, ".vaultsync_upload_probe");
         var timeout = TimeSpan.FromSeconds(15);
 
         var task = Task.Run(() =>
@@ -2917,7 +2946,7 @@ public sealed class BackupService(
 
             var fileInfo = new FileInfo(filePath);
             string relative = Path.GetRelativePath(sourceDir, filePath);
-            if (!BackupSafetyService.TryCombinePathUnderRoot(destDir, relative, out string targetPath))
+            if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(destDir, relative, out string targetPath))
                 throw new InvalidDataException($"Snapshot path '{relative}' escapes the backup destination.");
             string? targetDir = Path.GetDirectoryName(targetPath);
             if (!string.IsNullOrEmpty(targetDir))
@@ -2990,6 +3019,13 @@ public sealed class BackupService(
         }
     }
 
+    private static string ResolveBackupWritePath(string root, string relativePath)
+    {
+        if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(root, relativePath, out string path))
+            throw new InvalidDataException($"Snapshot path '{relativePath}' escapes the backup destination.");
+        return path;
+    }
+
     private static string Slugify(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -2999,7 +3035,7 @@ public sealed class BackupService(
         char[] cleanedChars = [.. name
             .Trim()
             .ToLowerInvariant()
-            .Select(ch => invalid.Contains(ch) ? '-' : ch)];
+            .Select(ch => invalid.Contains(ch) || ch is '/' or '\\' ? '-' : ch)];
 
         string cleaned = new string(cleanedChars);
 
@@ -3007,7 +3043,8 @@ public sealed class BackupService(
         while (cleaned.Contains("--", StringComparison.Ordinal))
             cleaned = cleaned.Replace("--", "-", StringComparison.Ordinal);
 
-        return cleaned.Trim('-');
+        cleaned = cleaned.Trim('-', '.', ' ');
+        return string.IsNullOrWhiteSpace(cleaned) ? "project" : cleaned;
     }
 
     public static string GetProjectBackupFolderName(string name) => Slugify(name);
