@@ -78,3 +78,30 @@ including failure if no browser is available.
 - [ ] Run release-candidate packages on all three OS platforms with rollback and smoke tests.
 - [ ] Preserve protected review and final Stable-promotion/signing workflows; never claim release qualification from a passing build alone.
 - [ ] Coordinate disclosure of any private vulnerability only after remediation and publication approval.
+
+
+## Automated executable updater qualification
+
+The exact-source, unpublished update qualification is wired to
+`.github/workflows/qualify-1.8.10.yml`. A push to
+`release/1.8.10` automatically calls `release-assets.yml` with
+`release_candidate=true`, previous version `1.8.9`, and all Windows,
+macOS and Linux patch options enabled. It builds candidate packages,
+executes `scripts/qualify_updater.py` on native GitHub-hosted runners
+(Windows x64, Linux x64/ARM64, macOS Apple Silicon/Intel), and retains
+`updater-qualification-*` evidence artifacts. No GitHub Release, tag,
+Store submission, or draft asset upload is performed by this path.
+
+For a vulnerability that is still under coordinated disclosure, **do not
+push confidential commits to a public repository merely to obtain CI**.
+GitHub security-advisory temporary private forks do not permit Actions.
+Use a separately access-controlled **regular private mirror** with a
+`release/1.8.10` branch containing the exact combined source and workflow
+to run this qualification without exposing the patch. Keep runner logs,
+artifacts and repository access private. Verify the private mirror's Actions
+and artifact-access settings before transferring confidential code.
+
+Passing this automation does not replace interactive permission prompts,
+in-app update discovery, Store qualification, signed-distribution checks
+or protected release approval. Review the full five-runner matrix and its
+evidence before public promotion or coordinated advisory disclosure.
