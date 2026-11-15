@@ -108,7 +108,7 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
         "src/VaultSync.CLI/VaultSync.CLI.csproj": (r"<Version>([^<]+)</Version>", version),
         "installer/VaultSyncInstaller.iss": (r'#define MyAppVersion "([^"]+)"', version),
         "packaging/VaultSync.Store/Package.appxmanifest": (r'Version="([^"]+)"', str(store["packageVersion"])),
-        "CHANGELOG.md": (r"^## \[([^]]+)\] - (?:Unreleased|\d{2}\.\d{2}\.\d{4})", version),
+        "CHANGELOG.md": (r"^## \[([^]]+)\] - (?:Unreleased|\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})", version),
         "docs/WHATS_NEW.md": (r"^## \[([^]]+)\]", version),
     }
     for relative, (pattern, wanted) in expected.items():
