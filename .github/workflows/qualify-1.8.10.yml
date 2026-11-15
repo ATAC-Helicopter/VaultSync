@@ -10,8 +10,12 @@ on:
       - release/1.8.10
   workflow_dispatch:
 
+# The called workflow contains an explicitly gated prepare-draft job that
+# needs contents:write on manual stable publication. GitHub validates every
+# called job permission even when that job is skipped in candidate mode.
+# Callee-level permissions still restrict all non-draft jobs to read.
 permissions:
-  contents: read
+  contents: write
   actions: read
   id-token: write
   attestations: write
