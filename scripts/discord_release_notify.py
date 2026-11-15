@@ -10,6 +10,11 @@ from scripts.discord_devlog_notify import post_discord
 
 RELEASE_API = "https://api.github.com/repos/ATAC-Helicopter/VaultSync/releases/tags/"
 TAG = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
+RELEASE_ROLE_IDS = (
+    "1569729675079589889",  # Dev Updates
+    "1569729619500863609",  # Beta Updates
+    "1569838025285050538",  # Release Updates
+)
 
 
 def fetch_release(tag):
@@ -39,14 +44,15 @@ def notification(release):
     kind = "pre-release" if release["prerelease"] else "release"
     description = release["body"] or f"VaultSync {release['tag']} is now available."
     return {
-        "content": f"📦 **VaultSync {release['tag']} {kind}**",
+        "content": " ".join(f"<@&{role_id}>" for role_id in RELEASE_ROLE_IDS)
+                   + f"\n📦 **VaultSync {release['tag']} {kind}**",
         "embeds": [{
             "title": release["name"],
             "url": release["url"],
             "description": description,
             "color": 0x4388DB,
         }],
-        "allowed_mentions": {"parse": []},
+        "allowed_mentions": {"parse": [], "roles": list(RELEASE_ROLE_IDS)},
     }
 
 

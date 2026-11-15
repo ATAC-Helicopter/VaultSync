@@ -66,7 +66,7 @@ class DiscordReleaseTests(unittest.TestCase):
                 mod.fetch_release("../../latest")
         opener.assert_not_called()
 
-    def test_notification_disables_mentions_and_includes_release_link(self):
+    def test_notification_only_mentions_release_update_roles_and_includes_release_link(self):
         payload = mod.notification({
             "tag": "v1.8.10",
             "name": "VaultSync 1.8.10",
@@ -74,7 +74,9 @@ class DiscordReleaseTests(unittest.TestCase):
             "url": "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.10",
             "prerelease": False,
         })
-        self.assertEqual(payload["allowed_mentions"], {"parse": []})
+        self.assertEqual(payload["allowed_mentions"], {"parse": [], "roles": list(mod.RELEASE_ROLE_IDS)})
+        for role_id in mod.RELEASE_ROLE_IDS:
+            self.assertIn(f"<@&{role_id}>", payload["content"])
         self.assertIn("v1.8.10", payload["content"])
         self.assertEqual(payload["embeds"][0]["url"],
                          "https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.10")
