@@ -3,6 +3,10 @@ name: VaultSync release to Discord
 on:
   release:
     types: [published]
+  # One-time recovery publication for v1.8.10; remove after the delivery succeeds.
+  push:
+    branches: [fix/discord-release-notifier-import]
+    paths: [".github/workflows/discord-release.yml"]
   workflow_dispatch:
     inputs:
       tag:
@@ -25,5 +29,5 @@ jobs:
       - name: Publish release notification
         env:
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v1.8.10' }}
         run: python3 scripts/discord_release_notify.py
