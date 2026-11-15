@@ -147,6 +147,7 @@ def notification(release):
         "content": (
             " ".join(f"<@&{role_id}>" for role_id in RELEASE_ROLE_IDS)
             + f"\n📦 **VaultSync {tag} is now available**"
+            + (" *(pre-release)*" if release["prerelease"] else "")
         ),
         "embeds": [{
             "title": _compact(release["name"], 256),
