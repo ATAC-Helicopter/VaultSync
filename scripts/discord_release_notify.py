@@ -123,7 +123,7 @@ def _qualification(body):
 def notification(release):
     tag = release["tag"]
     kind = "Pre-release" if release["prerelease"] else "Stable release"
-    intro = _opening(release["body"]) or f"VaultSync {tag} is available."
+    intro = _opening(release["body"]) or f"VaultSync {tag} is now available."
     highlights = _highlights(release["body"])
     if highlights:
         description = intro + "\n\n**What's improved**\n" + "\n".join(highlights)
