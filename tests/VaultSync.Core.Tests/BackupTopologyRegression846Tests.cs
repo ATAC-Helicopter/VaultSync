@@ -66,7 +66,10 @@ public sealed class BackupTopologyRegression846Tests : IDisposable
 
         // A project with the same ID but a now-overlapping source must be refused
         // even if the preflight cache contains a prior positive response.
-        Project unsafeProject = project with { RootPath = backupRoot };
+        Project unsafeProject = project with
+        {
+            RootPath = backupRoot
+        };
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.PreflightBackupAsync(unsafeProject, backupRoot,
                 useArchiveMode: true, cacheTtl: TimeSpan.FromHours(1)));

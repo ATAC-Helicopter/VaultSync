@@ -39,7 +39,7 @@ saved automatically unless an action opens a confirmation or file picker.
 
 | Control | What it does |
 | --- | --- |
-| Fallback backup location | The single destination used in simple mode, or when no advanced destination is configured. Never place it inside the protected project. |
+| Fallback backup location | The single destination used in simple mode, or when no advanced destination is configured. It must not be identical to, inside, or an ancestor of the protected project's source. Use an external or sibling directory. |
 | Advanced destinations | Enables multiple independently configured local, external, or network targets. |
 | Encrypt archive backups | Encrypts compressed archives locally before upload. Destinations receive `data.vse`. |
 | Allow session-only password fallback | Keeps a password only in memory if secure OS credential storage is unavailable. It is lost when VaultSync exits. |

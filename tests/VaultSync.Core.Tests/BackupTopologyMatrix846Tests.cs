@@ -24,38 +24,38 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
     public static IEnumerable<object[]> UnsafePreflightCases()
     {
         foreach (string scenario in UnsafeScenarios)
-        foreach (bool archive in new[] { false, true })
-            yield return new object[] { scenario, archive };
+            foreach (bool archive in new[] { false, true })
+                yield return new object[] { scenario, archive };
     }
 
     public static IEnumerable<object[]> UnsafeExecutionCases()
     {
         foreach (string scenario in UnsafeScenarios)
-        foreach (bool archive in new[] { false, true })
-        foreach (bool automatic in new[] { false, true })
-            yield return new object[] { scenario, archive, automatic };
+            foreach (bool archive in new[] { false, true })
+                foreach (bool automatic in new[] { false, true })
+                    yield return new object[] { scenario, archive, automatic };
     }
 
     public static IEnumerable<object[]> UnsafeFinalRootCases()
     {
         foreach (string scenario in UnsafeScenarios)
-        foreach (bool archive in new[] { false, true })
-            yield return new object[] { scenario, archive };
+            foreach (bool archive in new[] { false, true })
+                yield return new object[] { scenario, archive };
     }
 
     public static IEnumerable<object[]> SafePreflightCases()
     {
         foreach (string scenario in SafeScenarios)
-        foreach (bool archive in new[] { false, true })
-            yield return new object[] { scenario, archive };
+            foreach (bool archive in new[] { false, true })
+                yield return new object[] { scenario, archive };
     }
 
     public static IEnumerable<object[]> SafeExecutionCases()
     {
         foreach (string scenario in SafeScenarios)
-        foreach (bool archive in new[] { false, true })
-        foreach (bool automatic in new[] { false, true })
-            yield return new object[] { scenario, archive, automatic };
+            foreach (bool archive in new[] { false, true })
+                foreach (bool automatic in new[] { false, true })
+                    yield return new object[] { scenario, archive, automatic };
     }
 
     public static IEnumerable<object[]> InvalidServiceInputs()
@@ -201,7 +201,10 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
     {
         Fixture f = SetupSafe("sibling");
         Project project = scenario == "empty-source"
-            ? f.Project with { RootPath = string.Empty }
+            ? f.Project with
+            {
+                RootPath = string.Empty
+            }
             : f.Project;
         string backup = scenario switch
         {
@@ -233,7 +236,10 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
 
         // Retain the same project identity but move its source to the previously safe
         // destination: an old backup must not make the new unsafe configuration pass.
-        Project unsafeVersion = f.Project with { RootPath = f.BackupRoot };
+        Project unsafeVersion = f.Project with
+        {
+            RootPath = f.BackupRoot
+        };
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.PreflightBackupAsync(unsafeVersion, f.BackupRoot,
                 useArchiveMode: true, cacheTtl: TimeSpan.FromHours(1)));
@@ -287,9 +293,14 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
         bool createBackup = true;
         switch (scenario)
         {
-            case "nested": break;
-            case "nested-multiple-levels": backup = Path.Combine(source, "level-1", "level-2", "backups"); break;
-            case "equal": backup = source; break;
+            case "nested":
+                break;
+            case "nested-multiple-levels":
+                backup = Path.Combine(source, "level-1", "level-2", "backups");
+                break;
+            case "equal":
+                backup = source;
+                break;
             case "source-in-destination":
                 backup = Path.Combine(workspace, "backups");
                 source = Path.Combine(backup, "source");
@@ -298,24 +309,40 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
                 backup = Path.Combine(workspace, "backups");
                 source = Path.Combine(backup, "level-1", "level-2", "source");
                 break;
-            case "nested-trailing-separator": backup += Path.DirectorySeparatorChar; break;
-            case "equal-trailing-separator": backup = source + Path.DirectorySeparatorChar; break;
-            case "nested-unicode": backup = Path.Combine(source, "نسخ-احتياطية-äö", "nested"); break;
-            case "nested-spaces": backup = Path.Combine(source, "backup folder", "nested backup"); break;
-            case "nested-dot": backup = Path.Combine(source, ".", "backups"); break;
+            case "nested-trailing-separator":
+                backup += Path.DirectorySeparatorChar;
+                break;
+            case "equal-trailing-separator":
+                backup = source + Path.DirectorySeparatorChar;
+                break;
+            case "nested-unicode":
+                backup = Path.Combine(source, "نسخ-احتياطية-äö", "nested");
+                break;
+            case "nested-spaces":
+                backup = Path.Combine(source, "backup folder", "nested backup");
+                break;
+            case "nested-dot":
+                backup = Path.Combine(source, ".", "backups");
+                break;
             case "nested-parent-segment":
                 Directory.CreateDirectory(Path.Combine(source, "placeholder"));
                 backup = Path.Combine(source, "placeholder", "..", "backups");
                 break;
-            case "nested-custom-folder": backup = Path.Combine(source, "non-reserved-custom-data"); break;
-            case "nested-missing-destination": createBackup = false; break;
+            case "nested-custom-folder":
+                backup = Path.Combine(source, "non-reserved-custom-data");
+                break;
+            case "nested-missing-destination":
+                createBackup = false;
+                break;
             case "ancestor-trailing-separator":
-                backup = workspace + Path.DirectorySeparatorChar; break;
+                backup = workspace + Path.DirectorySeparatorChar;
+                break;
             case "same-via-parent-segment":
                 Directory.CreateDirectory(Path.Combine(source, "placeholder"));
                 backup = Path.Combine(source, "placeholder", "..");
                 break;
-            default: throw new ArgumentOutOfRangeException(nameof(scenario));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario));
         }
         return CreateFixture(workspace, source, backup, createBackup);
     }
@@ -327,7 +354,8 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
         string backup = Path.Combine(workspace, "backups");
         switch (scenario)
         {
-            case "sibling": break;
+            case "sibling":
+                break;
             case "sibling-prefix-collision":
                 backup = Path.Combine(workspace, "source-backups");
                 break;
@@ -347,7 +375,8 @@ public sealed class BackupTopologyMatrix846Tests : IDisposable
                 source = Path.Combine(workspace, "source with spaces");
                 backup = Path.Combine(workspace, "backups with spaces", ".", "child");
                 break;
-            default: throw new ArgumentOutOfRangeException(nameof(scenario));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario));
         }
         return CreateFixture(workspace, source, backup, createBackup: true);
     }

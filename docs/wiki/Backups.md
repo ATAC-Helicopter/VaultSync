@@ -21,6 +21,7 @@ VaultSync creates snapshot-based backups with progress tracking, status history,
 ## What happens during a backup
 1. Prepare destination
    - Resolve network paths and validate access.
+   - Reject destinations that overlap a protected project's source (same folder, source inside destination, or destination inside source). This check applies to regular and compressed backups; use a sibling or external path instead.
 2. Copy data
    - Use optimized copy tools depending on the target.
 3. Verify and hash
