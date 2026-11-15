@@ -1,7 +1,12 @@
 import importlib.util
+import json
+import os
+import sys
+import tempfile
+from contextlib import redirect_stdout
 import unittest
 from pathlib import Path
-from io import BytesIO
+from io import BytesIO, StringIO
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -22,6 +27,20 @@ def fixture(*items):
             f"<pubDate>Tue, 10 Nov 2026 20:00:00 GMT</pubDate></item>"
         )
     return ("<rss><channel>" + "".join(out) + "</channel></rss>").encode()
+
+
+class FakeResponse:
+    def __init__(self, body):
+        self.body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, _n):
+        return self.body
 
 
 class DiscordDevlogTests(unittest.TestCase):
@@ -144,3 +163,162 @@ class DiscordDevlogTests(unittest.TestCase):
             result = mod.post_discord(url, {'content': 'test'})
         self.assertEqual(result, '123456789098765432')
         self.assertEqual(opener.call_args.args[0].get_header('User-agent'), mod.DISCORD_USER_AGENT)
+
+    def test_main_posts_pending_article_and_saves_cursor(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            output = Path(root) / "after.json"
+            old = "https://fglabs.dev/devlog/old"
+            new = "https://fglabs.dev/devlog/new"
+            state.write_text(json.dumps({"last_guid": old, "last_sent_guid": old}))
+            webhook = "https://discord.com/api/webhooks/123456789012345678/secret"
+            responses = [
+                FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync"))),
+                FakeResponse(b'{"id":"123456789012345678"}'),
+            ]
+            with (
+                patch.object(mod, "urlopen", side_effect=responses) as opener,
+                patch.object(sys, "argv", ["notifier", "--state", str(state),
+                                            "--output-state", str(output)]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook}, clear=True),
+                redirect_stdout(StringIO()),
+            ):
+                mod.main()
+            result = json.loads(output.read_text())
+            self.assertEqual(result["last_guid"], new)
+            self.assertEqual(result["last_sent_guid"], new)
+            self.assertEqual(opener.call_count, 2)
+            self.assertEqual(opener.call_args.args[0].method, "POST")
+
+    def test_main_dry_run_never_posts_or_writes(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "state.json"
+            output = Path(root) / "after.json"
+            state.write_text('{"last_guid":"https://fglabs.dev/devlog/old"}')
+            with (
+                patch.object(mod, "urlopen",
+                             return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
+                patch.object(sys, "argv", ["notifier", "--state", str(state),
+                                            "--output-state", str(output), "--dry-run"]),
+                patch.dict(os.environ, {}, clear=True),
+                redirect_stdout(StringIO()) as messages,
+            ):
+                mod.main()
+            self.assertIn("https://fglabs.dev/devlog/new", messages.getvalue())
+            self.assertEqual(opener.call_count, 1)
+            self.assertFalse(output.exists())
+
+    def test_main_initial_run_seeds_without_sending_history(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "not-yet-created.json"
+            output = Path(root) / "after.json"
+            with (
+                patch.object(mod, "urlopen",
+                             return_value=FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync")))) as opener,
+                patch.object(sys, "argv", ["notifier", "--state", str(state), "--output-state", str(output)]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK":
+                           "https://discord.com/api/webhooks/123456789012345678/token"}, clear=True),
+                redirect_stdout(StringIO()),
+            ):
+                mod.main()
+            self.assertEqual(json.loads(output.read_text())["last_guid"],
+                             "https://fglabs.dev/devlog/new")
+            self.assertEqual(opener.call_count, 1)
+
+    def test_main_refuses_missing_webhook_and_keeps_state(self):
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / "after.json"
+            with (
+                patch.object(mod, "urlopen",
+                             return_value=FakeResponse(fixture(("new", "VaultSync")))),
+                patch.object(sys, "argv", ["notifier", "--state", str(Path(root) / "missing.json"),
+                                            "--output-state", str(output)]),
+                patch.dict(os.environ, {}, clear=True),
+            ):
+                with self.assertRaisesRegex(ValueError, "Missing DISCORD_DEVLOG_WEBHOOK"):
+                    mod.main()
+            self.assertFalse(output.exists())
+
+    def test_main_does_not_advance_cursor_after_post_failure(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "before.json"
+            output = Path(root) / "after.json"
+            state.write_text('{"last_guid":"https://fglabs.dev/devlog/old"}')
+            url = "https://discord.com/api/webhooks/123456789012345678/secret"
+            denied = HTTPError(url, 403, "Forbidden",
+                               {"Content-Type": "application/json"},
+                               BytesIO(b'{"code":50013}'))
+            with (
+                patch.object(mod, "urlopen", side_effect=[
+                    FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync"))),
+                    denied,
+                ]),
+                patch.object(sys, "argv", ["notifier", "--state", str(state),
+                                            "--output-state", str(output)]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url}, clear=True),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
+                    mod.main()
+            self.assertFalse(output.exists())
+            self.assertEqual(json.loads(state.read_text())["last_guid"],
+                             "https://fglabs.dev/devlog/old")
+
+    def test_main_rejects_oversize_feed_before_writing_cursor(self):
+        with tempfile.TemporaryDirectory() as root:
+            output = Path(root) / "after.json"
+            with (
+                patch.object(mod, "urlopen",
+                             return_value=FakeResponse(b"x" * 2_000_001)),
+                patch.object(sys, "argv", ["notifier", "--state", str(Path(root) / "missing.json"),
+                                            "--output-state", str(output), "--dry-run"]),
+            ):
+                with self.assertRaisesRegex(ValueError, "RSS larger than expected"):
+                    mod.main()
+            self.assertFalse(output.exists())
+
+    def test_discord_retries_rate_limits_and_preserves_confirmed_id(self):
+        url = "https://discord.com/api/webhooks/123456789012345678/token"
+        retry = HTTPError(url, 429, "Too Many Requests",
+                          {"Content-Type": "application/json"},
+                          BytesIO(b'{"retry_after":0.2}'))
+        with (
+            patch.object(mod, "urlopen", side_effect=[
+                retry, FakeResponse(b'{"id":"123456789012345678"}'),
+            ]) as opener,
+            patch.object(mod.time, "sleep") as sleep,
+        ):
+            self.assertEqual(mod.post_discord(url, {"content": "test"}),
+                             "123456789012345678")
+        self.assertEqual(opener.call_count, 2)
+        sleep.assert_called_once()
+
+    def test_reject_unrecognized_webhook_targets(self):
+        for value in [
+            "http://discord.com/api/webhooks/123456789012345678/secret",
+            "https://example.net/api/webhooks/123456789012345678/secret",
+            "https://discord.com/api/webhooks/123456789012345678/secret?x=1",
+            "https://discord.com/api/webhooks/123456789012345678/secret#part",
+            "https://discord.com/api/webhooks/xyz/secret",
+        ]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "Invalid webhook URL"):
+                    mod.post_discord(value, {"content": "test"})
+
+    def test_pending_limit_advances_in_fixed_batches(self):
+        items = mod.read_feed(fixture(*[(f"post-{i}", "VaultSync")
+                                       for i in range(8, 0, -1)]))
+        sent, cursor = mod.pending_posts(items, "https://fglabs.dev/devlog/post-1")
+        self.assertEqual(len(sent), 5)
+        self.assertEqual(cursor, "https://fglabs.dev/devlog/post-6")
+        next_sent, new_cursor = mod.pending_posts(items, cursor)
+        self.assertEqual(len(next_sent), 2)
+        self.assertEqual(new_cursor, "https://fglabs.dev/devlog/post-8")
+
+    def test_empty_feed_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "No valid VaultSync"):
+            mod.pending_posts([], "https://fglabs.dev/devlog/old")
+
+    def test_rejects_bad_rss_root(self):
+        with self.assertRaisesRegex(ValueError, "Expected RSS"):
+            mod.read_feed(b"<html><p>not an RSS feed</p></html>")
+
