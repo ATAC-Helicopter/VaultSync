@@ -6,9 +6,8 @@ import tempfile
 from contextlib import redirect_stdout
 import unittest
 from pathlib import Path
-from io import BytesIO, StringIO
+from io import StringIO
 from unittest.mock import patch, MagicMock
-from urllib.error import HTTPError, URLError
 
 path = Path(__file__).resolve().parents[2] / "scripts" / "discord_devlog_notify.py"
 spec = importlib.util.spec_from_file_location("discord_devlog_notify", path)
@@ -146,18 +145,6 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertNotIn("fixture", str(failure.exception))
         connection.close.assert_called_once()
 
-        url = 'https://discord.com/api/webhooks/123456789012345678/notARealWebhookToken'
-        problem = HTTPError(url, 403, 'Forbidden',
-                            {'Content-Type': 'text/html'}, BytesIO(b'<html>blocked</html>'))
-        with patch.object(mod, 'urlopen', side_effect=problem) as opener:
-            with self.assertRaisesRegex(RuntimeError, 'HTTP 403.*non-JSON') as failure:
-                mod.post_discord(url, {'content': 'test'})
-        request = opener.call_args.args[0]
-        self.assertEqual(request.get_header('User-agent'), mod.DISCORD_USER_AGENT)
-        self.assertTrue(mod.DISCORD_USER_AGENT.startswith('DiscordBot ('))
-        self.assertEqual(request.get_header('Content-type'), 'application/json')
-        self.assertNotIn('notARealWebhookToken', str(failure.exception))
-        self.assertNotIn('blocked', str(failure.exception))
 
     def test_discord_api_403_exposes_only_error_code(self):
         url = "https://discord.com/api/webhooks/123456789012345678/fixture"
@@ -168,14 +155,6 @@ class DiscordDevlogTests(unittest.TestCase):
                 mod.post_discord(url, {"content": "test"})
         self.assertNotIn("fixture", str(failure.exception))
 
-        url = 'https://discord.com/api/webhooks/123456789012345678/secretToken'
-        error = HTTPError(url, 403, 'Forbidden',
-                          {'Content-Type': 'application/json; charset=utf-8'},
-                          BytesIO(b'{"message":"Missing Permissions","code":50013}'))
-        with patch.object(mod, 'urlopen', side_effect=error):
-            with self.assertRaisesRegex(RuntimeError, 'HTTP 403: Discord API error code 50013') as failure:
-                mod.post_discord(url, {'content': 'test'})
-        self.assertNotIn('secretToken', str(failure.exception))
 
     def test_discord_post_keeps_confirmed_success_requirement(self):
         url = "https://discord.com/api/webhooks/123456789012345678/fixture"
@@ -185,18 +164,6 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertEqual(result, "123456789098765432")
         self.assertEqual(sender.call_count, 1)
 
-        url = 'https://discord.com/api/webhooks/123456789012345678/secretToken'
-        class Response:
-            def __enter__(self):
-                return self
-            def __exit__(self, *args):
-                return False
-            def read(self, _n):
-                return b'{"id":"123456789098765432"}'
-        with patch.object(mod, 'urlopen', return_value=Response()) as opener:
-            result = mod.post_discord(url, {'content': 'test'})
-        self.assertEqual(result, '123456789098765432')
-        self.assertEqual(opener.call_args.args[0].get_header('User-agent'), mod.DISCORD_USER_AGENT)
 
     def test_main_posts_pending_article_and_saves_cursor(self):
         with tempfile.TemporaryDirectory() as root:
@@ -223,30 +190,6 @@ class DiscordDevlogTests(unittest.TestCase):
             self.assertEqual(feed.call_count, 1)
             self.assertEqual(sender.call_count, 1)
 
-        with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "state.json"
-            output = Path(root) / "after.json"
-            old = "https://fglabs.dev/devlog/old"
-            new = "https://fglabs.dev/devlog/new"
-            state.write_text(json.dumps({"last_guid": old, "last_sent_guid": old}))
-            webhook = "https://discord.com/api/webhooks/123456789012345678/secret"
-            responses = [
-                FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync"))),
-                FakeResponse(b'{"id":"123456789012345678"}'),
-            ]
-            with (
-                patch.object(mod, "urlopen", side_effect=responses) as opener,
-                patch.object(sys, "argv", ["notifier", "--state", str(state),
-                                            "--output-state", str(output)]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook}, clear=True),
-                redirect_stdout(StringIO()),
-            ):
-                mod.main()
-            result = json.loads(output.read_text())
-            self.assertEqual(result["last_guid"], new)
-            self.assertEqual(result["last_sent_guid"], new)
-            self.assertEqual(opener.call_count, 2)
-            self.assertEqual(opener.call_args.args[0].method, "POST")
 
     def test_main_dry_run_never_posts_or_writes(self):
         with tempfile.TemporaryDirectory() as root:
@@ -318,28 +261,6 @@ class DiscordDevlogTests(unittest.TestCase):
             self.assertEqual(json.loads(state.read_text())["last_guid"],
                              "https://fglabs.dev/devlog/old")
 
-        with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "before.json"
-            output = Path(root) / "after.json"
-            state.write_text('{"last_guid":"https://fglabs.dev/devlog/old"}')
-            url = "https://discord.com/api/webhooks/123456789012345678/secret"
-            denied = HTTPError(url, 403, "Forbidden",
-                               {"Content-Type": "application/json"},
-                               BytesIO(b'{"code":50013}'))
-            with (
-                patch.object(mod, "urlopen", side_effect=[
-                    FakeResponse(fixture(("new", "VaultSync"), ("old", "VaultSync"))),
-                    denied,
-                ]),
-                patch.object(sys, "argv", ["notifier", "--state", str(state),
-                                            "--output-state", str(output)]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url}, clear=True),
-            ):
-                with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
-                    mod.main()
-            self.assertFalse(output.exists())
-            self.assertEqual(json.loads(state.read_text())["last_guid"],
-                             "https://fglabs.dev/devlog/old")
 
     def test_main_rejects_oversize_feed_before_writing_cursor(self):
         with tempfile.TemporaryDirectory() as root:
@@ -368,20 +289,6 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertEqual(sender.call_count, 2)
         sleep.assert_called_once()
 
-        url = "https://discord.com/api/webhooks/123456789012345678/token"
-        retry = HTTPError(url, 429, "Too Many Requests",
-                          {"Content-Type": "application/json"},
-                          BytesIO(b'{"retry_after":0.2}'))
-        with (
-            patch.object(mod, "urlopen", side_effect=[
-                retry, FakeResponse(b'{"id":"123456789012345678"}'),
-            ]) as opener,
-            patch.object(mod.time, "sleep") as sleep,
-        ):
-            self.assertEqual(mod.post_discord(url, {"content": "test"}),
-                             "123456789012345678")
-        self.assertEqual(opener.call_count, 2)
-        sleep.assert_called_once()
 
     def test_reject_unrecognized_webhook_targets(self):
         for value in [
@@ -422,15 +329,6 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertEqual(sender.call_args.args[0],
                          "/api/webhooks/123456789012345678/fixture")
 
-        url = "https://discordapp.com/api/webhooks/123456789012345678/fixture"
-        with patch.object(mod, "urlopen",
-                          return_value=FakeResponse(b'{"id":"123456789012345678"}')) as opener:
-            self.assertEqual(mod.post_discord(url, {"content": "test"}),
-                             "123456789012345678")
-        request = opener.call_args.args[0]
-        self.assertTrue(request.full_url.startswith(
-            "https://discord.com/api/webhooks/123456789012345678/"))
-        self.assertNotIn("discordapp.com", request.full_url)
 
     def test_webhook_transport_errors_do_not_log_token(self):
         url = "https://discord.com/api/webhooks/123456789012345678/privatefixture"
@@ -442,12 +340,6 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertNotIn("privatefixture", str(failure.exception))
         connection.close.assert_called_once()
 
-        url = "https://discord.com/api/webhooks/123456789012345678/privatefixture"
-        with patch.object(mod, "urlopen",
-                          side_effect=URLError("network failed for " + url)):
-            with self.assertRaisesRegex(RuntimeError, "network failure") as failure:
-                mod.post_discord(url, {"content": "test"})
-        self.assertNotIn("privatefixture", str(failure.exception))
 
     def test_feed_rejects_doctype_and_entity_declarations(self):
         for xml in [
