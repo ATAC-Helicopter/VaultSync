@@ -6,7 +6,11 @@ import re
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-from scripts.discord_devlog_notify import post_discord
+# Support both `python3 scripts/discord_release_notify.py` and `python3 -m scripts.discord_release_notify`.
+if __package__:
+    from .discord_devlog_notify import post_discord
+else:
+    from discord_devlog_notify import post_discord
 
 RELEASE_API = "https://api.github.com/repos/ATAC-Helicopter/VaultSync/releases/tags/"
 TAG = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
