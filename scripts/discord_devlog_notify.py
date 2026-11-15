@@ -36,7 +36,7 @@ def read_feed(xml):
         value = lambda key: (item.findtext(key) or "").strip()
         link, guid, title = value("link"), value("guid"), value("title")
         url = urlparse(link)
-        if (not guid or not title or guid in seen
+        if (not guid or guid != link or not title or guid in seen
                 or url.scheme != "https" or url.netloc != "fglabs.dev"
                 or not PATH.fullmatch(url.path) or url.query or url.fragment
                 or value("category").casefold() != "vaultsync"):
@@ -49,6 +49,24 @@ def read_feed(xml):
         posts.append({"guid": guid, "url": link, "title": title,
                       "summary": value("description"), "date": date})
     return posts
+
+
+def load_state(path):
+    if not path.is_file() or not path.stat().st_size:
+        return {}
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise ValueError("Invalid delivery state")
+    state = {}
+    for key in ("last_guid", "last_sent_guid"):
+        guid = value.get(key)
+        if guid is not None:
+            parsed = urlparse(guid) if isinstance(guid, str) else None
+            if (parsed is None or parsed.scheme != "https" or parsed.netloc != "fglabs.dev"
+                    or not PATH.fullmatch(parsed.path) or parsed.query or parsed.fragment):
+                raise ValueError("Invalid delivery state")
+            state[key] = guid
+    return state
 
 
 def pending_posts(posts, cursor):
@@ -166,7 +184,7 @@ def main():
                         help="Publish the latest already-baselined article once")
     args = parser.parse_args()
     prior = Path("discord-devlog-state.json")
-    state = json.loads(prior.read_text()) if prior.is_file() and prior.stat().st_size else {}
+    state = load_state(prior)
     request = Request(FEED, headers={"User-Agent": "VaultSyncDiscordNotifier/1.0"})
     with urlopen(request, timeout=25) as response:
         xml = response.read(2_000_001)

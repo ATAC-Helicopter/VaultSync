@@ -78,6 +78,17 @@ class DiscordDevlogTests(unittest.TestCase):
         xml = b"<rss><channel><item><guid>x</guid><title>x</title><link>https://evil.com/devlog/x</link><category>VaultSync</category></item></channel></rss>"
         self.assertEqual(mod.read_feed(xml), [])
 
+    def test_feed_guid_must_match_validated_article_url(self):
+        xml = b"<rss><channel><item><guid>https://evil.test/path</guid><title>x</title><link>https://fglabs.dev/devlog/x</link><category>VaultSync</category></item></channel></rss>"
+        self.assertEqual(mod.read_feed(xml), [])
+
+    def test_state_cursors_must_be_valid_article_urls(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "state.json"
+            path.write_text(json.dumps({"last_guid": "../../outside"}))
+            with self.assertRaisesRegex(ValueError, "Invalid delivery state"):
+                mod.load_state(path)
+
     def test_embed_no_image_and_mentions_disabled(self):
         item = mod.read_feed(fixture(("update", "VaultSync")))[0]
         payload = mod.message(item)
