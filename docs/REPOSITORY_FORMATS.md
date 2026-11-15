@@ -118,6 +118,30 @@ the lease protocol and must not be used as concurrent writers.
 See [Encryption](wiki/Encryption.md) for the supported backup format and secret
 storage behavior.
 
+## Planned independent-recovery compatibility boundary (1.9.2–1.9.3)
+
+Current repository metadata is valuable but must not become a single point of
+failure in future recovery workflows. The planned standalone utility in 1.9.2
+must distinguish (a) the machine-local application database, (b) optional
+portable repository metadata, and (c) supported backup payloads and their own
+discovery/integrity evidence. When both databases are gone, it should still
+inspect and recover independently identifiable supported payloads when the
+published format permits, or fail explicitly where identity or required
+dependencies cannot be established. No recovery utility may infer encryption
+keys from machine-local credential references.
+
+The 1.9.3 object-storage mapping must preserve enough exact object-version
+identity to locate a protected payload after a same-key write or delete marker.
+Retention applies to versions, not just object names. The manifest's completed
+state and integrity must be validated before any recovery point is declared
+usable. Providers lacking Object Lock/versioning semantics must be identified
+as unsupported for those guarantees.
+
+This is **planned acceptance scope**, not an assertion that the current 1.8.x
+format supports payload-only discovery or that native S3 restoration exists.
+See [Portable recovery and Object Lock qualification](RECOVERY_PORTABILITY_AND_OBJECT_LOCK.md)
+for the test matrix and compatibility boundaries.
+
 ## Emergency read-only inspection
 
 When VaultSync cannot open a destination normally:
@@ -141,8 +165,11 @@ not be “repaired” by deleting backup payloads.
 
 ### Clean-machine identification
 
-On a clean machine, treat a destination as a VaultSync repository only when its
-root contains `.vaultsync/meta/vaultsync.meta.db`. Preserve the entire
+For the **current metadata-based workflow**, on a clean machine treat a
+destination as a recognized VaultSync metadata repository only when its root
+contains `.vaultsync/meta/vaultsync.meta.db`. This is not a blanket statement
+that future 1.9.2 tools will require the database to inspect supported backup
+payloads. Preserve the entire
 `.vaultsync/meta/` directory, including SQLite sidecars, before inspection.
 Open the copy read-only and verify:
 

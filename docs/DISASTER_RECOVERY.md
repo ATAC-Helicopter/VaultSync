@@ -103,6 +103,31 @@ credential on the recovery machine. A valid writer lease allows read-only
 inspection only. An expired lease is not automatic permission to overwrite it;
 use explicit stale takeover after confirming the previous writer is stopped.
 
+### Planned clean-machine recovery without the original database
+
+The procedure above describes the **current** app-based recovery path. It is
+not evidence that the planned standalone restore utility has shipped. In a
+complete machine loss, also plan for the original VaultSync application database
+and local credential store to be gone.
+
+For **1.9.2 Portable Recovery**, the acceptance target is recovery from
+independently identifiable, supported backup payloads even when both the
+original local database and optional portable metadata are missing or damaged.
+Inspection must be read-only; write into a separate restore directory; verify
+the recovered bytes; and state explicitly when an unknown format, missing
+payload dependency, or unavailable encryption secret blocks recovery.
+A surviving machine-local key reference cannot unlock a backup by itself.
+
+For **1.9.3 Offsite Protection**, an Object Lock configuration is not a restore
+test. Qualification must verify recovery from a fresh machine and test
+version-specific protection, delete markers, retention mode, legal holds, and
+safe cleanup on dedicated disposable S3 buckets. Providers that do not support
+the required semantics must be labelled unsupported rather than assumed safe.
+
+See the [planned portable recovery and Object Lock qualification contract](RECOVERY_PORTABILITY_AND_OBJECT_LOCK.md)
+for release-gating tests and limitations. These planned tests do not expand
+the frozen 1.9.0 disk/boot recovery commitments.
+
 For raw layout, version compatibility, interrupted-write handling, and manual
 read-only inspection, see [Repository formats](REPOSITORY_FORMATS.md). For the
 lease and merge rules, see [Cross-machine safety](CROSS_MACHINE_SAFETY.md).

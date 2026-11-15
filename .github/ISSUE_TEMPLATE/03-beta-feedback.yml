@@ -122,5 +122,5 @@ body:
   - type: markdown
     attributes:
       value: |
-        Optional first test: [Recovery Lab v1](https://github.com/ATAC-Helicopter/VaultSync/blob/Dev/docs/wiki/Recovery-Lab.md).
+        Optional first test: [Recovery Lab v1](https://github.com/ATAC-Helicopter/VaultSync/blob/Stable/docs/wiki/Recovery-Lab.md).
         Security vulnerabilities belong in the [private reporting workflow](https://github.com/ATAC-Helicopter/VaultSync/security/policy).

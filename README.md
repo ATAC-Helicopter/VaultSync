@@ -1,353 +1,237 @@
+
 <p align="center">
   <img
-    width="960"
-    alt="VaultSync — back up with confidence"
     src="docs/branding/vaultsync-social-preview.png"
+    alt="VaultSync — Back up with confidence"
+    width="100%"
   />
 </p>
 
 <h1 align="center">VaultSync</h1>
 
 <p align="center">
-  <strong>Snapshot · Back up · Understand · Recover</strong>
+  <strong>Back up your projects. Verify your data. Recover with confidence.</strong>
 </p>
 
 <p align="center">
-  A cross-platform backup and recovery manager for project folders, workspaces, external storage, and NAS workflows.
-  VaultSync helps you inspect what is stored, verify that backup data is still readable, and understand what a restore would do before changing your files.
+  An open-source, cross-platform backup and recovery manager for
+  developers, creators, homelabs, and anyone who wants to understand
+  what their backups actually protect.
 </p>
 
 <p align="center">
-  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest"><strong>Download VaultSync</strong></a>
-  ·
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest"><strong>Download</strong></a>
+  &nbsp;·&nbsp;
   <a href="https://fglabs.dev/vaultsync">Website</a>
-  ·
+  &nbsp;·&nbsp;
+  <a href="docs/wiki/Quick-Start.md">Quick Start</a>
+  &nbsp;·&nbsp;
   <a href="DOCUMENTATION.md">Documentation</a>
-  ·
-  <a href="https://discord.gg/sgP8UzeAQt">Discord</a>
+  &nbsp;·&nbsp;
+  <a href="https://discord.gg/sgP8UzeAQt">Community</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
-    <img alt="Latest release" src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?style=flat-square" />
+    <img src="https://img.shields.io/github/v/release/ATAC-Helicopter/VaultSync?style=for-the-badge&label=Stable&color=1578D4" alt="Latest stable version"/>
   </a>
   <a href="https://github.com/ATAC-Helicopter/VaultSync/releases">
-    <img alt="Total GitHub downloads" src="https://img.shields.io/github/downloads/ATAC-Helicopter/VaultSync/total?style=flat-square" />
+    <img src="https://img.shields.io/github/downloads/ATAC-Helicopter/VaultSync/total?style=for-the-badge&label=Downloads&color=204C85" alt="Total GitHub downloads"/>
   </a>
   <a href="LICENSE">
-    <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" />
+    <img src="https://img.shields.io/github/license/ATAC-Helicopter/VaultSync?style=for-the-badge&color=228B73" alt="MIT license"/>
   </a>
-  <img alt="Supported platforms: Windows, macOS and Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f?style=flat-square" />
-  <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet" />
-  <a href="https://www.reddit.com/r/VaultSync/">
-    <img alt="VaultSync subreddit" src="https://img.shields.io/reddit/subreddit-subscribers/VaultSync?style=flat-square&logo=reddit&label=r%2FVaultSync&color=FF4500" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-supported-252A34?style=flat-square&logo=windows11" alt="Windows"/>
+  <img src="https://img.shields.io/badge/macOS-supported-252A34?style=flat-square&logo=apple" alt="macOS"/>
+  <img src="https://img.shields.io/badge/Linux-supported-252A34?style=flat-square&logo=linux" alt="Linux"/>
+  <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet" alt=".NET 10"/>
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/actions/workflows/ci.yml">
+    <img src="https://github.com/ATAC-Helicopter/VaultSync/actions/workflows/ci.yml/badge.svg?branch=Stable" alt="Stable CI"/>
   </a>
 </p>
 
 ---
 
-## Why VaultSync?
+## Beyond successful backups
 
-A completed backup job only proves that a process finished. It does not necessarily prove that the stored data is still readable, matches the expected project state, or can be restored safely.
+**A backup finishing successfully is only the beginning.**
 
-VaultSync is built to answer the questions that come afterward:
+You should also know what changed, whether the stored data can still be read, and what a restore would actually do.
 
-- **What changed?**
-- **What is actually stored?**
-- **Can the stored bytes still be read?**
-- **Do they match the snapshot?**
-- **What would happen if I restored them?**
+VaultSync brings those answers into one desktop application.
 
-VaultSync combines snapshots, backups, verification, browsing, comparison, restore simulation, retention planning, and recovery guidance in one desktop application.
+| Back up | Understand | Recover |
+| :--- | :--- | :--- |
+| Protect project folders using local storage, external drives, and NAS destinations. | Browse snapshots, inspect changes, and compare recovery points. | Verify stored bytes, preview restores, and run recovery drills. |
+| Manual and scheduled protection | History and snapshot comparison | Evidence-backed recovery checks |
 
-### The three core concepts
-
-- A **snapshot** records the state of a project and tracks what changed.
-- A **backup** stores the project data at a configured destination.
-- A **recovery drill** reads bounded stored data, verifies it against snapshot hashes, and previews the restore plan without modifying the live project.
-
-```mermaid
-flowchart LR
-    A[Project folder] --> B[Snapshot]
-    B --> C[Backup destination]
-    C --> D[Browse and compare]
-    C --> E[Verify stored bytes]
-    D --> F[Restore plan]
-    E --> F
-    F --> G[Restore with confidence]
-```
-
----
+No mandatory cloud account. No automatic crash-report uploads. Your configured storage remains under your control.
 
 ## See VaultSync in action
 
-### Recovery readiness
-
-VaultSync evaluates recent backup coverage across tracked projects, highlights protection gaps, and shows which recovery points are currently reachable.
-
-![VaultSync recovery readiness overview](docs/images/Recovery_Readiness.png)
-
-### Recovery drill evidence
-
-Recovery drills verify stored data against snapshot hashes without modifying the live project. Results expose what was checked, what passed, and what still needs attention.
-
-![VaultSync recovery drill evidence](docs/images/Recovery_Drill.png)
-
-### History and recovery timeline
-
-Review snapshots, restore points, metadata events, backup changes, and recovery activity over time.
-
-![VaultSync history and recovery timeline](docs/images/History_Timeline.png)
-
-### Snapshot comparison
-
-Compare restore points by added, modified, and deleted files, with readable text previews for supported formats.
-
-![VaultSync snapshot comparison and text diff](docs/images/Compare_View.png)
-
-### Themes and appearance
-
-VaultSync includes curated dark and light visual presets with optional advanced tuning.
+<p align="center">
+  <strong>Recovery readiness</strong>
+</p>
 
 <p align="center">
   <img
-    width="49%"
-    alt="VaultSync Aurora Glass theme gallery"
-    src="docs/images/Theme_Gallery_Dark.png"
-  />
-  <img
-    width="49%"
-    alt="VaultSync Porcelain Glass theme gallery"
-    src="docs/images/Theme_Gallery_Light.png"
+    src="docs/images/Recovery_Readiness.png"
+    alt="VaultSync Recovery page showing backup coverage and recovery readiness"
+    width="94%"
   />
 </p>
 
----
+<p align="center">
+  <sub>Review protection coverage, available recovery points, and conditions that need attention.</sub>
+</p>
 
-## Key features
+<br>
 
-### Back up
+| Recovery drill | Snapshot comparison |
+| :---: | :---: |
+| ![Recovery drill evidence](docs/images/Recovery_Drill.png) | ![Snapshot comparison](docs/images/Compare_View.png) |
+| Check stored backup data against snapshot evidence. | See what changed between recovery points. |
 
-- Create manual or scheduled backups from the desktop application.
-- Route each project to an automatic, specific, or multi-destination configuration.
-- Back up to local disks, external drives, pre-mounted storage, SMB shares, and supported NAS workflows.
-- Use full, incremental, compressed, imported, encrypted, or plain backup workflows.
-- Create a fresh snapshot automatically when a backup starts.
-- Apply bandwidth limits and quiet hours.
-- Continue using VaultSync headlessly through its CLI and JSON output.
-
-### Understand
-
-- Browse available backup contents with **Snapshot Explorer** without restoring everything.
-- Compare snapshots and navigate added, modified, deleted, and unchanged files.
-- Inspect supported text files with line-by-line diffs.
-- Organize restore points with labels, notes, tags, and protected **Keep** status.
-- Filter history across projects, backup types, encryption states, and source machines.
-- Synchronize metadata across machines through `.vaultsync/meta`.
-- Track imported backups discovered from metadata or destination scans.
-
-### Prove recoverability
-
-- Read stored backup bytes directly from the destination.
-- Verify stored files against the hashes captured by the snapshot.
-- Run bounded recovery drills without modifying the live project.
-- Simulate the restore plan and show what will happen before restoration begins.
-- Review restore-readiness summaries and actionable recovery recommendations.
-- Evaluate backup coverage with integrated 3-2-1 guidance.
-- Detect missing, unreadable, changed, or mismatched recovery data.
-
-### Maintain and diagnose
-
-- Apply retention policies while preserving protected backups.
-- Simulate retention before deleting data.
-- Clean up orphan snapshots when related backups are pruned.
-- Detect destination availability problems, including sleeping or disconnected NAS devices.
-- Run startup integrity checks and guided **Doctor** repair workflows.
-- Review metadata conflicts before accepting changes.
-- Receive destination quota suggestions and schedule maintenance jobs.
-- Export support bundles and inspect strict patch compatibility diagnostics.
-- Copy the exact running build identity from Settings, or print the same machine-readable record with `vaultsync --version --json`.
-- Prepare optional, fully reviewable crash-report email drafts. Nothing is uploaded or sent automatically.
-
-### Encrypt
-
-- Configure global or per-project encryption policies.
-- Store credentials through the operating system's secure credential store.
-- Encrypt archive backups locally before they reach the destination.
-- Require the backup password before encrypted content can be opened or restored.
-- Use automatic lock timeouts or manually select **Lock now**.
-
-See [Backup encryption](docs/wiki/Encryption.md) for setup, behavior, and recovery guidance.
-
-### Smart presets
-
-Presets define which files should be included or excluded, similarly to `.gitignore`.
-
-Included presets cover:
-
-- Unity
-- Unreal Engine
-- Godot
-- GameMaker
-- .NET and C#
-- Node.js
-- Python
-- Rust
-- Java
-- Go
-- Blender
-- Video editing
-- Music production and DAWs
-- VS Code
-- JetBrains tools
-- Docker
-- General project workflows
-
-Choose **No preset** to include everything, or configure your own exclusion rules.
-Development presets remove disposable build output, package caches, test caches,
-logs, and machine-local IDE state while preserving Git control files and shareable
-editor configuration. Live `.git` internals remain excluded until full-repository
-backup consistency and restore safeguards are available. VaultSync rules are
-exclusion-only; `!` negation rules from `.gitignore` are not supported.
-
----
-
-## Download VaultSync
-
-Desktop builds are published on the repository's [Releases page](https://github.com/ATAC-Helicopter/VaultSync/releases/latest).
-
-| Platform | Available packages |
-| --- | --- |
-| Windows | Desktop installer |
-| macOS | `.dmg` for Apple Silicon and Intel |
-| Linux | AppImage x64, `.deb` x64/arm64, tar.gz x64/arm64 |
-
-Windows users may also install VaultSync through the Microsoft Store when the current Store release is available.
-
-### Installer signing notice
-
-Direct-download desktop installers are intentionally unsigned because paid platform signing programs are outside the project's release budget. This can cause Windows SmartScreen or macOS Gatekeeper to display a warning. Signing is not a release gate; official-source and SHA-256 verification are the supported trust controls.
-
-Download only from the official `ATAC-Helicopter/VaultSync` release page and compare the asset's published SHA-256 digest before bypassing an operating-system warning. VaultSync's updater also rejects installer and patch downloads whose trusted GitHub digest or exact size is missing or mismatched.
-
-Release packages also publish SPDX 2.3 SBOMs and GitHub artifact attestations
-for the final downloadable bytes. Online and offline verification commands are
-documented in [the release guide](docs/RELEASING.md#sbom-and-provenance-verification).
+| History timeline | Backup management |
+| :---: | :---: |
+| ![History timeline](docs/images/History_Timeline.png) | ![Backups interface](docs/images/Backup_Page.png) |
+| Explore backup and recovery activity. | Manage projects, destinations, and stored points. |
 
 <details>
-<summary><strong>Windows SmartScreen instructions</strong></summary>
+<summary><strong>Explore themes and appearance</strong></summary>
 
-1. Open the downloaded installer.
-2. Select **More info**.
-3. Select **Run anyway**.
+<br>
 
-Only continue when the installer came from the official VaultSync repository or website.
+VaultSync includes curated themes, dark and light appearances, and optional advanced color customization.
 
-</details>
-
-<details>
-<summary><strong>macOS Gatekeeper instructions</strong></summary>
-
-1. Open the downloaded `.dmg`.
-2. Drag VaultSync into **Applications**.
-3. Close the disk image.
-4. Open **Applications**.
-5. Right-click VaultSync and select **Open**.
-
-If Gatekeeper still blocks the application, clear the quarantine attribute from the canonical app bundle:
-
-```sh
-sudo xattr -dr com.apple.quarantine "/Applications/VaultSync.app"
-```
+<p align="center">
+  <img src="docs/images/Theme_Gallery_Dark.png" alt="VaultSync dark theme gallery" width="49%"/>
+  <img src="docs/images/Theme_Gallery_Light.png" alt="VaultSync light theme gallery" width="49%"/>
+</p>
 
 </details>
 
 ---
 
-## Desktop quick start
+## How VaultSync works
 
-1. Install and open VaultSync.
-2. Select the folder where your projects or workspaces are stored.
-3. Add a backup destination.
-4. Create or import a project.
-5. Choose a preset or use **No preset**.
-6. Create the first snapshot and backup.
-7. Open the backup history to browse, compare, verify, or restore it.
+```mermaid
+flowchart LR
+    A["Your project"] --> B["Snapshot"]
+    B --> C["Backup destination"]
+    C --> D["Verify stored data"]
+    D --> E["Restore preview"]
+    E --> F["Recovery drill / test restore"]
 
-The desktop application provides guided setup and does not require CLI commands.
+    B --> G["History & comparison"]
+    C --> H["Local / External / NAS"]
+```
 
-For a **safe first verification exercise**, use the [Recovery Lab v1](docs/wiki/Recovery-Lab.md): back up synthetic data, run a read-only drill, and restore into a separate empty folder if supported by your build. For public support Forums, private tickets or beta participation, see [Community and Support](docs/COMMUNITY.md); joining Discord is optional.
+VaultSync distinguishes three important operations:
+
+**Snapshot** — Records the state of your project so changes can be identified.
+
+**Backup** — Stores project data at a configured destination, creating a recovery point.
+
+**Recovery drill** — Performs bounded, non-destructive checks against stored backup data and available restore evidence.
+
+A passing recovery drill is not the same as successfully restoring every file or booting a recovered operating system. For important data, periodically perform a real restore to an independent test destination.
+
+[Learn about recovery](docs/wiki/Recovery.md) · [Try Recovery Lab](docs/wiki/Recovery-Lab.md)
 
 ---
 
-## Network storage
+## Features
 
-### SMB
+| Protection | Inspection |
+| :--- | :--- |
+| Manual and automatic backups | Snapshot Explorer |
+| Full, incremental, and compressed workflows | Snapshot and text comparison |
+| Local, removable, and NAS destinations | Searchable recovery history |
+| Per-project schedules and exclusions | Labels, notes, tags, and protected points |
+| Optional archive encryption | Imported backup discovery |
 
-VaultSync supports SMB auto-mounting on Windows and macOS through configured credential profiles.
+| Recovery confidence | Maintenance |
+| :--- | :--- |
+| Stored-data verification | Retention planning and simulation |
+| Recovery drills | Destination availability checks |
+| Restore previews | Integrity checks and Doctor |
+| Recovery readiness and 3-2-1 guidance | Metadata synchronization |
+| Recovery evidence reports | Diagnostics and support bundles |
 
-A destination can also use an existing system mount by enabling **Pre-mounted** and disabling **Auto-mount**.
+### Built for development workflows
 
-### NFS on macOS
+VaultSync includes exclusion presets for popular tools and project types:
 
-VaultSync does not auto-mount NFS shares on macOS because mounting requires elevated privileges. Mount the share through macOS first, then configure VaultSync to use the local mount path.
+**Unity · Unreal Engine · Godot · GameMaker · .NET · Node.js · Python · Rust · Java · Go · Blender · Docker · IDEs · Media production**
 
-Example:
+Choose an existing preset, define custom exclusions, or select **No preset**.
 
-```sh
-mkdir -p "$HOME/Library/Application Support/VaultSync/mounts/nfs-backups"
+Presets exclude disposable build artifacts and caches while preserving shareable project configuration. VaultSync does not automatically import `.gitignore`, and its exclusion rules do not support Git-style `!` negation.
 
-sudo /sbin/mount_nfs -o rw,resvport \
-  192.168.1.100:/export/backups \
-  "$HOME/Library/Application Support/VaultSync/mounts/nfs-backups"
-```
-
-Then configure the destination:
-
-```text
-Path: ~/Library/Application Support/VaultSync/mounts/nfs-backups/Projects
-Pre-mounted: Enabled
-Auto-mount: Disabled
-```
-
-Replace the server address, export, and destination folder with values from your own environment.
+[Backup pipeline](docs/wiki/Backup-Pipeline.md) · [Encryption](docs/wiki/Encryption.md) · [Destinations](docs/wiki/Destinations.md)
 
 ---
 
-## CLI
+## Download
 
-The VaultSync CLI supports snapshots, synchronization, verification, scripting, automation, and headless environments.
+**Get the latest published stable release from GitHub.**
 
-### Install from source
+<p align="center">
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Latest_Stable_Release-1578D4?style=for-the-badge&logo=github&logoColor=white" alt="Download latest VaultSync release"/>
+  </a>
+</p>
 
-Requirements:
+| Platform | Available formats |
+| :--- | :--- |
+| **Windows** | Desktop installer |
+| **macOS** | Apple Silicon and Intel `.dmg` |
+| **Linux** | x64 AppImage, x64/ARM64 `.deb`, x64/ARM64 `.tar.gz` |
 
-- Git
-- .NET 10 SDK
+The [Microsoft Store listing](https://apps.microsoft.com/detail/9N9HRX4JCLCP) is also available for supported Windows distributions and release channels.
 
-```sh
-git clone https://github.com/ATAC-Helicopter/VaultSync.git
-cd VaultSync
+**Package authenticity matters.** Direct installers may be unsigned and trigger operating-system security warnings. Obtain builds only from official release sources, verify the published SHA-256 information, and consult the documented SBOM/provenance checks.
 
-dotnet pack src/VaultSync.CLI -c Release
+[Installation guide](docs/wiki/Installation.md) · [Release verification](docs/RELEASING.md) · [Updater behavior](docs/UPDATER.md)
 
-export PATH="$PATH:$HOME/.dotnet/tools"
+---
 
-dotnet tool install \
-  --global \
-  --add-source src/VaultSync.CLI/bin/ToolPackages \
-  vaultsync.cli
-```
+## Get started in minutes
 
-Update the installed CLI:
+1. **Choose your projects root.** Select the folder containing the projects you want to protect.
+2. **Configure a destination.** Use a local disk, external drive, or supported network location.
+3. **Register a project.** Select a preset and any additional exclusions.
+4. **Create your first backup.** Check that the operation completes and a restore point appears.
+5. **Verify it.** Inspect the stored data and run a recovery drill.
 
-```sh
-dotnet tool update --global vaultsync.cli
-```
+<p align="center">
+  <img
+    src="docs/images/Projects_Page.png"
+    alt="VaultSync Projects page"
+    width="86%"
+  />
+</p>
 
-### CLI quick start
+Start with disposable test files if you are evaluating VaultSync for the first time.
 
-```sh
+[Full Quick Start](docs/wiki/Quick-Start.md) · [Safe Recovery Lab](docs/wiki/Recovery-Lab.md)
+
+---
+
+## Developer tools and CLI
+
+VaultSync includes a command-line interface for automation, headless systems, and scriptable operations.
+
+<details>
+<summary><strong>Show CLI example</strong></summary>
+
+Requires the VaultSync CLI to be installed.
+
+```bash
 vaultsync init
 vaultsync add-project Demo ~/Projects/Demo --preset unity
 vaultsync snapshot Demo
@@ -355,80 +239,112 @@ vaultsync sync Demo ~/Backups/Demo
 vaultsync verify Demo ~/Backups/Demo --full
 ```
 
-### Useful commands
+**Important:** `sync` is a mirror workflow. Do not confuse it with a versioned backup or a substitute for independent recovery points.
 
-| Command | Description |
-| --- | --- |
-| `vaultsync init` | Initialize the configuration and database |
-| `vaultsync add-project <name> <path>` | Register a project |
-| `vaultsync list-projects` | Show all tracked projects |
-| `vaultsync snapshot <name>` | Create a project snapshot |
-| `vaultsync sync <name> <dest>` | Mirror a project to a destination |
-| `vaultsync verify <name> <dest>` | Hash-compare a project and backup |
-| `vaultsync history <name>` | Show snapshot history |
-| `vaultsync diff <name>` | Compare snapshots |
-| `vaultsync prune <name>` | Remove old snapshots |
-| `vaultsync restore <name> <dest>` | Restore a recorded folder backup; use the desktop app for archives or encryption |
-| `vaultsync doctor` | Check the local environment |
+Other commands provide history, comparisons, verification, restore operations, maintenance, and watch mode.
 
-### Watch mode
+[CLI documentation](DOCUMENTATION.md)
 
-```sh
-vaultsync watch Game \
-  --dest /Backups/Game \
-  --sync \
-  --verify \
-  --debounce-ms 2500
+</details>
+
+<details>
+<summary><strong>Build and run from source</strong></summary>
+
+Requirements: Git and the supported .NET 10 SDK.
+
+```bash
+git clone https://github.com/ATAC-Helicopter/VaultSync.git
+cd VaultSync
+
+dotnet restore
+
+dotnet run \
+  --framework net10.0 \
+  --project src/VaultSync.UI/VaultSync.UI.csproj
 ```
+
+For Windows-specific builds, use the Windows target framework documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Source builds are development builds and should not be confused with qualified release packages.
+
+</details>
+
+<details>
+<summary><strong>Network storage and advanced configuration</strong></summary>
+
+VaultSync supports pre-mounted storage and documented SMB/NAS workflows. On supported platforms, configured SMB destinations may also be mounted automatically.
+
+macOS NFS destinations require an existing system mount rather than automatic mounting by VaultSync.
+
+- [Network shares](docs/wiki/Network-Shares.md)
+- [Destination configuration](docs/wiki/Destinations.md)
+- [Settings reference](docs/wiki/Settings-Reference.md)
+- [Metadata synchronization](docs/wiki/Metadata-Sync.md)
+- [Troubleshooting](docs/wiki/Troubleshooting.md)
+
+</details>
 
 ---
 
-## Updates
+## Designed for transparent recovery
 
-VaultSync checks GitHub Releases according to the selected update channel and interval.
+VaultSync is built around a principle: **users should be able to inspect the evidence behind their backups.**
 
-- **Stable** follows production releases.
-- **Beta** can include prerelease builds from the `Dev` branch.
-- Compatible versions may receive smaller platform-specific delta updates.
-- Unsupported or older versions fall back to the full installer rather than attempting an unsafe patch.
+- Backup verification reads stored data instead of trusting a completion message alone.
+- Restore previews help explain proposed changes before they are applied.
+- Recovery checks distinguish measured results, inferred conditions, and unsupported operations.
+- Sensitive diagnostic exports remain reviewable before sharing.
+- Direct update packages are checked against trusted release metadata.
+- Encryption credentials use supported operating-system credential storage.
 
-The CLI follows the stable release line. Run the following after a release to update it:
+VaultSync does not guarantee recovery from every failure scenario. Offline destinations, unavailable credentials, corrupted storage, and untested restore paths can still prevent successful recovery.
 
-```sh
-dotnet tool update --global vaultsync.cli
-```
-
-See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, patch compatibility, and platform-specific behavior.
+[Privacy](docs/PRIVACY.md) · [Security policy](SECURITY.md) · [Repository formats](docs/REPOSITORY_FORMATS.md)
 
 ---
 
-## Documentation
+## Roadmap
 
-- [Documentation overview](DOCUMENTATION.md)
-- [Wiki and how-to guides](docs/wiki/Home.md)
-- [Recovery guide](docs/wiki/Recovery.md)
-- [Encryption guide](docs/wiki/Encryption.md)
-- [Recoverability engine](docs/RECOVERABILITY_ENGINE.md)
-- [Disaster-recovery design](docs/DISASTER_RECOVERY.md)
-- [Updater details](docs/UPDATER.md)
-- [Privacy](docs/PRIVACY.md)
-- [Roadmap](ROADMAP.md)
-- [Changelog](CHANGELOG.md)
-- [Download statistics](docs/DOWNLOAD_STATS.md)
-- [Security policy](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+VaultSync development continues beyond the current stable release, including work on more comprehensive offline system recovery.
+
+**System-disk imaging, bootable recovery, and platform-specific recovery support are development goals, not capabilities to assume are available in the latest stable build.**
+
+The roadmap distinguishes planned work, active development, testing, and qualified releases.
+
+[View the roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) · [Release history](https://github.com/ATAC-Helicopter/VaultSync/releases)
 
 ---
 
 ## Community and support
 
-- Join the [official VaultSync Discord](https://discord.gg/sgP8UzeAQt) for help, bug discussion, development, beta conversation, and optional games.
-- Read the [community and support guide](docs/COMMUNITY.md) for channel guidance and issue-reporting routes.
-- Join [r/VaultSync](https://www.reddit.com/r/VaultSync/) for updates, feedback, questions, and roadmap discussions.
-- Use [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) for longer technical or product conversations.
-- Report reproducible problems through [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues).
-- Read [SECURITY.md](SECURITY.md) before reporting a security vulnerability.
+VaultSync is developed in the open. You can participate as a user, tester, developer, translator, or simply someone interested in backup reliability.
+
+| Community | Purpose |
+| :--- | :--- |
+| [Discord](https://discord.gg/sgP8UzeAQt) | Support, discussions, ideas, and project updates |
+| [r/VaultSync](https://www.reddit.com/r/VaultSync/) | Reddit discussions and feedback |
+| [GitHub Discussions](https://github.com/ATAC-Helicopter/VaultSync/discussions) | Technical and product conversations |
+| [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose) | Reproducible bugs and tracked requests |
+| [Community Bot](https://github.com/ATAC-Helicopter/vaultsync-community-bot) | Optional Discord onboarding, ideas, and support workflows |
+
+Discord is never required to use VaultSync. Confirmed bugs belong on GitHub, and suspected security vulnerabilities must be reported privately according to [SECURITY.md](SECURITY.md).
+
+[Community and Support Guide](docs/COMMUNITY.md)
+
+---
+
+## Documentation
+
+| Topic | Guide |
+| :--- | :--- |
+| Getting started | [Quick Start](docs/wiki/Quick-Start.md) |
+| Complete documentation | [Documentation Hub](DOCUMENTATION.md) |
+| Backup and recovery | [Recovery Guide](docs/wiki/Recovery.md) |
+| Backup encryption | [Encryption Guide](docs/wiki/Encryption.md) |
+| Installation and updates | [Installation](docs/wiki/Installation.md) · [Updates](docs/wiki/Updates.md) |
+| Architecture and formats | [Repository Formats](docs/REPOSITORY_FORMATS.md) |
+| Privacy and security | [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md) |
+| Contribution guide | [Contributing](CONTRIBUTING.md) |
 
 ---
 
@@ -436,41 +352,30 @@ See [Updater documentation](docs/UPDATER.md) for release manifests, packaging, p
 
 <p align="center">
   <img
-    alt="VaultSync repository activity"
     src="https://repobeats.axiom.co/api/embed/2ff04847931404c1d0a47e6628fbc5cf1fc7f9f0.svg"
+    alt="VaultSync GitHub repository activity"
+    width="90%"
   />
 </p>
 
+<details>
+<summary><strong>Contributors and additional links</strong></summary>
+
+<br>
+
 <p align="center">
   <a href="https://github.com/ATAC-Helicopter/VaultSync/graphs/contributors">
-    <img
-      alt="VaultSync contributors"
-      src="https://contrib.rocks/image?repo=ATAC-Helicopter/VaultSync"
-    />
+    <img src="https://contrib.rocks/image?repo=ATAC-Helicopter/VaultSync" alt="VaultSync contributors"/>
   </a>
 </p>
 
-<p align="center">
-  <a href="https://www.producthunt.com/products/vaultsync?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vaultsync" target="_blank" rel="noopener noreferrer">
-    <img
-      src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1094807&amp;theme=dark&amp;t=1773182638071"
-      alt="VaultSync on Product Hunt"
-      width="250"
-      height="54"
-    />
-  </a>
-</p>
-
-<details>
-<summary><strong>Additional repository links</strong></summary>
-
-- [Latest release](https://github.com/ATAC-Helicopter/VaultSync/releases/latest)
-- [All releases and prereleases](https://github.com/ATAC-Helicopter/VaultSync/releases)
-- [Persistent download history](https://github.com/ATAC-Helicopter/VaultSync/tree/download-stats)
-- [Open issues](https://github.com/ATAC-Helicopter/VaultSync/issues)
+- [All releases](https://github.com/ATAC-Helicopter/VaultSync/releases)
 - [Pull requests](https://github.com/ATAC-Helicopter/VaultSync/pulls)
+- [Open issues](https://github.com/ATAC-Helicopter/VaultSync/issues)
+- [Download history](docs/DOWNLOAD_STATS.md)
+- [Product Hunt](https://www.producthunt.com/products/vaultsync)
 
-GitHub badge counters can lag because of third-party caching. Use the download-statistics history for persistent release totals.
+Third-party counters and graphics may be cached or temporarily unavailable.
 
 </details>
 
@@ -478,20 +383,33 @@ GitHub badge counters can lag because of third-party caching. Use the download-s
 
 ## Contributing
 
-Contributions, bug reports, documentation improvements, translations, testing, and product feedback are welcome.
+Bug reports, translations, testing, documentation improvements, feature proposals, and code contributions are welcome.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Community participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before submitting changes.
 
----
+For security reports, use the private process described in [SECURITY.md](SECURITY.md).
 
 ## License
 
 VaultSync is licensed under the [MIT License](LICENSE).
 
-Bundled helper tools may use separate licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Bundled third-party components may have separate licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ---
 
-## Credits
+<p align="center">
+  <strong>VaultSync</strong><br>
+  Back up with confidence.
+</p>
 
-Created by **Flavio Giacchetti** with contributions from the VaultSync community.
+<p align="center">
+  Created by <strong>Flavio Giacchetti</strong> with contributions from the VaultSync community.
+</p>
+
+<p align="center">
+  <a href="https://fglabs.dev/vaultsync">Website</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/ATAC-Helicopter/VaultSync/releases/latest">Download</a>
+  &nbsp;·&nbsp;
+  <a href="https://discord.gg/sgP8UzeAQt">Discord</a>
+</p>

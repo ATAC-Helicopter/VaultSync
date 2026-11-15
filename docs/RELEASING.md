@@ -2,6 +2,21 @@
 
 This document defines the current release packaging flow.
 
+## Stable promotion and patch-release safety
+
+All non-Stable PRs use **Create a merge commit** and retain original commits.
+The Stable branch has **one qualified release/hotfix merge commit on the
+first-parent history** per promotion; Git's full graph still contains the
+source commits, so this is not squash. No direct Stable feature/fix commits,
+rebase, fast-forward or force-push. Do not confuse `Squash and merge` with
+an actual merge commit.
+
+The 1.8.10 preparation isolates already-shipped 1.8.9 code regressions from
+future 1.9 features and from the private embargoed advisory fix. Candidates
+need exact SHA approval, cross-platform builds, native package tests,
+runtime servicing, updater/rollback, provenance and security qualification
+before stable promotion. See [engineering workflow](ENGINEERING_WORKFLOW.md).
+
 ## Release cadence
 
 - Minor releases target seven days and have a fourteen-day maximum from the
@@ -13,15 +28,16 @@ This document defines the current release packaging flow.
 - Major releases begin after their planned minor train is complete and use one
   or more explicit betas when the combined feature set is stable enough for
   broader qualification.
-- `1.8.9` targets Stable on 2026-09-09 and has a maximum date of 2026-09-16.
+- The published stable is `1.8.9` (2026-09-16). Planned maintenance patch `1.8.10` targets 2026-11-14 subject to all platform and release gates; see `docs/RELEASE_1.8.10.md`.
 
 ## Prerequisites
-- .NET 10 SDK
+- Serviced .NET 10 SDK pinned by `global.json` (currently 10.0.404)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release is `1.8.8`.
-- The active development target is `1.8.9` on `release/1.8.9`, integrating
-  through `Dev` and promoted to `Stable` only after its release gates pass.
+- The current public stable release is `1.8.9`.
+- The maintenance candidate is prepared from published `Stable` on `release/1.8.10`.
+  It must meet protected review and exact-source gates before promotion; no
+  unreleased 1.9 features or private vulnerability details are imported.
 - The owner-approved 1.8.9 maintainer exception is recorded on
   [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168).
   It allowed missing review approval and documented interactive/Store-runtime
@@ -56,8 +72,8 @@ This document defines the current release packaging flow.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.9 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.9 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.10 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.10 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a

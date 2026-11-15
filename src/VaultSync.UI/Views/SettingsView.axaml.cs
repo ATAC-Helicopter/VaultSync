@@ -1,6 +1,8 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using VaultSync.UI.Infrastructure;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using VaultSync.UI.Services;
@@ -28,6 +30,18 @@ namespace VaultSync.UI
 
         internal static ResponsiveLayout GetResponsiveLayout(double width) =>
             new(StackContent: width < StackedContentWidth);
+
+        private static void OnOpenCommunity(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SystemFileLauncher.OpenUri("https://discord.gg/sgP8UzeAQt");
+            }
+            catch (Exception)
+            {
+                // An optional community link must not interrupt Settings.
+            }
+        }
 
         private void InitializeComponent()
         {

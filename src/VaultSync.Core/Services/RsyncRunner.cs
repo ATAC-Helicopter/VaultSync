@@ -17,11 +17,20 @@ namespace VaultSync.Core.Services
         private static readonly ConcurrentDictionary<string, RsyncCapabilities> s_capabilityCache = new(StringComparer.OrdinalIgnoreCase);
         private readonly bool _useWholeFile;
         private readonly string _rsyncPath;
+        private readonly Func<string> _excludeFilePathFactory;
 
         public RsyncRunner(bool useWholeFile = true, string? rsyncPath = null)
+            : this(useWholeFile, rsyncPath, () =>
+                Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt"))
+        {
+        }
+
+        // The test names its own file instead of enumerating any shared temporary directory.
+        internal RsyncRunner(bool useWholeFile, string? rsyncPath, Func<string> excludeFilePathFactory)
         {
             _useWholeFile = useWholeFile;
             _rsyncPath = string.IsNullOrWhiteSpace(rsyncPath) ? "rsync" : rsyncPath;
+            _excludeFilePathFactory = excludeFilePathFactory ?? throw new ArgumentNullException(nameof(excludeFilePathFactory));
         }
 
         public string Name => "rsync";
@@ -45,14 +54,14 @@ namespace VaultSync.Core.Services
             BackupSafetyService.EnsureSafeBackupRoot(project, destination);
 
             var filter = FilterService.FromPresetAndLocal(project.RootPath, project.Preset);
-            string? tempExcludeFile = null;
+            using var tempExcludeFile = new TemporaryExcludeFile();
 
             if (filter.HasRules)
             {
-                tempExcludeFile = Path.Combine(Path.GetTempPath(), $"vaultsync_exclude_{Guid.NewGuid():N}.txt");
+                tempExcludeFile.Path = _excludeFilePathFactory();
                 IReadOnlyList<string> patterns = filter.RawPatterns ?? Array.Empty<string>();
                 await File.WriteAllLinesAsync(
-                    tempExcludeFile,
+                    tempExcludeFile.Path,
                     patterns.Where(p => !string.IsNullOrWhiteSpace(p)),
                     ct).ConfigureAwait(false);
             }
@@ -107,9 +116,9 @@ namespace VaultSync.Core.Services
 
             if (OperatingSystem.IsWindows())
             {
-                if (tempExcludeFile != null)
+                if (tempExcludeFile.Path != null)
                 {
-                    psi.ArgumentList.Add($"--exclude-from={ToRsyncPath(tempExcludeFile)}");
+                    psi.ArgumentList.Add($"--exclude-from={ToRsyncPath(tempExcludeFile.Path)}");
                 }
 
                 psi.ArgumentList.Add(ToRsyncPath(src));
@@ -117,9 +126,9 @@ namespace VaultSync.Core.Services
             }
             else
             {
-                if (tempExcludeFile != null)
+                if (tempExcludeFile.Path != null)
                 {
-                    psi.ArgumentList.Add($"--exclude-from={tempExcludeFile}");
+                    psi.ArgumentList.Add($"--exclude-from={tempExcludeFile.Path}");
                 }
 
                 psi.ArgumentList.Add(src);
@@ -198,11 +207,6 @@ namespace VaultSync.Core.Services
                 TryKill(proc);
                 throw;
             }
-            finally
-            {
-                TryDeleteExcludeFile(tempExcludeFile);
-            }
-
             return proc.ExitCode;
         }
 
@@ -235,6 +239,14 @@ namespace VaultSync.Core.Services
                 // The process may have exited between cancellation observation and this cleanup attempt.
                 RuntimeLog.WriteVerbose($"[RsyncRunner] Could not stop an already-exiting rsync process: {ex.Message}");
             }
+        }
+
+        // Own the exclusion file from allocation through write, process startup and exit.
+        private sealed class TemporaryExcludeFile : IDisposable
+        {
+            public string? Path { get; set; }
+
+            public void Dispose() => TryDeleteExcludeFile(Path);
         }
 
         private static void TryDeleteExcludeFile(string? path)

@@ -62,6 +62,15 @@ paths are redacted and backup payloads or credentials are never included. It
 remains local until you choose to share it, and standard SHA-256 tooling can
 verify its contents without VaultSync.
 
+### Planned portable and offsite recovery
+
+The current recovery drills and evidence exports do **not** provide a
+standalone no-install restore utility or native S3 Object Lock support.
+The roadmap places independent clean-machine recovery in **1.9.2** and
+qualified offsite recovery in **1.9.3**. Both must prove actual restoration
+without the original local database, rather than rely on metadata presence
+or an immutability setting. See [the planned qualification contract](../RECOVERY_PORTABILITY_AND_OBJECT_LOCK.md).
+
 Technical details:
 
 - [Disaster recovery](../DISASTER_RECOVERY.md)
