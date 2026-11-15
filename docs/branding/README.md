@@ -14,8 +14,7 @@ The VaultSync mark is a direct evolution of the original open-vault identity. It
 
 - `vaultsync-logo-icon-preview.png`: 512 × 512 general-purpose preview and website icon.
 - `vaultsync-reddit-icon.png`: 300 × 300 community icon.
-- `vaultsync-reddit-banner.png`: 1080 × 128 community banner.
-- `vaultsync-social-preview.png`: 1280 × 640 Open Graph and repository social preview.
+- `vaultsync-social-preview.png`: shared README, social preview and Reddit banner asset.
 - `vaultsync-logo-icon-9x16-1440x2160.png`: portrait press/social artwork.
 
 The Windows, macOS, Linux, and Microsoft Store exports are generated from the same canonical SVG by `scripts/generate_brand_assets.sh`.

@@ -61,14 +61,6 @@ done
 iconutil -c icns "$iconset" -o "$repo_root/src/VaultSync.UI/Assets/VaultSync.icns"
 
 ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
-  -filter_complex "[0:v]scale=1080:445,crop=1080:128:(iw-ow)/2:(ih-oh)/2[bg];[1:v]scale=-1:92[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
-  -frames:v 1 "$repo_root/docs/branding/vaultsync-reddit-banner.png"
-
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
-  -filter_complex "[0:v]scale=1280:640:force_original_aspect_ratio=increase,crop=1280:640[bg];[1:v]scale=820:-1[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
-  -frames:v 1 "$repo_root/docs/branding/vaultsync-social-preview.png"
-
-ffmpeg -hide_banner -loglevel error -y -i "$background" -i "$lockup_png" \
   -filter_complex "[0:v]scale=620:300:force_original_aspect_ratio=increase,crop=620:300[bg];[1:v]scale=450:-1[logo];[bg][logo]overlay=(W-w)/2:(H-h)/2" \
   -frames:v 1 "$repo_root/packaging/VaultSync.Store/Assets/SplashScreen.png"
 
