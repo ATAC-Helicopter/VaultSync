@@ -200,7 +200,8 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "_send_discord_request", return_value=(
                     200, "application/json", b'{"id":"123456789012345678"}')) as sender,
                 patch.object(sys, "argv", ["notifier"]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook}, clear=True),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": webhook,
+                                        "DISCORD_DEVLOG_ROLE_ID": "123456789012345678"}, clear=True),
                 redirect_stdout(StringIO()),
             ):
                 with working_directory(root):
@@ -262,6 +263,25 @@ class DiscordDevlogTests(unittest.TestCase):
                         mod.main()
             self.assertFalse(output.exists())
 
+    def test_main_refuses_pending_post_without_role_and_keeps_cursor(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "discord-devlog-state.json"
+            output = Path(root) / "discord-devlog-new-state.json"
+            state.write_text(json.dumps({"last_guid": "https://fglabs.dev/devlog/old"}))
+            with (
+                patch.object(mod, "urlopen", return_value=FakeResponse(
+                    fixture(("new", "VaultSync"), ("old", "VaultSync")))),
+                patch.object(sys, "argv", ["notifier"]),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK":
+                           "https://discord.com/api/webhooks/123456789012345678/token"}, clear=True),
+            ):
+                with working_directory(root):
+                    with self.assertRaisesRegex(ValueError, "Missing DISCORD_DEVLOG_ROLE_ID"):
+                        mod.main()
+            self.assertFalse(output.exists())
+            self.assertEqual(json.loads(state.read_text())["last_guid"],
+                             "https://fglabs.dev/devlog/old")
+
     def test_main_does_not_advance_cursor_after_post_failure(self):
         with tempfile.TemporaryDirectory() as root:
             state = Path(root) / "discord-devlog-state.json"
@@ -274,7 +294,8 @@ class DiscordDevlogTests(unittest.TestCase):
                 patch.object(mod, "_send_discord_request", return_value=(
                     403, "application/json", b'{"code":50013}')),
                 patch.object(sys, "argv", ["notifier"]),
-                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url}, clear=True),
+                patch.dict(os.environ, {"DISCORD_DEVLOG_WEBHOOK": url,
+                                        "DISCORD_DEVLOG_ROLE_ID": "123456789012345678"}, clear=True),
             ):
                 with working_directory(root):
                     with self.assertRaisesRegex(RuntimeError, "Discord API error code 50013"):
