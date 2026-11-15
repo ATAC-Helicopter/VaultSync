@@ -7,6 +7,8 @@ Use this page as the primary index for all project documentation.
 - Documentation hub: [DOCUMENTATION](../DOCUMENTATION.md)
 - Wiki home: [VaultSync Wiki](wiki/Home.md)
 - Community help and Discord onboarding: [Community and Support](COMMUNITY.md)
+- Discord community bot, commands, ideas, tickets and workspace rollout:
+  [VaultSync Community Bot](https://github.com/ATAC-Helicopter/vaultsync-community-bot)
 - Reproducible first backup verification: [Recovery Lab v1](wiki/Recovery-Lab.md)
 - Help page (in-app target): [Help](HELP.md)
 
@@ -19,6 +21,8 @@ Use this page as the primary index for all project documentation.
 - Changelog: [CHANGELOG](../CHANGELOG.md)
 - Current release highlights: [What's New](WHATS_NEW.md)
 - 1.8.9 bug fixes and UI polish: [1.8.9 release review](RELEASE_1.8.9.md)
+- 1.8.10 maintenance candidate and release qualification:
+  [1.8.10 release contract](RELEASE_1.8.10.md)
 - Reproducible release performance profile: [performance benchmarks](PERFORMANCE_BENCHMARKS.md)
 - Release process: [Releasing](RELEASING.md)
 - Canonical direct-download manifest schema:
@@ -31,6 +35,8 @@ Use this page as the primary index for all project documentation.
   [Video production guide](video/recording-guide.md)
 
 ## Contribution and Governance
+- Maintainer workflow, branch merge policy, label/Project gates, targeted tests
+  and private security review: [Engineering workflow](ENGINEERING_WORKFLOW.md)
 - Contributing: [CONTRIBUTING](../CONTRIBUTING.md)
 - Security policy: [SECURITY](../SECURITY.md)
 - Privacy overview: [Privacy](PRIVACY.md)

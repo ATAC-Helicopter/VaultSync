@@ -209,6 +209,35 @@ public sealed class PatchManifestCompatibilityTests
     }
 
     [Theory]
+    [InlineData("1.8.9", true)]
+    [InlineData("v1.8.9+installed.1", true)]
+    [InlineData("1.8.8", false)]
+    [InlineData("1.8.10", false)]
+    [InlineData("1.8.9-beta.1", false)]
+    public void Maintenance1810Manifest_QualifiesOnlyExact189Predecessor(string installedVersion, bool expected)
+    {
+        var manifest = new PatchManifest
+        {
+            PreviousVersion = "1.8.9",
+            BaseVersions = new List<string> { "1.8.9" },
+            TargetVersion = "1.8.10"
+        };
+
+        bool eligible = PatchUpdateService.TryValidateAllowedBaseVersions(
+            manifest,
+            installedVersion,
+            out IReadOnlyList<string> allowed,
+            out string matched,
+            out string statusCode,
+            out _);
+
+        Assert.Equal(expected, eligible);
+        Assert.Equal(["1.8.9"], allowed);
+        Assert.Equal(expected ? "1.8.9" : string.Empty, matched);
+        Assert.Equal(expected ? "eligible" : "base-version-not-allowed", statusCode);
+    }
+
+    [Theory]
     [InlineData("1.8.7", true)]
     [InlineData("v1.8.7+installed", true)]
     [InlineData("1.8.6", false)]

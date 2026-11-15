@@ -59,6 +59,13 @@ namespace VaultSync.CLI.Commands
     {
         protected override Task<int> ExecuteAsync(CommandContext context, RemoveProjectSettings s, CancellationToken cancellationToken)
         {
+            // A noninteractive request must explicitly acknowledge removal before opening the database.
+            if (!s.Yes && (s.Quiet || Console.IsInputRedirected))
+            {
+                Console.Error.WriteLine("Project removal requires --yes when --quiet is set or standard input is redirected.");
+                return Task.FromResult(2);
+            }
+
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
             repo.EnsureSchema();
@@ -66,7 +73,7 @@ namespace VaultSync.CLI.Commands
             if (repo.GetProjectByName(s.Name) is null)
                 throw new InvalidOperationException($"Project '{s.Name}' not found");
 
-            if (!s.Yes && !s.Quiet)
+            if (!s.Yes)
             {
                 AnsiConsole.MarkupLine(
                     "[yellow]This removes the project registration and local history index only.[/] " +

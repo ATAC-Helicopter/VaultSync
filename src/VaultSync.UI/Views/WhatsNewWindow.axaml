@@ -101,15 +101,23 @@
               BorderBrush="{DynamicResource BorderSoft}"
               BorderThickness="0,1,0,0"
               Padding="20">
-        <Button Content="{infra:LocalizedString Key=WhatsNew.Close}"
-                Command="{CompiledBinding CloseCommand}"
-                Background="{DynamicResource AccentBrush}"
-                Foreground="{DynamicResource TextOnPillBrush}"
-                BorderBrush="{DynamicResource AccentBrush}"
-                CornerRadius="8"
-                MinWidth="132"
-                HorizontalAlignment="Right"
-                HorizontalContentAlignment="Center" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <Button Grid.Column="0"
+                  Content="{infra:LocalizedString Key=Settings.Advanced.CommunityJoin}"
+                  Click="OnOpenCommunity"
+                  Classes="action-ghost"
+                  HorizontalAlignment="Left" />
+          <Button Grid.Column="1"
+                  Content="{infra:LocalizedString Key=WhatsNew.Close}"
+                  Command="{CompiledBinding CloseCommand}"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="{DynamicResource TextOnPillBrush}"
+                  BorderBrush="{DynamicResource AccentBrush}"
+                  CornerRadius="8"
+                  MinWidth="132"
+                  HorizontalAlignment="Right"
+                  HorizontalContentAlignment="Center" />
+        </Grid>
       </Border>
     </Grid>
   </Border>

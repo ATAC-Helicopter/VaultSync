@@ -73,6 +73,38 @@ class RuntimePackAuditTests(unittest.TestCase):
             self.assertEqual(1, len(errors))
             self.assertIn("metadata is missing", errors[0])
 
+    def test_updated_core_does_not_hide_unserviced_optional_frameworks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.runtimeconfig.json"
+            for name in ("Microsoft.AspNetCore.App", "Microsoft.WindowsDesktop.App"):
+                path.write_text(json.dumps({"runtimeOptions": {"includedFrameworks": [
+                    {"name": "Microsoft.NETCore.App", "version": "10.0.13"},
+                    {"name": name, "version": "10.0.12"}
+                ]}}))
+                errors = runtime_pack_audit.audit_runtimeconfig(path, "10.0.13")
+                self.assertEqual(1, len(errors))
+                self.assertIn(name + " 10.0.12", errors[0])
+
+    def test_all_serviced_frameworks_are_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.runtimeconfig.json"
+            path.write_text(json.dumps({"runtimeOptions": {"includedFrameworks": [
+                {"name": name, "version": "10.0.13"} for name in (
+                    "Microsoft.NETCore.App", "Microsoft.AspNetCore.App", "Microsoft.WindowsDesktop.App")
+            ]}}))
+            self.assertEqual([], runtime_pack_audit.audit_runtimeconfig(path, "10.0.13"))
+
+    def test_invalid_preview_duplicate_and_unknown_framework_metadata_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.runtimeconfig.json"
+            core = {"name": "Microsoft.NETCore.App", "version": "10.0.13"}
+            for invalid in (None, {}, {"name": "Other.App", "version": "10.0.13"}, core,
+                            {"name": "Microsoft.AspNetCore.App", "version": "10.0.14-preview.1"},
+                            {"name": "Microsoft.AspNetCore.App", "version": "11.0.0"},
+                            {"name": "Microsoft.AspNetCore.App", "version": 13}):
+                path.write_text(json.dumps({"runtimeOptions": {"includedFrameworks": [core, invalid]}}))
+                self.assertTrue(runtime_pack_audit.audit_runtimeconfig(path, "10.0.13"))
+
     def test_resolve_runtimeconfig_rejects_paths_outside_allowed_roots(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as repo_tmp:
             with tempfile.TemporaryDirectory() as outside_tmp:

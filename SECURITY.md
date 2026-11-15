@@ -17,6 +17,24 @@ Please include:
 - impact summary
 - any suggested mitigation
 
+## Private remediation and coordinated disclosure
+
+Maintain draft vulnerability reports and reproduction evidence in a **private
+GitHub Security Advisory** and restricted temporary private fork. Invite
+external researchers as **advisory collaborators**, not as general repository
+writers or administrators. Do not expose exploit detail in public Issues,
+PRs, CI logs, release notes or open Discord channels before the qualified
+fix is available.
+
+Confirm impacted *published* versions, attack prerequisites and actual
+boundary violations; test both negative/refusal cases and normal backup
+paths on disposable fixtures. Review symbolic links, filesystem races and
+Windows/macOS/Linux differences when relevant; disclose any unqualified
+scenario rather than treating a passing isolated suite as universal proof.
+Coordinate confidential review, patch release qualification, reporter credit
+and only then publication of the advisory. See the
+[engineering workflow](docs/ENGINEERING_WORKFLOW.md).
+
 ## Response Policy
 - We acknowledge valid reports as soon as possible.
 - We triage severity and provide an estimated remediation window.

@@ -662,6 +662,12 @@ public sealed class NetworkMountService
     {
         try
         {
+            if (!TryResolveSmbMountRoot(res.EffectivePath, out string mountRoot))
+            {
+                Log("Auto-unmount skipped: no verified SMB mount root matches this destination.");
+                return;
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName               = "/sbin/umount",
@@ -671,7 +677,7 @@ public sealed class NetworkMountService
                 CreateNoWindow         = true
             };
 
-            psi.ArgumentList.Add(res.EffectivePath);
+            psi.ArgumentList.Add(mountRoot);
 
             using var proc = Process.Start(psi);
             proc?.WaitForExit(5_000);
@@ -954,15 +960,7 @@ public sealed class NetworkMountService
 
         try
         {
-            string candidate = string.Empty;
-            foreach (string mountPoint in mounts.Select(mount => mount.MountPoint))
-            {
-                if (!path.StartsWith(mountPoint, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (mountPoint.Length > candidate.Length)
-                    candidate = mountPoint;
-            }
+            string? candidate = ResolveMacSmbMountRoot(path, mounts.Select(mount => mount.MountPoint));
 
             if (string.IsNullOrWhiteSpace(candidate))
                 return false;
@@ -975,6 +973,13 @@ public sealed class NetworkMountService
             return false;
         }
     }
+
+    // Match directory boundaries, not merely lexical prefixes such as /Volumes/BackupElsewhere.
+    internal static string? ResolveMacSmbMountRoot(string path, IEnumerable<string> mountPoints) =>
+        string.IsNullOrWhiteSpace(path) ? null : mountPoints
+            .Where(mount => BackupSafetyService.IsPathUnderRoot(mount, path))
+            .OrderByDescending(mount => Path.GetFullPath(mount).Length)
+            .FirstOrDefault();
 
     private static class KeepAliveRegistry
     {
