@@ -24,7 +24,7 @@ Delivery state is stored on the standalone branch `automation/vaultsync-devlog-s
 
 The webhook is a GitHub Actions secret; never store it in repository content. For private security reports, use VaultSync's security policy, not Discord. The script accepts only FG Labs VaultSync article URLs, limits the feed and messages, restricts mentions to an optional opted-in role, and rejects unrecognized webhook URL shapes. The publication job alone receives `contents: write`; PR validation has read access and cannot publish.
 
-The Discord channel is for FG Labs devlog articles, including diaries about released builds. **Release announcements** and critical notices should still be posted separately to `#announcements`. No GitHub release assets or store builds are changed by this notifier.
+The Discord channel is for FG Labs devlog articles, including diaries about released builds. **Release announcements** go through the separate [VaultSync release notification workflow](discord-release-notifications.md). No GitHub release assets or store builds are changed by this notifier.
 
 ## Test locally
 
