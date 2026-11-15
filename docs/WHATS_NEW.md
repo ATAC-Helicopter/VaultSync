@@ -2,9 +2,22 @@
 
 ## [1.8.10]
 
-VaultSync 1.8.10 is a planned security and dependency maintenance patch on the 1.8.9 stable baseline. It does not include 1.9 recovery features. Public release notes and platform support claims remain pending validation.
+VaultSync 1.8.10 is a maintenance update being prepared on the 1.8.9 stable baseline. It focuses on safer everyday operations, more reliable exclusions and refreshed dependencies. This release candidate is not yet published or fully qualified. Disk cloning and bootable recovery remain part of the separate 1.9 development cycle.
 
-An optional link to the [VaultSync Discord community](https://discord.gg/sgP8UzeAQt) is now available in What's New and Settings > Advanced for help, bug-report discussions and general community chat. GitHub remains the canonical tracker for confirmed issues; no notifications or tracking are added.
+### Safer everyday operations
+- CLI project removal now requires explicit `--yes` confirmation when running quietly or without interactive input. Removing a project registration does not delete its source files or stored backups.
+- On macOS, cleanup of a mounted SMB destination now targets the actual share mount rather than a nested project folder.
+
+### More reliable backup exclusions
+- Refresh `.vaultsyncignore` rules and preset mappings when their contents change, even if a tool preserves the original file timestamp.
+- Remove temporary rsync exclusion files when the external sync tool cannot start, avoiding leftover temporary files.
+
+### Updated foundations
+- Refresh the serviced .NET 10 runtime and related packages, alongside coordinated rendering, font and development-tool dependencies.
+- Preserve existing backup formats and 1.8.x workflows; this maintenance release does not introduce the experimental 1.9 disk-recovery features.
+
+### Community and support
+- Open the optional VaultSync Discord community from What's New or Settings > Advanced. GitHub Issues remains the place to track confirmed bugs, and no new account, notifications or telemetry are required.
 
 ## [1.8.9]
 
