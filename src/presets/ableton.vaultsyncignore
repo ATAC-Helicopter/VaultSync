@@ -1,7 +1,0 @@
-Ableton Projects/*/Backup/**
-Ableton Projects/*/Samples/**
-*.tmp
-*.asd
-.DS_Store
-Thumbs.db
-.git/
