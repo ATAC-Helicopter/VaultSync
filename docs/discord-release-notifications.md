@@ -1,6 +1,6 @@
 # VaultSync release notifications on Discord
 
-VaultSync sends one Discord notification when a GitHub release is published. The workflow reads the public release notes from the VaultSync GitHub release and uses the `DISCORD_RELEASE_WEBHOOK` Actions secret. Mentions are disabled in release text.
+VaultSync sends one Discord notification to **`#announcements`** when a GitHub release is published. Configure the `DISCORD_RELEASE_WEBHOOK` Actions secret with a webhook created in that channel. The workflow reads the public release notes from the VaultSync GitHub release; mentions are disabled in release text.
 
 To announce an already-published release, run **VaultSync release to Discord** from the `Stable` branch and enter its tag, for example `v1.8.10`. The workflow rejects draft releases and tags outside VaultSync's version format.
 

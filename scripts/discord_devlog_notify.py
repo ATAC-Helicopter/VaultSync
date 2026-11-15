@@ -193,6 +193,8 @@ def main():
     posts = read_feed(xml)
     pending, cursor = choose_notifications(posts, state, args.publish_latest)
     role_id = os.getenv("DISCORD_DEVLOG_ROLE_ID", "").strip()
+    if pending and not args.dry_run and not role_id:
+        raise ValueError("Missing DISCORD_DEVLOG_ROLE_ID")
     messages = [message(post, role_id) for post in pending]
     if args.dry_run:
         print(json.dumps({"messages": messages, "next_guid": cursor}, indent=2))
