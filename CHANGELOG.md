@@ -1,5 +1,19 @@
 ﻿# Changelog
-## [1.8.9] - Unreleased
+## [1.8.10] - Unreleased
+### Security
+- [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
+### Added
+- [VS-1997] Offer an optional Discord community link in What's New and Settings > Advanced, without notifications or telemetry.
+### Fixed
+- [BUG-19048] Refresh exclusion-file and preset-index mappings after timestamp-preserving changes without altering legacy missing-preset behavior. (@ameenalqershi)
+- [BUG-19047] Clean up temporary rsync exclusion files if tool startup fails. (@ameenalqershi)
+- [BUG-19001] Require explicit confirmation for noninteractive CLI project removal; retain source and stored backups.
+- [BUG-19027] Read JSON preset mappings independently of property-name capitalization.
+- [BUG-19029] Unmount the actual SMB share root, not a nested destination folder.
+### Changed
+- [VS-1997] Refresh test tooling and pinned CI actions, and align the managed and native rendering packages; cross-platform compatibility qualification remains pending.
+
+## [1.8.9] - 2026-09-16
 ### Maintenance
 - [VS-1897] Audit 1.8.9 safety, edge cases, usability, dependencies, and repository health.
 - [VS-1896] Clear static-analysis findings and restore the Sonar coverage gate.

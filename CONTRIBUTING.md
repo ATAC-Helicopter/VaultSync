@@ -72,19 +72,35 @@ Examples:
 - List compatibility/migration impact if any.
 - Include validation evidence (build, tests, manual checks).
 
+See the consolidated [engineering workflow](docs/ENGINEERING_WORKFLOW.md)
+for classification, exact-SHA independent regression tests, secure backports
+and merge/Stable release requirements.
+
+Each PR requires exactly one valid `priority:p0..p3`, one `status:*`, one
+concrete `release:X.Y.Z`, at least one `area:*`, and one `kind:*`.
+Version-prefixed release umbrella PRs labeled `area:release` may omit
+`kind:*` because they consolidate multiple types. Missing/conflicting
+classification must block the tracking policy check when configured as
+required in the target branch ruleset. An additional family release label
+does not replace the concrete version.
+
 ## 6.0) Repository Workflow Standard (PR-first)
 - Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).
-- Merge feature, fix, and release PRs into `Dev` with a **merge commit**. Do not
-  squash or rebase them at merge time: `Dev` must retain the source commits and
-  their original identities.
-- Promote `Dev` into `Stable` with a **merge commit**. `Stable` is a shipped-
-  release spine: do not squash, rebase, or fast-forward a promotion into it.
+- Merge PRs into **all non-Stable branches** using **Create a merge commit**:
+  preserve each original commit, identity and author; do not squash or rebase.
+- For **Stable**, use a **single real release/hotfix merge commit on the
+  first-parent history** for each qualified promotion, not squash/rebase or
+  fast-forward. All incoming commits remain reachable in Git's full graph.
+  View the release-only history with `git log --first-parent --oneline Stable`.
+  GitHub's `Squash and merge` produces a single commit but **not** a merge commit.
 - Release branches use `release/<version>` and receive the same deletion,
   force-push, review, and status-check protection as `Dev`.
-- Direct pushes are reserved for:
-  - emergency maintainer hotfixes
+- Direct pushes to **non-Stable** branches are reserved for:
+  - emergency maintainer preparation
   - metadata-only maintenance (for example: label/board sync scripts)
   - explicit owner decision
+- **Stable** receives reviewed promotion/hotfix merge commits only: never
+  standalone direct feature/fix commits.
 - A Stable hotfix still goes through a hotfix branch and merge commit so the
   Stable first-parent history remains release/hotfix merges only.
 - Even for direct pushes, keep issue/roadmap/changelog links exactly as with PRs.
@@ -98,7 +114,7 @@ Keep planning, implementation, and release tracking connected:
 - If an issue does not exist yet, create it before opening the PR for non-trivial work.
 - Keep issue titles aligned with roadmap/changelog IDs when applicable:
   - Feature work: `VS-xxxx: concise scope`
-  - Bug-fix work with changelog bug IDs: `BUG-xxxxx / VS-xxxx: concise scope`
+  - Bug-fix work: `BUG-xxxxx: concise scope`; reuse the one canonical bug ID, not a second VS identifier
   - Example (feature): `VS-1601: richer restore flows`
   - Example (bug): `BUG-15020 / VS-1578: harden app config reads against transient file locks`
 - Update issue metadata when opening/updating a PR:
@@ -108,7 +124,7 @@ Keep planning, implementation, and release tracking connected:
   - issue should be closed (`Closes #...`) or explicitly left open with next-step notes
   - project status should be updated (`Done` for closed; `In progress`/`Todo` otherwise)
 - Release-gated policy:
-  - For unreleased work (for example under `1.5.1 - Unreleased`), keep issue open and set project status `In progress` (or `Done` only when you intentionally track implementation-complete but unreleased in your process).
+  - Keep unreleased, release-gated issues open and Project status `In progress`, even if implementation tests pass; close as complete only when actually shipped/accepted.
   - Close the issue when the release cut/merge policy says the item is truly shipped.
 - CLI formatting rule:
   - For `gh issue comment` and similar commands, use a PowerShell here-string (`@' ... '@`) or `--body-file`.
@@ -185,3 +201,8 @@ Commit/push defaults:
 Reference:
 - `DOCUMENTATION.md`
 - `docs/README.md`
+
+
+## Runtime security servicing
+
+Use the serviced .NET 10 SDK 10.0.404 or a later version on the same supported line. Every distributed self-contained Microsoft runtime must be at least 10.0.15, including optional framework packs. Audit with `scripts/runtime_pack_audit.py` and preserve package advisories, exact artifact evidence, protected branch review and publication gates. See `docs/RUNTIME_SECURITY.md`. Refs #787 / VS-1997.

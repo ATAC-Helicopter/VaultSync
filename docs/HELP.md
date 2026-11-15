@@ -156,6 +156,17 @@ See full troubleshooting page: `docs/wiki/Troubleshooting.md`.
 
 See `docs/PRIVACY.md` and `docs/CRASH_REPORTING.md`.
 
+## Community and Support
+
+- Join the optional [VaultSync Discord community](https://discord.gg/sgP8UzeAQt) for general discussion, support and development feedback.
+- Use the server's Resources guide to find current support, ideas and contribution channels.
+- The VaultSync Community Bot offers optional private onboarding surveys, community ideas and restricted support tickets where configured.
+- Confirmed bugs should be reported through [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose).
+- Security vulnerabilities must follow `SECURITY.md`, not public Discord discussions or support tickets.
+- Community membership is never required to use VaultSync.
+
+See [Community and Support](COMMUNITY.md).
+
 ## More Docs
 - Docs index: `docs/README.md`
 - Documentation hub: `DOCUMENTATION.md`

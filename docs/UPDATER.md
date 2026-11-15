@@ -32,6 +32,13 @@ macOS can use architecture-specific patch names:
 - `vaultsync-patch-macos-apple-silicon.*`
 - `vaultsync-patch-macos-intel.*`
 
+For the planned **VaultSync 1.8.10** maintenance release, **1.8.9** is the only
+currently configured direct-download patch predecessor. Any patch asset must
+still pass complete managed-file inventory, SHA-256/provenance, platform overlay
+safety and installed upgrade tests; otherwise use the full installer. Other
+historical versions are **not** implicitly supported by this patch. No 1.8.10
+asset has been published or qualified yet.
+
 VaultSync 1.8.9 targets 1.8.8 as its primary patch predecessor on every direct-
 download platform. Windows, macOS, and Linux additionally consider 1.8.2,
 1.8.3, 1.8.5, 1.8.6, and 1.8.7, but include each base only when its published
