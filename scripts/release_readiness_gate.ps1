@@ -47,12 +47,12 @@ function Get-FileVersionValue {
 }
 
 function Get-ChangelogHeader {
-    $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
+    $line = Get-Content CHANGELOG.md | Select-Object -First 3 | Where-Object { $_ -match '^## \[(.+?)\] - (Unreleased|\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})' } | Select-Object -First 1
     if (-not $line) {
         throw "Could not find release changelog header in CHANGELOG.md."
     }
 
-    $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{2}\.\d{2}\.\d{4})')
+    $match = [regex]::Match($line, '^## \[(.+?)\] - (Unreleased|\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4})')
     return [pscustomobject]@{
         version = $match.Groups[1].Value.Trim()
         status  = $match.Groups[2].Value.Trim()
