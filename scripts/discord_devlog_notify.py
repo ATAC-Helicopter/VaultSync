@@ -6,9 +6,9 @@ import os
 import re
 import time
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+from http.client import HTTPSConnection, HTTPException
 from xml.etree import ElementTree as ET
 from email.utils import parsedate_to_datetime
 from datetime import timezone
@@ -91,6 +91,34 @@ def message(post, role_id=""):
     }
 
 
+def _send_discord_request(path, data):
+    """Send to Discord through a fixed HTTPS origin, without following redirects.
+
+    The webhook path is validated by post_discord; it is never used as a host.
+    """
+    connection = HTTPSConnection("discord.com", timeout=20)
+    try:
+        connection.request(
+            "POST", path + "?wait=true", body=data,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": DISCORD_USER_AGENT,
+            },
+        )
+        result = connection.getresponse()
+        return (
+            result.status,
+            result.getheader("Content-Type", ""),
+            result.read(16384),
+        )
+    except (OSError, HTTPException):
+        # Network exceptions can contain request paths and webhook tokens.
+        raise RuntimeError("Discord webhook network failure; destination omitted") from None
+    finally:
+        connection.close()
+
+
 def post_discord(webhook, payload):
     url = urlparse(webhook)
     if (url.scheme != "https" or url.netloc not in ("discord.com", "discordapp.com")
@@ -100,49 +128,36 @@ def post_discord(webhook, payload):
 
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     for attempt in range(3):
-        # Never use the incoming URL as the HTTP destination. Only the
-        # validated webhook path is retained; the HTTPS origin is fixed.
-        request = Request("https://discord.com" + url.path + "?wait=true",
-                          data=data, method="POST",
-                          headers={"Content-Type": "application/json",
-                                   "Accept": "application/json",
-                                   "User-Agent": DISCORD_USER_AGENT})
-        try:
-            with urlopen(request, timeout=20) as result:
-                response = json.loads(result.read(16384))
-                if not response.get("id"):
-                    raise ValueError("Discord did not confirm delivery")
-                return response["id"]
-        except HTTPError as error:
-            # Never log the webhook URL/token or raw HTML error pages.
-            error_body = error.read(4096)
-            content_type = (error.headers.get("Content-Type", "") if error.headers else "")
-            discord_error = None
-            if "application/json" in content_type.lower():
-                try:
-                    discord_error = json.loads(error_body)
-                except (UnicodeDecodeError, ValueError):
-                    pass
-            if error.code == 429 and attempt < 2:
-                try:
-                    retry = float(discord_error.get("retry_after", 2)) if isinstance(discord_error, dict) else 2
-                except (TypeError, ValueError):
-                    retry = 2
-                time.sleep(max(0.5, min(10, retry)))
-                continue
+        status, content_type, body = _send_discord_request(url.path, data)
+        if 200 <= status < 300:
+            response = json.loads(body)
+            if not response.get("id"):
+                raise ValueError("Discord did not confirm delivery")
+            return response["id"]
 
-            if isinstance(discord_error, dict) and isinstance(discord_error.get("code"), int):
-                detail = f"Discord API error code {discord_error['code']}"
-            else:
-                detail = "non-JSON response (possible network/Cloudflare block)"
-            raise RuntimeError(
-                f"Discord webhook rejected HTTP {error.code}: {detail}; "
-                "webhook URL and response body intentionally omitted"
-            ) from None
-        except (URLError, OSError):
-            # Network exceptions may contain their request URL (the secret token).
-            raise RuntimeError("Discord webhook network failure; destination omitted") from None
+        discord_error = None
+        if "application/json" in content_type.lower():
+            try:
+                discord_error = json.loads(body)
+            except (UnicodeDecodeError, ValueError):
+                pass
 
+        if status == 429 and attempt < 2:
+            try:
+                retry = float(discord_error.get("retry_after", 2)) if isinstance(discord_error, dict) else 2
+            except (TypeError, ValueError):
+                retry = 2
+            time.sleep(max(0.5, min(10, retry)))
+            continue
+
+        if isinstance(discord_error, dict) and isinstance(discord_error.get("code"), int):
+            detail = f"Discord API error code {discord_error['code']}"
+        else:
+            detail = "non-JSON response (possible network/Cloudflare block)"
+        raise RuntimeError(
+            f"Discord webhook rejected HTTP {status}: {detail}; "
+            "webhook URL and response body intentionally omitted"
+        )
 
 def main():
     parser = argparse.ArgumentParser()
