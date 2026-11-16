@@ -7,6 +7,11 @@ components from the intended product journey; it does not qualify disk support.
 
 ## What an ordinary user can do today
 
+![1.9.0 development Disk cloning page: image verification only, with disk writing disconnected](images/development/Disk_Cloning.png)
+
+Desktop preview from development source `c7f76c86`, November 16, 2026. This
+illustration does not qualify disk support or the installed recovery environment.
+
 The desktop Disk Cloning page can select a folder and request read-only image
 verification on Linux x64. Windows and macOS retain the page but require the
 Linux recovery environment for this verifier. The desktop cannot launch the

@@ -2,6 +2,9 @@
 
 This file is the canonical documentation hub for VaultSync.
 
+Guide illustrations show **1.8.10 stable** with synthetic demonstration data;
+1.9.0 interface previews are confined to development documents.
+
 For a quick file index, see `docs/README.md`.
 
 ## 1. Product Summary

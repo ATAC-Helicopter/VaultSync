@@ -1,10 +1,18 @@
 # Development status — Recovery Horizon
 
-Current published stable: **1.8.9**, September 16, 2026. The complete supplied
+Current published stable: **1.8.10**, November 15, 2026. The complete supplied
 roadmap was reconciled on October 3, 2026. Existing work IDs remain unchanged;
 the BSC aliases in the supplied document have an explicit crosswalk.
 
 ## Current release and preserved work
+
+The following **1.9.0 development** views were rendered from source `c7f76c86`
+on November 16, 2026, with synthetic demonstration projects. They show desktop
+preparation screens, not qualified boot media or a released system-recovery workflow.
+
+![1.9.0 development Dashboard with history navigation and Disk cloning entry](../images/development/Dashboard.png)
+
+![1.9.0 development recovery overview with explicit evidence and coverage limits](../images/development/Recovery.png)
 
 1.9.0 owns disk capture/validation, bootable media, disk restore and complete
 post-restore evidence. The joint architecture direction was approved on 2026-10-20, while
