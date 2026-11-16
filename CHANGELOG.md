@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to VaultSync are documented in this file.
 
@@ -26,6 +26,9 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1980] Keep release notes brief and consecutive entries adjacent.
 
 ### Fixed
+
+- [BUG-19049] Retain the 1.8.10 backup destination and archive-output safety guards.
+- [BUG-19048] Refresh exclusion policies while preserving custom-preset compatibility.
 
 - [BUG-19033] Preserve canonical issue priorities when adopting existing work.
 - [BUG-19008] Restore both console globals before disposing captured discovery output, preventing Windows test runs from retaining a closed Spectre output writer.
