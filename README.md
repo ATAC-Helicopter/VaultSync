@@ -76,6 +76,7 @@ No mandatory cloud account. No automatic crash-report uploads. Your configured s
 - [Back up development projects](https://fglabs.dev/vaultsync/use-cases/backup-development-projects) — Unity, Godot, Blender, source code, and other project folders.
 - [Back up folders to a NAS](https://fglabs.dev/vaultsync/use-cases/backup-to-nas) — local and network storage, including supported SMB destinations.
 - [Verify backups and test restores](https://fglabs.dev/vaultsync/use-cases/verify-backups-and-test-restores) — distinguish successful copies, integrity checks, and recovery drills.
+- [Try the community Recovery Lab](https://fglabs.dev/vaultsync/recovery-lab) — follow a reproducible test with disposable files and record what was actually verified.
 
 ## See VaultSync in action
 
