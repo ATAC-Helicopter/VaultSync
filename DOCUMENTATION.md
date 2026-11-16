@@ -52,8 +52,6 @@ Core pillars:
 - `docs/RECOVERABILITY_ENGINE.md`: native proof trust boundary, safety limits, evidence model, retention behavior, and ProofRestore provenance.
 - `docs/PRIVACY.md`: local-data and crash-reporting privacy guarantees.
 - `docs/CRASH_REPORTING.md`: reviewed, user-sent crash reports and their strict data boundary.
-- `docs/video/recording-guide.md`: reproducible native-app walkthrough
-  recording, no-key neural narration, captions, assembly, and publishing QA.
 
 ### 2.3 Wiki docs
 - `docs/wiki/Home.md`: wiki entry page.

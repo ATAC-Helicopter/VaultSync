@@ -109,6 +109,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Removed
 
+- [VS-1980] Remove repository video production assets and obsolete guide links.
 - [VS-1994] Remove LiveCharts packages and unused weekly chart construction.
 - [VS-1980] Remove unused Inter font packaging while preserving existing font fallbacks.
 

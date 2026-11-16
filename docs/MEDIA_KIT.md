@@ -37,7 +37,7 @@ A realistic demo should use disposable sample data rather than personal files:
 6. Simulate a restore or run an isolated recovery drill where supported.
 7. Open the recovered content in its actual application, noting any dependencies not covered.
 
-For repeatable recording guidance, see [the video recording guide](video/recording-guide.md). For interface visuals, use actual screenshots from [docs/images](images) and the [current product page](https://fglabs.dev/vaultsync). Do not present development mockups as released functionality.
+For interface visuals, use actual screenshots from [docs/images](images) and the [current product page](https://fglabs.dev/vaultsync). Do not present development mockups as released functionality.
 
 ## Appropriate audiences
 

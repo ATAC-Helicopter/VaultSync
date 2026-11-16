@@ -49,8 +49,6 @@ Use this page as the primary index for all project documentation.
 - Microsoft Store planning and packaging notes: [Microsoft Store](MICROSOFT_STORE.md)
 - Microsoft Store submission checklist: [Store submission checklist](MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
 - Download stats snapshots: [Download stats](DOWNLOAD_STATS.md)
-- Walkthrough recording and no-key narration:
-  [Video production guide](video/recording-guide.md)
 
 ## Community and Support
 - Discord channels, safety and support routing: [Community and Support](COMMUNITY.md)
