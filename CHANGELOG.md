@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to VaultSync are documented in this file.
 
@@ -21,6 +21,9 @@ Current stable remains 1.8.9. This release is unscheduled; predecessor and produ
 See [the original development notes](docs/release-evidence/changelog-development-before-standard-2026-10-04.md) and [the release contract](docs/RELEASE_1.9.8.md).
 
 ### Fixed
+
+- [BUG-19049] Retain the 1.8.10 backup destination and archive-output safety guards.
+- [BUG-19048] Refresh exclusion policies while preserving custom-preset compatibility.
 
 - [BUG-19033] Preserve canonical issue priorities when adopting existing work.
 
