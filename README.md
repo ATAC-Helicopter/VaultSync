@@ -14,9 +14,10 @@
 </p>
 
 <p align="center">
-  An open-source, cross-platform backup and recovery manager for
-  developers, creators, homelabs, and anyone who wants to understand
-  what their backups actually protect.
+  Free, open-source desktop backup software for Windows, macOS, and Linux.
+  Back up selected folders and development projects to local drives, external disks,
+  or NAS storage. Schedule backups, verify stored files, and test restores
+  without requiring a cloud account.
 </p>
 
 <p align="center">
@@ -69,6 +70,13 @@ VaultSync brings those answers into one desktop application.
 | Manual and scheduled protection | History and snapshot comparison | Evidence-backed recovery checks |
 
 No mandatory cloud account. No automatic crash-report uploads. Your configured storage remains under your control.
+
+### Explore a backup workflow
+
+- [Back up development projects](https://fglabs.dev/vaultsync/use-cases/backup-development-projects) — Unity, Godot, Blender, source code, and other project folders.
+- [Back up folders to a NAS](https://fglabs.dev/vaultsync/use-cases/backup-to-nas) — local and network storage, including supported SMB destinations.
+- [Verify backups and test restores](https://fglabs.dev/vaultsync/use-cases/verify-backups-and-test-restores) — distinguish successful copies, integrity checks, and recovery drills.
+- [Try the community Recovery Lab](https://fglabs.dev/vaultsync/recovery-lab) — follow a reproducible test with disposable files and record what was actually verified.
 
 ## See VaultSync in action
 
