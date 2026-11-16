@@ -39,8 +39,8 @@ try
             .With(new X11PlatformOptions
             {
                 RenderingMode = new[] { X11RenderingMode.Software },
-                // Retain CPU frames for the bare-X11 recovery display; native redraw verification is required.
-                UseRetainedFramebuffer = true,
+                // Repaint the complete CPU frame: retained dirty regions lose unchanged content on bare X11.
+                UseRetainedFramebuffer = false,
                 WmClass = "vaultsync-recovery"
             })
             // Isolate dirty-region drawing from the retained CPU frame (Skia clip workaround).
