@@ -973,6 +973,9 @@ public sealed class BackupService(
         RuntimeLog.WriteVerbose($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
         progressCallback?.Invoke(0, "Preparing backup...", string.Empty);
 
+        // A progress observer may cancel synchronously; honor it before filesystem side effects.
+        linkedToken.ThrowIfCancellationRequested();
+
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
         backupRoot = Path.GetFullPath(backupRoot);
         if (ShouldRejectUnbackedManagedMount(
