@@ -557,6 +557,9 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
+        // Reject overlapping project/backup trees before scanning or using cached preflight.
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+
         backupRoot = Path.GetFullPath(backupRoot);
         if (!Directory.Exists(backupRoot))
         {
@@ -922,6 +925,11 @@ public sealed class BackupService(
         if (string.IsNullOrWhiteSpace(backupRoot))
             throw new InvalidOperationException("Backup root is empty. Configure a backup location in Settings.");
 
+        // Refuse unsafe destinations before creating folders, snapshots or backup metadata.
+        BackupSafetyService.EnsureSafeBackupRoot(project, backupRoot);
+        if (!string.IsNullOrWhiteSpace(preferredFinalBackupRoot))
+            BackupSafetyService.EnsureSafeBackupRoot(project, preferredFinalBackupRoot);
+
         AppConfig configSnapshot = _configStore.Load();
         BackupEncryptionConfig encryptionConfig = configSnapshot.Backups.Encryption ?? new BackupEncryptionConfig();
         BackupEncryptionPolicyResolver.ResolvedPolicy resolvedEncryption = BackupEncryptionPolicyResolver.Resolve(project, encryptionConfig);
@@ -964,6 +972,9 @@ public sealed class BackupService(
 
         RuntimeLog.WriteVerbose($"[BackupService] RunBackupAsync entered for project '{project.Name}' (Id={project.Id}), backupRoot='{backupRoot}', isAuto={isAuto}, useArchiveMode={useArchiveMode}");
         progressCallback?.Invoke(0, "Preparing backup...", string.Empty);
+
+        // A progress observer may cancel synchronously; honor it before filesystem side effects.
+        linkedToken.ThrowIfCancellationRequested();
 
         // Normalise backup root and ensure it exists (e.g. mounted NAS/share).
         backupRoot = Path.GetFullPath(backupRoot);

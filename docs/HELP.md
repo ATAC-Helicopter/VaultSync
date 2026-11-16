@@ -79,6 +79,7 @@ overwritten; each probe is removed when its owning stream closes.
 VaultSync supports two destination modes:
 - Simple mode: one backup location.
 - Advanced mode: multiple destinations (NAS, USB, network) with per-destination options and credentials.
+- Choose a destination outside the protected project's source directory. A source and destination must not be the same folder or contain one another. Overlapping paths are refused during backup preflight and before backup execution; choose an independent sibling or external destination instead.
 - On macOS, auto-unmount closes the SMB share mount even when the destination
   points to a subfolder inside that share.
 
