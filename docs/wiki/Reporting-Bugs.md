@@ -1,38 +1,54 @@
 # Reporting bugs
 
-Thanks for helping improve VaultSync. Good bug reports make fixes faster.
+Thanks for helping improve VaultSync. Clear, reproducible reports make problems easier to investigate and fix.
 
-## Before you file
-- Make sure you are on the latest version for your channel.
-- Try to reproduce the issue after a restart.
-- Check `Troubleshooting.md` for common fixes.
+## Before reporting
+
+- Check that you are using the latest published version for your chosen update channel.
+- Try reproducing the issue after restarting VaultSync.
+- Consult [Troubleshooting](Troubleshooting.md) and [FAQ](FAQ.md).
+- Where possible, reproduce the problem using disposable files and a separate test destination.
 
 ## Where to report
-Track reproducible bugs on GitHub Issues:
-- https://github.com/ATAC-Helicopter/VaultSync/issues
 
-For preliminary troubleshooting, visit the [VaultSync Discord](https://discord.gg/sgP8UzeAQt). Discord conversations do not replace GitHub Issues; see [Community and support](../COMMUNITY.md).
+**GitHub Issues is the official bug tracker.**
 
-For preliminary troubleshooting and bug discussion, visit the [official Discord](https://discord.gg/sgP8UzeAQt) `#help-and-support` or `#bug-reports` Forum. Discord posts do not replace GitHub Issues; see [Community and support](../COMMUNITY.md).
+Submit a report using the [GitHub issue forms](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose).
+
+For troubleshooting before filing a report, use the [VaultSync Discord community](https://discord.gg/sgP8UzeAQt) and its public support Forum.
+
+You may also request a private support ticket through the community server when a restricted conversation is appropriate.
+
+Discord discussions and bot-generated community ideas are not automatically confirmed software defects. Reproducible bugs should be tracked on GitHub.
 
 ## What to include
-- VaultSync version (from the footer or tray header).
-- Operating system and build.
-- Steps to reproduce.
-- Expected result vs actual result.
-- Screenshots or short screen recordings if UI-related.
-- Relevant logs (see below).
+
+- VaultSync version, build identity, and installation channel.
+- Operating system and version.
+- Clear steps to reproduce the problem.
+- Expected behavior and actual behavior.
+- Relevant error messages and safe screenshots.
+- Whether the issue affects local, removable, or network-backed storage.
+- Whether testing used synthetic data, an existing backup, a read-only recovery drill, or an actual restore.
 
 ## Logs and diagnostics
-- If the issue is backup-related, include the recent backup log output.
-- If it is update-related, include update banner text, current version, target version, and any patch-preflight diagnostics.
-- Prefer exporting a support bundle from Settings > Advanced when possible.
-  Review its exact file list first; remove optional sanitized diagnostics or
-  anonymized telemetry if they are unnecessary. VaultSync pseudonymizes known
-  paths and display identities, scrubs configured and structured secrets,
-  limits file and bundle sizes, and includes a checksum manifest. It never
-  sends the ZIP automatically, so inspect it again before sharing it.
-- After a crash, VaultSync can prepare a strictly redacted local report for you to inspect and email manually. It never sends the report automatically; see [Crash reporting and user control](../CRASH_REPORTING.md) for the exact fields and privacy controls.
 
-## Security issues
-If you believe you found a security issue, avoid public disclosure and follow the [security policy](../../SECURITY.md).
+For backup issues, include relevant recent operation logs.
+
+For update issues, provide the installed version, offered version, update status, and patch-preflight diagnostics.
+
+You can export a support bundle through **Settings > Advanced**. Review its contents before sharing and exclude unnecessary optional diagnostics.
+
+VaultSync does not upload support bundles or crash reports automatically. Never publish passwords, tokens, encryption recovery material, confidential paths, or private backup contents.
+
+## Community follow-up
+
+If a public Discord discussion identifies a reproducible bug, create or link the corresponding GitHub Issue instead of relying on a Forum thread as the engineering record.
+
+When a fix or workaround is verified and safe to share, maintainers should update the appropriate documentation page.
+
+## Security vulnerabilities
+
+**Never disclose an unpatched vulnerability in a public issue, Discord Forum, or support ticket.**
+
+Follow the [private security reporting policy](../../SECURITY.md).

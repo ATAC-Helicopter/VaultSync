@@ -37,7 +37,7 @@ See [engineering workflow](ENGINEERING_WORKFLOW.md) and [security](../SECURITY.m
   runtime verification against the [runtime security contract](RUNTIME_SECURITY.md)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current stable release is `1.8.9`.
+- The current stable release is `1.8.10` (2026-11-15).
 - Active development is `1.9.0` on `work/1.9-roadmap-realignment`, sole draft
   PR #736 into `Dev`. Read AGENTS.md, release/1.9-family.json and the owning
   release contract before changing an existing preparation PR.
@@ -92,8 +92,8 @@ publication dates. Keep original detail in the linked evidence archive.
    ```
 2. Build Linux archives:
    ```bash
-   bash scripts/build_linux_release.sh 1.8.9 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
-   bash scripts/build_linux_release.sh 1.8.9 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
+   bash scripts/build_linux_release.sh 1.8.10 x64 src/VaultSync.UI/bin/Release/net10.0/linux-x64/publish
+   bash scripts/build_linux_release.sh 1.8.10 arm64 src/VaultSync.UI/bin/Release/net10.0/linux-arm64/publish
    ```
 3. Upload the generated `.tar.gz`, `.deb`, and `linux-x64` `.AppImage` artifacts.
    The `.tar.gz` archives include `install.sh` and `uninstall.sh` for a

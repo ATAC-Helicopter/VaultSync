@@ -13,7 +13,7 @@ Recovery Horizon is in planning and architecture work. 1.9.0 owns disk capture,
 validation, independent boot media, restore and post-restore validation.
 These capabilities have not shipped. The earlier CLI development cohort has
 been moved to 1.9.5, with discovery/legacy documentation in 1.9.1.
-Current stable remains **1.8.9**, published 2026-09-16.
+Current stable is **1.8.10**, published 2026-11-15.
 See [the release contract](RELEASE_1.9.0.md) and [family plan](RELEASE_FAMILY_1.9.md).
 
 ### Simpler storage charts
@@ -121,6 +121,25 @@ Reports use fixed codes and coarse measurements, with no file contents, paths,
 credentials or user/device identifiers. Existing logs and text crash reports are
 not uploaded automatically. Reception requires the configured companion service;
 see [fields, retention and delivery limits](PRODUCT_DIAGNOSTICS.md).
+
+## [1.8.10]
+
+VaultSync 1.8.10 was published on 2026-11-15 from the 1.8.9 stable baseline. It focuses on safer everyday operations, more reliable exclusions and refreshed dependencies. Disk cloning and bootable recovery remain part of the separate 1.9 development cycle.
+
+### Safer everyday operations
+- CLI project removal now requires explicit `--yes` confirmation when running quietly or without interactive input. Removing a project registration does not delete its source files or stored backups.
+- On macOS, cleanup of a mounted SMB destination now targets the actual share mount rather than a nested project folder.
+
+### More reliable backup exclusions
+- Refresh `.vaultsyncignore` rules and preset mappings when their contents change, even if a tool preserves the original file timestamp.
+- Remove temporary rsync exclusion files when the external sync tool cannot start, avoiding leftover temporary files.
+
+### Updated foundations
+- Refresh the serviced .NET 10 runtime and related packages, alongside coordinated rendering, font and development-tool dependencies.
+- Preserve existing backup formats and 1.8.x workflows; this maintenance release does not introduce the experimental 1.9 disk-recovery features.
+
+### Community and support
+- Open the optional VaultSync Discord community from What's New or Settings > Advanced. GitHub Issues remains the place to track confirmed bugs, and no new account, notifications or telemetry are required.
 
 ## [1.8.9]
 

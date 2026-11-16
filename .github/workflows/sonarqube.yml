@@ -116,7 +116,7 @@ jobs:
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.cs.vscoveragexml.reportsPaths="${RUNNER_TEMP}/coverage-main.xml,${RUNNER_TEMP}/recovery-storage/coverage-native.xml,${RUNNER_TEMP}/recovery-admission/coverage-admission.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
-            /d:sonar.exclusions="coverage.xml,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
+            /d:sonar.exclusions="TestResults/**,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="benchmarks/**,docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
             /d:sonar.test.inclusions="tests/**/*" \
             /d:sonar.python.version="3"

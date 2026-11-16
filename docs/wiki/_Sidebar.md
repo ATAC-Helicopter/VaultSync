@@ -7,21 +7,27 @@
   - [Quick start](Quick-Start.md)
   - [Guided app tour](Guided-Tour.md)
   - [Configuration](Configuration.md)
-  - [Settings reference](Settings-Reference.md)
+  - [Settings Reference](Settings-Reference.md)
 
 - Backups and Storage
-  - [Backups overview](Backups.md)
-  - [Backup pipeline](Backup-Pipeline.md)
-  - [Backup encryption](Encryption.md)
+  - [Backups Overview](Backups.md)
+  - [Backup Pipeline](Backup-Pipeline.md)
   - [Destinations](Destinations.md)
-  - [Metadata sync](Metadata-Sync.md)
-  - [Network shares](Network-Shares.md)
+  - [Network Shares and NAS](Network-Shares.md)
+  - [Encryption](Encryption.md)
   - [Snapshots](Snapshots.md)
-  - [Recovery](Recovery.md)
-  - [Tray menu](Tray.md)
+  - [Metadata Synchronization](Metadata-Sync.md)
+  - [Tray Menu](Tray.md)
+
+- Verification and Recovery
+  - [Recovery Guide](Recovery.md)
+  - [Safe Test Restore](Recovery-Lab.md)
+  - [Snapshot Comparison](Snapshots.md)
 
 - Updates
-  - [Updates](Updates.md)
+  - [Installation and Packages](Installation.md)
+  - [Updates and Release Channels](Updates.md)
+  - [Official Releases](https://github.com/ATAC-Helicopter/VaultSync/releases/latest)
 
 - Chronicle (1.8)
   - History and comparison: [Snapshots](Snapshots.md)
@@ -37,7 +43,9 @@
 - Support
   - [Troubleshooting](Troubleshooting.md)
   - [FAQ](FAQ.md)
-  - [Reporting bugs](Reporting-Bugs.md)
+  - [Reporting Bugs](Reporting-Bugs.md)
+  - [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose)
+  - [Reddit](https://www.reddit.com/r/VaultSync/)
 
 - Repository Docs
   - [Docs index](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/README.md)

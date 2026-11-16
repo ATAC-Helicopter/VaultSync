@@ -60,6 +60,21 @@ class PublicReleaseMetadataTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     public_release_metadata.load_metadata(path)
 
+    def test_release_changelog_iso_and_legacy_dates(self) -> None:
+        for heading in ("## [1.8.10] - 2026-11-15", "## [1.8.10] - 15.11.2026"):
+            with self.subTest(heading=heading), tempfile.TemporaryDirectory() as root:
+                (Path(root) / "CHANGELOG.md").write_text(
+                    "# Changelog\n" + heading + "\n## [1.8.8] - 02.09.2026\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(
+                    "1.8.10",
+                    public_release_metadata._first_match(
+                        Path(root), "CHANGELOG.md",
+                        public_release_metadata.CHANGELOG_VERSION_HEADING_RE,
+                    ),
+                )
+
     def test_repository_consumers_match_contract(self) -> None:
         self.assertEqual([], public_release_metadata.validate_consumers(REPO_ROOT, self.metadata))
 

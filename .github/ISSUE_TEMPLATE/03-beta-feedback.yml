@@ -67,5 +67,10 @@ body:
   - type: textarea
     id: diagnostics
     attributes:
-      label: Diagnostics or screenshots
-      description: Attach logs/screenshots when the feedback is about errors, speed, UI, or update behavior.
+      label: Sanitized evidence (optional)
+      description: Attach redacted logs, version output or screenshots. Never include credentials, tokens, encryption/recovery keys, private paths, personal files or disk images.
+  - type: markdown
+    attributes:
+      value: |
+        Optional first test: [Recovery Lab v1](https://github.com/ATAC-Helicopter/VaultSync/blob/Stable/docs/wiki/Recovery-Lab.md).
+        Security vulnerabilities belong in the [private reporting workflow](https://github.com/ATAC-Helicopter/VaultSync/security/policy).

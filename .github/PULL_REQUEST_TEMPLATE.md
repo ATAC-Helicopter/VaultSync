@@ -27,6 +27,13 @@ Refs #
 - [ ] `ROADMAP.md` updated or not needed
 - [ ] Owning issue, release PR and native Project status/dates align with actual evidence
 
+## Metadata and merge policy
+- [ ] One `priority:*`, `status:*`, exact `release:X.Y.Z`, and at least one `area:*`
+- [ ] One `kind:*` unless a version-prefixed `area:release` umbrella PR
+- [ ] Owning issue, milestone and Project #7 fields align with the release
+- [ ] Non-Stable: **Create a merge commit**; Stable: qualified **first-parent** merge commit
+- [ ] Confidential security details withheld from public PRs until coordinated disclosure
+
 ## Risk
 -
 

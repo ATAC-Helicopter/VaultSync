@@ -1,31 +1,51 @@
-name: Discord Release Announcement
+name: VaultSync release to Discord
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Published release tag to announce (for example v1.8.10)"
+        required: true
+        type: string
+      replace_message_id:
+        description: "Optional previous webhook message ID to replace (post corrected, then delete previous)"
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - ".github/workflows/discord-release.yml"
+      - "scripts/discord_release_notify.py"
+      - "scripts/discord_devlog_notify.py"
+      - "tests/scripts/test_discord_release_notify.py"
 
 permissions:
   contents: read
 
 concurrency:
-  group: discord-release-${{ github.event.release.id }}
+  group: vaultsync-discord-release-${{ github.event.release.tag_name || inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  announce:
-    name: Announce published release
-    # A retry after an uncertain network outcome must not create a second post.
-    if: ${{ github.event.release.draft == false && github.run_attempt == 1 }}
+  validate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 2
     steps:
-      - name: Checkout notifier from default branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: Stable
-          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Release notifier unit tests
+        run: python3 -m unittest discover -s tests/scripts -p 'test_discord_release_notify.py' -v
+      - name: Compile Discord notifiers
+        run: python3 -m py_compile scripts/discord_release_notify.py scripts/discord_devlog_notify.py
 
-      - name: Announce release in Discord
+  notify:
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Publish release notification
         env:
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-        run: python3 scripts/discord_release_announcement.py
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          DISCORD_REPLACE_MESSAGE_ID: ${{ inputs.replace_message_id || '' }}
+        run: python3 scripts/discord_release_notify.py

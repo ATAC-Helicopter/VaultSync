@@ -891,6 +891,24 @@ compatibility, and smoke tests on all supported operating systems.
 
 ---
 
+## 1.8.10 — Security and dependency maintenance
+
+**Status:** Published on 2026-11-15 as `v1.8.10`.
+**Original planning target:** 2026-11-14
+**Current stable:** 1.8.10 (2026-11-15)
+**Working branch:** `release/1.8.10` (prepared from `Stable`)
+**Previous version:** 1.8.9
+**Scope:** Serviced .NET 10 runtime/SDK, reviewed dependency and workflow updates, and independently validated safety maintenance. No 1.9 system recovery features or format changes.
+
+The planning date does not override release qualification, real-platform testing,
+updater predecessor verification, publication provenance or the confidential
+reporting and coordinated-disclosure process in `SECURITY.md`.
+The [published release](https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.10)
+records the delivered scope and native updater qualification. Retain the
+[historical candidate contract](docs/RELEASE_1.8.10.md) as preparation evidence.
+
+---
+
 ## 1.8.9 — Bug fixes and everyday polish
 
 **Status:** Released on 2026-09-16 as `v1.8.9`; tracking closed on maintainer instruction 2026-09-18
@@ -1232,12 +1250,12 @@ Boot does not promise arbitrary database or application consistency.
 
 **Status:** Active implementation; worker, independent recovery and qualification gates remain open
 **Planning started:** 2026-09-18
-**Current stable:** `1.8.9`, published 2026-09-16
+**Current stable:** `1.8.10`, published 2026-11-15
 **Stable target:** 2027-03-26
 **Working branch:** `work/1.9-roadmap-realignment` (sole release PR #736)
 **Protected release identity:** `release/1.9.0`
 **Integration target:** `Dev`
-**Primary upgrade predecessor:** `1.8.9`; qualification pending
+**Primary upgrade predecessor:** `1.8.10`; qualification pending
 **Release contract:** [1.9.0 kickoff and gates](docs/RELEASE_1.9.0.md)
 **Tagline:** *Recover when the installed system cannot.*
 
@@ -2293,12 +2311,36 @@ not a recovery path until a fresh installation can discover, inspect, unlock,
 restore, and verify supported portable data. Existing identifiers remain
 unchanged because work IDs are immutable and do not encode the patch number.
 
+The primary failure scenario is loss of the original host, its installed app,
+its local application database, and its credential store. The portable metadata
+database may also be missing or damaged. Supported recoverable payloads must
+not silently become unrecoverable solely because the local catalog is gone.
+Encryption still requires independently available authorized recovery material.
+See [the portable recovery and Object Lock qualification contract](docs/RECOVERY_PORTABILITY_AND_OBJECT_LOCK.md).
+
 - [ ] `VS-1931` `P0` Ship a standalone desktop restore utility.
+  - Scope: independently inspect supported backup payloads on a clean machine
+    without the original VaultSync installation, local database, or settings;
+    use portable metadata when intact, but offer bounded read-only discovery
+    where the supported payload format permits it.
+  - Acceptance: recover a supported fixture into a separate directory with
+    byte-level verification after removing the source host/local catalog;
+    corrupted, unsupported, incomplete, ambiguous, or encrypted-without-key
+    payloads fail visibly and safely.
 - [ ] `VS-1932` `P1` Generate an emergency recovery kit.
+  - Acceptance: verifiable utility, offline instructions, supported-format
+    information, and a source-preservation checklist work without network or
+    credentials embedded in the kit.
 - [ ] `VS-1933` `P0` Publish the supported backup and encryption format
   specification.
+  - Acceptance: versioned reader documentation, discovery rules, integrity
+    coverage, encryption/compression descriptors, and fixture examples distinguish
+    shipped 1.8 payloads from qualified 1.9 images.
 - [ ] `VS-1934` `P0` Define compatibility, migration, deprecation, and
   emergency read-only policies.
+  - Acceptance: unknown/newer versions fail closed; the only surviving copy
+    is never rewritten for inspection; supported versions, credential
+    dependencies, and documented recovery limits are explicit.
 - [ ] `VS-1935` `P1` Migrate History, Snapshot Explorer, and Settings into
   focused activity, inspection, and management workspaces.
 - [ ] `VS-1976` `P0` Add independent headless recovery through the reworked CLI.
@@ -2308,6 +2350,15 @@ unchanged because work IDs are immutable and do not encode the patch number.
   - Acceptance: a clean isolated machine recovers supported recorded content
     without the original installation; credentials remain private, unsupported
     formats stay unmodified, and destructive plans require exact target identity.
+
+### 1.9.2 release gate: clean-machine proof
+
+- A disposable test restores representative supported payloads after the
+  original host and application database are made unavailable.
+- Missing/corrupt portable metadata, wrong/missing key, tampered/incomplete
+  payload, and unsupported format produce distinct safe outcomes.
+- Recovered files are independently verified, without modifying the only
+  surviving source; evidence states coverage and limits.
 
 ## 1.9.3 — Offsite Protection
 
@@ -2320,14 +2371,36 @@ independence. See
 
 
 - [ ] `VS-1921` `P0` Add resumable S3-compatible object-storage destinations.
+  - Acceptance: supported provider capabilities, versioning, integrity, and
+    Object Lock support are probed rather than inferred from the S3 protocol.
 - [ ] `VS-1922` `P1` Add Backblaze B2 and SFTP destination profiles.
 - [ ] `VS-1923` `P0` Validate remote manifests and clean incomplete uploads.
+  - Acceptance: only complete verified backups are exposed for recovery;
+    object-version IDs are retained when needed and interrupted/orphan cleanup
+    does not delete protected versions or bypass retention.
 - [ ] `VS-1924` `P1` Explain immutability, object lock, retention, and cost.
+  - Acceptance: document governance/compliance, legal holds, version-specific
+    retention, delete markers, expiration, lifecycle and storage cost, and
+    provider-specific unsupported behaviors without a false protection claim.
 - [ ] `VS-1925` `P1` Prove clean-machine recovery from supported offsite data.
+  - Acceptance: real restore tests from disposable Object Lock/versioned buckets
+    cover protected-version retention, same-key rewrites, delete markers,
+    retention-aware cleanup, and verified recovery without the original
+    local catalog; log negative/blocked cases as evidence.
 - [ ] `VS-1926` `P1` Migrate Projects, Backups, and Schedule into one
   progressive-disclosure Protection workspace.
 - [ ] `VS-1927` `P1` Add multi-destination health scoring and safe,
   explainable automatic failover.
+
+### 1.9.3 release gate: protected offsite recovery
+
+- Each qualified provider demonstrates an actual version-pinned restore from
+  an isolated bucket with retention enabled; pass/fail evidence must distinguish
+  retention claims from restored-and-verified bytes.
+- No deletion, overwrite, retry, or automatic cleanup path silently bypasses
+  retention, hides a recoverable locked version behind a delete marker, or
+  treats an unsupported Object Lock endpoint as protected.
+- No new obligation is added to the unchanged 1.9.0 scope.
 
 ## 1.9.4 — Unified Recovery Experience
 

@@ -3725,7 +3725,7 @@ namespace VaultSync.UI
                     }
                 }
 
-                string onlineFallback = "https://github.com/flaviorame/VaultSync/wiki";
+                string onlineFallback = "https://github.com/ATAC-Helicopter/VaultSync/blob/Stable/docs/wiki/Home.md";
                 if (TryOpen(onlineFallback))
                 {
                     SaveStatus = L("Settings.Destinations.OpenHelpSuccess", "Help guide opened.");

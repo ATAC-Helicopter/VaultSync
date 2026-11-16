@@ -192,6 +192,18 @@ Examples:
 See [engineering workflow](docs/ENGINEERING_WORKFLOW.md) for scope,
 independent test receipts and secure maintenance processes.
 
+See the consolidated [engineering workflow](docs/ENGINEERING_WORKFLOW.md)
+for classification, exact-SHA independent regression tests, secure backports
+and merge/Stable release requirements.
+
+Each PR requires exactly one valid `priority:p0..p3`, one `status:*`, one
+concrete `release:X.Y.Z`, at least one `area:*`, and one `kind:*`.
+Version-prefixed release umbrella PRs labeled `area:release` may omit
+`kind:*` because they consolidate multiple types. Missing/conflicting
+classification must block the tracking policy check when configured as
+required in the target branch ruleset. An additional family release label
+does not replace the concrete version.
+
 ## 6.0) Repository Workflow Standard (PR-first)
 - Standard workflow is **PR-first** (feature/fix branches into `Dev` via PR).
 - For **every branch other than `Stable`**, use **Create a merge commit**, retaining
@@ -304,8 +316,8 @@ Pull requests and pushes to `Dev`/`Stable` also run CI and release-quality workf
 - Ensure roadmap states are accurate for completed/remaining work.
 
 ## 9) Reporting Bugs
-Use `docs/wiki/Reporting-Bugs.md`. Discord `#help-and-support` and `#bug-reports` are available for preliminary discussion; reproducible issues belong on GitHub Issues.
-Security issues: follow `SECURITY.md` privately, not a public channel.
+Use `docs/wiki/Reporting-Bugs.md`.
+Security issues: follow `SECURITY.md`.
 
 ## 10) Standard Project Operations
 These are the default procedures for everyone contributing to VaultSync.
@@ -396,3 +408,7 @@ also authorizes its automatic notification to confirmed followers of that produc
 respecting unsubscribe state and durable duplicate protection. Follow the owning
 website publication contract; previews and unrelated sends require their own
 maintainer authorization.
+
+## Runtime security servicing
+
+Use the serviced .NET 10 SDK 10.0.404 or a later version on the same supported line. Every distributed self-contained Microsoft runtime must be at least 10.0.15, including optional framework packs. Audit with `scripts/runtime_pack_audit.py` and preserve package advisories, exact artifact evidence, protected branch review and publication gates. See `docs/RUNTIME_SECURITY.md`. Refs #787 / VS-1997.

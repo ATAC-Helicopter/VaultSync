@@ -39,7 +39,7 @@ public sealed class GuideViewModel : ViewModelBase
         _repositoryFactory = repositoryFactory;
         RestartSetupCommand = new RelayCommand(_ => _app.OnboardingTour.Start());
         OpenDocumentationCommand = new RelayCommand(_ =>
-            SystemFileLauncher.OpenUri("https://github.com/flaviorame/VaultSync/wiki"));
+            SystemFileLauncher.OpenUri("https://github.com/ATAC-Helicopter/VaultSync/blob/Stable/docs/wiki/Home.md"));
         RefreshHeaderText();
         RebuildContent();
     }

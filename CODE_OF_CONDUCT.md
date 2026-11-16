@@ -27,9 +27,7 @@ acceptable behavior.
 
 ## Reporting
 To report a conduct issue, contact the maintainers via GitHub Discussions or
-contact a Discord moderator privately for incidents on Discord. For sensitive
-security vulnerabilities, follow [SECURITY.md](SECURITY.md) through its private
-reporting route instead of posting in a public channel.
+open a private report using GitHub's security advisory form when appropriate.
 
 ## Attribution
 This code of conduct is adapted from the Contributor Covenant, version 2.1:

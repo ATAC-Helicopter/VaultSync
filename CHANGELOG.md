@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to VaultSync are documented in this file.
 
@@ -172,6 +172,24 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 Disk capture, independent boot and disk restore remain unimplemented/unqualified.
 See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release-evidence/1.9-work-2026-10-04.md).
+
+## [1.8.10] - 2026-11-15
+
+### Added
+- [VS-1997] Offer an optional Discord community link in What's New and Settings > Advanced, without notifications or telemetry.
+
+### Changed
+- [VS-1997] Refresh test tooling and pinned CI actions, and align the managed and native rendering packages; cross-platform compatibility qualification remains pending.
+
+### Fixed
+- [BUG-19048] Refresh exclusion-file and preset-index mappings after timestamp-preserving changes without altering legacy missing-preset behavior. (@ameenalqershi)
+- [BUG-19047] Clean up temporary rsync exclusion files if tool startup fails. (@ameenalqershi)
+- [BUG-19001] Require explicit confirmation for noninteractive CLI project removal; retain source and stored backups.
+- [BUG-19027] Read JSON preset mappings independently of property-name capitalization.
+- [BUG-19029] Unmount the actual SMB share root, not a nested destination folder.
+
+### Security
+- [VS-1997] Service the .NET 10 runtime and Microsoft managed packages; independent security qualification remains pending.
 
 ## [1.8.9] - 2026-09-16
 
@@ -1804,3 +1822,4 @@ See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release
 [0.4.0]: https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/release-evidence/changelog-history-before-standard-2026-10-04.md#040---2025-10-19
 [0.3.0]: https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/release-evidence/changelog-history-before-standard-2026-10-04.md#030---2025-10-17
 [0.1.0]: https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/release-evidence/changelog-history-before-standard-2026-10-04.md#010---2025-10-15
+[1.8.10]: https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.10

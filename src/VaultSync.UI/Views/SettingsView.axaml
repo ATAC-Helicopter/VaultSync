@@ -1886,6 +1886,28 @@
                              FontSize="12" />
                 </StackPanel>
 
+                <!-- Optional community link; no notifications, tracking or modal. -->
+                <Border Classes="subtle-card"
+                        Padding="12"
+                        CornerRadius="12">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CommunityTitle}"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.CommunityDescription}"
+                                 Foreground="{DynamicResource TextSecondary}"
+                                 TextWrapping="Wrap"
+                                 FontSize="11" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Classes="action-ghost"
+                            Content="{infra:LocalizedString Key=Settings.Advanced.CommunityJoin}"
+                            Click="OnOpenCommunity" />
+                  </Grid>
+                </Border>
+
                 <Border Classes="subtle-card"
                         Padding="12"
                         CornerRadius="12">

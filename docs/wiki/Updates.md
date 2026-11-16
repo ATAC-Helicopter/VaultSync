@@ -1,9 +1,9 @@
 # Updates
 
-The current published stable release is **1.8.9**, released September 16, 2026.
+The current published stable release is **1.8.10**, released November 15, 2026.
 The **1.9** branch and its CLI commands are development work, not an available
 stable update. Follow [development status](Development-Status.md) for the PR stack
-and qualification gates. Upgrade qualification from an installed 1.8.9 to 1.9
+and qualification gates. Upgrade qualification from an installed 1.8.10 to 1.9
 is still pending. The planned FG Labs owner compatibility has not authorized a
 repository transfer; official stable downloads remain in this repository.
 
@@ -11,63 +11,130 @@ VaultSync supports two Windows update models:
 - Direct builds use GitHub patch and installer updates.
 - Microsoft Store builds use Store-managed updates.
 
-## Updater safeguards
-- Patch preflight persists clearer diagnostics about why patching is allowed or blocked.
-- Patch manifests can declare multiple exact allowed base versions for one target release.
-- Release tooling distinguishes pre-publish warnings from post-publish hard failures.
-- Support bundles include updater and patch preflight diagnostics for troubleshooting.
+Always use the [official GitHub Releases page](https://github.com/ATAC-Helicopter/VaultSync/releases/latest) to identify the latest published stable version.
 
-## Patch updates
-- Smaller and faster when available.
-- If a patch fails, the installer fallback is offered.
-- Patch assets are named `vaultsync-patch-<platform>.json` and `vaultsync-patch-<platform>.zip`.
-  - macOS checks for arch-specific assets first (`vaultsync-patch-macos-apple-silicon.*` or `vaultsync-patch-macos-intel.*`).
-  - Linux checks for arch-specific assets first (`vaultsync-patch-linux-x64.*` or `vaultsync-patch-linux-arm64.*`).
-- Patch eligibility is exact:
-  - the manifest must explicitly list the installed version as an allowed base version
-  - unlisted or older installs fall back to the full installer
-- Multi-base patch manifests are strict allowlists, not version ranges.
-- Additional bases are included only when their published managed-file
-  inventory is a subset of the target payload. The release build checks each
-  platform independently and leaves incompatible versions on installer fallback.
-- Patch + installer fallback applies to Direct builds only.
-- VaultSync 1.8.7 provides a one-time architecture-aware bridge patch from the
-  exact 1.8.6 predecessor to canonical `/Applications/VaultSync.app`. It stages,
-  signs, verifies, and launches the canonical bundle before moving the legacy
-  app to Trash. Older versions use the appropriate full DMG. Later patches
-  update and verify the complete app bundle,
-  including its version metadata.
+## Distribution models
 
-## Manual update check
-- Settings > Advanced > Check for updates now.
-- The update banner shows the channel and current status.
-- Microsoft Store builds replace GitHub update actions with `Open Microsoft Store`.
+### Direct downloads
+
+Direct builds for Windows, macOS, and Linux use GitHub release metadata to discover available updates.
+
+Depending on platform, version, and published assets, VaultSync may offer:
+
+- A compatible patch update.
+- A full installer or package.
+- A manual download when an automatic update is unavailable.
+
+### Microsoft Store
+
+Microsoft Store builds use Store-managed delivery rather than the GitHub patch or installer flow.
+
+Use the Microsoft Store to manage updates for this distribution.
+
+Do not mix the Store and Direct installation channels in place.
+
+## Release channels
+
+- **Stable:** published releases recommended for regular use.
+- **Beta:** explicitly published test releases for early feedback.
+
+Switch supported channels through **Settings > Advanced**.
+
+A development branch, planned milestone, or unpublished release is not an available update.
+
+## Checking for updates
+
+1. Open **Settings**.
+2. Navigate to **Advanced**.
+3. Select **Check for updates now**.
+4. Review the displayed release channel and update status.
+
+Microsoft Store builds direct users to the Store rather than offering the GitHub installer workflow.
 
 ![Maintenance and update controls in Settings](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Settings_Maintenance.png)
 
+## Patch update eligibility
+
+Patch updates are offered only when the published patch manifest explicitly permits the installed version.
+
+VaultSync uses numeric version comparison. For example, `1.8.10` is newer than `1.8.9`, but that comparison alone does not establish patch compatibility or release availability.
+
+The patch manifest must list the installed version as an allowed base version.
+
+### Exact version allowlists
+
+A single target release can support more than one exact predecessor.
+
+These are strict allowlists, not version ranges.
+
+A predecessor is eligible only when its published managed-file inventory satisfies the release pipeline's compatibility requirements for the target payload.
+
+Eligibility is evaluated independently for each supported platform.
+
+### When a patch is unavailable
+
+Use the appropriate full installer or package when:
+
+- Your installed version is not in the manifest allowlist.
+- You are upgrading across an unsupported version gap.
+- Patch preflight blocks the operation.
+- Required or trusted patch assets are unavailable.
+- The current platform or installation method does not support that patch.
+
+A newer release being discoverable does not guarantee a compatible patch.
+
+## Patch assets and verification
+
+Published patch assets use platform-specific manifest and ZIP files.
+
+The general naming pattern is:
+
+- `vaultsync-patch-<platform>.json`
+- `vaultsync-patch-<platform>.zip`
+
+Where applicable, macOS checks architecture-specific patch assets before generic ones, including Apple Silicon and Intel variants.
+
+Linux similarly checks supported x64 and ARM64 variants.
+
+Direct updates verify required trusted release metadata, including payload size and SHA-256 digests. Missing or mismatched trusted values block the affected update.
+
+Updater preflight diagnostics help explain why patching is allowed or blocked.
+
+## Platform-specific behavior
+
+### Windows
+
+Direct releases use an Inno Setup `.exe` installer.
+
+Microsoft Store packages follow the Store update mechanism.
+
+### macOS
+
+Direct releases use architecture-specific `.dmg` packages containing the canonical `VaultSync.app` and an Applications shortcut.
+
+The 1.8.7 update path includes a one-time migration from the exact 1.8.6 predecessor to the canonical `/Applications/VaultSync.app` location.
+
+Older or unqualified installations should use the corresponding full DMG.
+
+Later qualified patches update the canonical application bundle and verify its metadata.
+
+### Linux
+
+Published assets may include `.AppImage`, `.deb`, and `.tar.gz`, depending on architecture.
+
+For Debian-package updates, VaultSync waits for the administrator-authentication and package-installation result. Cancelling authentication leaves the existing app running.
+
+After successful installation, the replacement application starts only after the old process exits.
+
+AppImage updates use a similar deferred handoff to avoid conflict with the running instance.
+
 ## Skipping a version
-- Use the Skip version action in the update banner.
-- You can re-enable the banner by clearing the skipped tag in Settings.
 
-## Channels
-- Stable: recommended for production use.
-- Beta: early access to new features.
+Use **Skip version** in the update banner if you do not want to install that version.
 
-Switch channels in Settings > Advanced.
+You can clear the skipped-version setting later to allow the banner to appear again.
 
-## Installers
-- Windows: `.exe` installer (Inno Setup).
-- macOS: architecture-specific, intentionally unsigned `.dmg` containing the
-  canonical `VaultSync.app` and an Applications shortcut.
-- Linux: `.AppImage`, `.deb`, or `.tar.gz` assets, depending on architecture and distribution.
-- Debian-package installation waits for administrator authentication and the
-  package result; cancelling the password prompt keeps VaultSync open. After a
-  successful package install, VaultSync schedules the installed app to start
-  only after the old process exits, so the single-instance guard cannot swallow
-  the relaunch.
-- AppImage updates are launched through the same deferred handoff instead of
-  starting the downloaded AppImage while the old app instance is still running.
-- Windows Store: packaged Microsoft Store build when published.
+## Troubleshooting
 
 ## Safe update expectation
 - Use only assets from the official `ATAC-Helicopter/VaultSync` release page and compare their published SHA-256 digests before bypassing SmartScreen or Gatekeeper warnings.
