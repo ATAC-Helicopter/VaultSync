@@ -19,7 +19,7 @@ class MacosQaPackageTests(unittest.TestCase):
         for name in qa.REQUIRED:
             (self.source / name).write_bytes(b"\xcf\xfa\xed\xfe")
         (self.source / "VaultSync.UI").chmod(0o755)
-        self.runtime("10.0.13")
+        self.runtime("10.0.15")
         self.output = self.root / "Recovery QA.app"
 
     def tearDown(self):
@@ -61,7 +61,7 @@ class MacosQaPackageTests(unittest.TestCase):
         self.runtime("10.0.12")
         with self.assertRaises(ValueError):
             self.validate()
-        self.runtime("10.0.13")
+        self.runtime("10.0.15")
         (self.source / "VaultSync.UI").write_bytes(b"\x7fELF")
         with self.assertRaises(ValueError):
             self.validate()

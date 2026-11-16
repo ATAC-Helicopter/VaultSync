@@ -114,6 +114,8 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19049] Backport 1.8.10 backup destination, directory-alias and archive-output guards.
+- [BUG-19048] Refresh exclusion files and preset mappings even when timestamps are preserved, retaining custom-preset compatibility. (@ameenalqershi)
 - [BUG-19047] Remove temporary rsync exclusion files when external tool startup fails. (@ameenalqershi)
 - [BUG-19046] Avoid repeated full payload reads during disk image verification.
 - [BUG-19045] Observe image-list refresh failures and preserve cancellation when refreshing.

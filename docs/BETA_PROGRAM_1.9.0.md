@@ -50,7 +50,7 @@ Physical hardware breadth remains a stable gate, separate from the explicitly
 measured disposable-VM beta scope.
 
 All stages also require real cross-platform desktop/package checks, predecessor
-1.8.9 update/data-preservation checks, beta-channel discovery, exact-source
+1.8.10 update/data-preservation checks (retaining 1.8.9 regression coverage), beta-channel discovery, exact-source
 provenance and asset signatures, privacy/localization compliance, a passing
 separate Sonar quality gate and protected release reviews. Neither the staged
 schedule nor urgency waives these shared gates. The existing release workflow
