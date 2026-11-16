@@ -127,5 +127,56 @@ class WorkTrackingTests(unittest.TestCase):
         self.assertEqual(work_tracking.audit_push_payload(payload), ["Untracked commit abc12345: fix: no tracking"])
 
 
+    @staticmethod
+    def _labeled_pr(title, names):
+        return {"pull_request": {
+            "title": title,
+            "labels": [{"name": name} for name in names],
+        }}
+
+    def test_label_gate_accepts_bug_with_complete_metadata(self):
+        payload = self._labeled_pr("BUG-19047: rsync cleanup", [
+            "kind:bug", "area:core", "priority:p1", "status:in-progress", "release:1.9.0",
+        ])
+        self.assertEqual(work_tracking.validate_pr_label_payload(payload), [])
+
+    def test_label_gate_requires_every_classification(self):
+        errors = work_tracking.validate_pr_label_payload(self._labeled_pr("BUG-19047: fix", []))
+        self.assertEqual(len(errors), 6)
+
+    def test_label_gate_accepts_release_umbrella_with_family_label(self):
+        payload = self._labeled_pr("1.9.0: recovery foundation", [
+            "area:release", "priority:p0", "release:1.9.x",
+            "release:1.9.0", "status:in-progress",
+        ])
+        self.assertEqual(work_tracking.validate_pr_label_payload(payload), [])
+
+    def test_label_gate_detects_wrong_bug_kind(self):
+        payload = self._labeled_pr("BUG-19047: fix", [
+            "kind:feature", "area:core", "priority:p1",
+            "release:1.9.0", "status:in-progress",
+        ])
+        self.assertIn("BUG-xxxxx PR must have kind:bug.",
+                      work_tracking.validate_pr_label_payload(payload))
+
+    def test_label_gate_rejects_conflicting_priorities_and_exact_releases(self):
+        payload = self._labeled_pr("BUG-19047: fix", [
+            "kind:bug", "area:core", "priority:p1", "priority:p2",
+            "release:1.9.0", "release:1.9.1", "status:in-progress",
+        ])
+        self.assertEqual(len(work_tracking.validate_pr_label_payload(payload)), 2)
+
+    def test_label_gate_rejects_wrong_release_umbrella_version(self):
+        payload = self._labeled_pr("1.9.7: release preparation", [
+            "area:release", "priority:p1", "release:1.9.6", "status:in-progress",
+        ])
+        self.assertIn("Release preparation PR title and exact release label disagree.",
+                      work_tracking.validate_pr_label_payload(payload))
+
+    def test_label_gate_rejects_unavailable_metadata(self):
+        self.assertEqual(work_tracking.validate_pr_label_payload({"pull_request": {}}),
+                         ["PR label metadata is missing or invalid."])
+
+
 if __name__ == "__main__":
     unittest.main()

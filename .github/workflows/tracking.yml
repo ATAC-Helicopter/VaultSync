@@ -3,7 +3,7 @@ name: Work Tracking
 on:
   pull_request:
     branches: ["**"]
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: ["**"]
   workflow_dispatch:
@@ -26,10 +26,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+        with:
+          # External PRs execute tracking checks from the trusted base SHA.
+          # Owner-authored same-repo release PRs test their own reviewed head.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner && github.event.pull_request.head.sha || github.event.pull_request.base.sha || github.sha }}
+
       - name: Setup Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.x"
+
+      - name: Validate tracking regression tests
+        run: python3 -m unittest discover -s tests/scripts -p 'test_work_tracking.py'
 
       - name: Validate tracking
         run: python3 scripts/work_tracking.py check-event

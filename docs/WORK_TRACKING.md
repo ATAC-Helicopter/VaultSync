@@ -129,6 +129,12 @@ releases; label them as planning, never a publication commitment.
 
 ## Pull requests
 
+The operational [engineering workflow](ENGINEERING_WORKFLOW.md) covers exact-SHA
+independent test receipts, reporter collaboration and first-parent-only Stable
+promotion merges. All non-Stable integration merges preserve source commits;
+Git's complete DAG remains available after Stable release merges.
+
+
 Once the branch is tracked:
 
 ```bash
@@ -141,6 +147,22 @@ The helper creates a PR to `Dev` by default, includes the canonical ID, and link
 
 1. a canonical work ID;
 2. a closing/reference keyword to a GitHub issue.
+
+PRs also require complete labels: exactly one `priority:p0..p3`, exactly one
+concrete `release:X.Y.Z` (an additional family `release:X.Y.x` may coexist),
+exactly one `status:*`, at least one `area:*`, and exactly one `kind:*`.
+Consolidated release-preparation PRs with a version-prefixed title and
+`area:release` may omit `kind:*` because they aggregate several work types.
+Bug-ID PR titles must have `kind:bug`. Missing or conflicting labels fail the
+Work Tracking job; `labeled`/`unlabeled` events rerun it when metadata changes.
+Validation reads the GitHub pull_request event. For external contributors
+the workflow checks out the **trusted base SHA**, not the contributor's code.
+For owner-authored same-repository release PRs it checks out the reviewed
+PR **head SHA**, because the current Dev base does not yet include the
+work-tracking test suite; this exception does not authorize an untrusted
+fork's code in the policy check. For protected branches, maintainers must
+configure **Tracking policy** as a required status check in GitHub rulesets:
+workflow failure alone cannot prevent an authorized merge.
 
 Direct pushes to every branch are audited but not failed: commits without an ID are surfaced as warnings. This keeps the safety net useful without making emergency or metadata maintenance impossible.
 

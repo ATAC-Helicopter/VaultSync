@@ -27,6 +27,16 @@ GitHub remains the source of truth for issues, code review, the roadmap, and pub
 
 Members can select `Release Updates`, `Event Updates`, and `Community Games` through **Channels & Roles**. These are opt-in notification/activity roles, not proof of contributor, maintainer, moderator, or beta-tester status.
 
+## Private security collaboration
+
+Use the private GitHub Security Advisory for vulnerability evidence, review,
+and private patches; use its restricted temporary fork where appropriate.
+A private Discord channel is for coordination, not for replacing the advisory
+as the technical source of truth. Invite external reporters to advisory
+collaboration without granting general repository write/admin privileges.
+See [SECURITY.md](../SECURITY.md) and
+[engineering workflow](ENGINEERING_WORKFLOW.md).
+
 ## Privacy and security
 
 Provide your VaultSync version, OS, reproduction steps, and expected/actual behavior when asking for help. Review and redact all logs, screenshots, and support bundles before posting. Do not share credentials, tokens, password material, encryption or recovery keys, private backup content, or personal information.

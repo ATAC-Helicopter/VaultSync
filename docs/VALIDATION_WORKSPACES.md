@@ -5,6 +5,17 @@ tracking, localization, protected review, provenance and release gates remain
 in force. Its purpose is to prevent completed experiments from filling the
 maintainer's computer or leaving runnable test copies scattered across it.
 
+## Independent PR regression worktree
+
+For a third-party PR, create a detached worktree at the **reviewed exact SHA**
+outside the main checkout. Pin the SDK from its `global.json` and run only the
+focused regression filter first. Record commit, OS, SDK, command, test counts
+and limitations; contributor-reported runs are not independent CI evidence.
+After completing verification, return to the owning checkout and remove only
+the **known created** worktree. Do not use broad `git clean` or
+`reset --hard` for cleanup. For a concrete example, see
+[engineering workflow](ENGINEERING_WORKFLOW.md).
+
 ## Before provisioning
 
 Use one private validation root outside the repository and synchronized folders;
