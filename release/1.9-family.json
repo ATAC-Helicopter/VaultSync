@@ -10,14 +10,14 @@
     "commit": "ae6dfc34703afdbe59bd8a4f22a8df3a59a75e52"
   },
   "canonicalRoadmap": "ROADMAP.md",
-  "currentStable": "1.8.9",
+  "currentStable": "1.8.10",
   "familyHorizon": "2027-09-24",
   "releases": [
     {
       "version": "1.9.0",
       "name": "Disk and Bootable Recovery Foundation",
       "branch": "release/1.9.0",
-      "predecessor": "1.8.9",
+      "predecessor": "1.8.10",
       "targetDate": "2027-03-26",
       "workIds": [
         "VS-1902",

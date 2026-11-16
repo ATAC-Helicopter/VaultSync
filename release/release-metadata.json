@@ -7,9 +7,9 @@
     "stage": "planned",
     "tag": "v1.9.0",
     "targetDate": "2027-03-26",
-    "previousVersion": "1.8.9",
+    "previousVersion": "1.8.10",
     "compatiblePredecessors": [
-      "1.8.9"
+      "1.8.10"
     ],
     "patchBaseCandidates": {
       "windows": [],
@@ -22,9 +22,9 @@
     "stableBranch": "Stable"
   },
   "currentStable": {
-    "version": "1.8.9",
-    "tag": "v1.8.9",
-    "releasedDate": "2026-09-16"
+    "version": "1.8.10",
+    "tag": "v1.8.10",
+    "releasedDate": "2026-11-15"
   },
   "platforms": [
     "Windows",
