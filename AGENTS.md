@@ -3,7 +3,7 @@
 Keep work scoped to the request and current branch. Preserve existing C#/.NET/Avalonia conventions, compatibility, and safe backup behavior. Inspect the working diff before edits; do not overwrite unrelated work.
 
 ## Find only relevant context
-- Use scoped `rg` / `rg --files` and bounded reads. Avoid whole-repo scans, repeated logs, and mandatory document preloads.
+- Use Graphify first for indexed code structure, as specified below. For literal text or non-indexed content, use scoped `rg` / `rg --files` and bounded reads. Avoid whole-repo scans, repeated logs, and mandatory document preloads.
 - Consult `CONTRIBUTING.md` for IDs, issue tracking, changelog, and delivery; `ROADMAP.md`, `release/1.9-family.json`, and `docs/RELEASE_FAMILY_1.9.md` for release ownership, only when relevant. Read the affected domain contract before changing its behavior.
 - Prefer existing patterns and tests. Make the smallest coherent change; avoid unrelated refactors.
 
@@ -27,3 +27,17 @@ All betas retain Windows, macOS and Linux desktop support; new system-recovery q
 
 ## Ponytail (optional Codex plugin)
 Use the upstream `DietrichGebert/ponytail` Codex plugin when installed, preferring existing code and the smallest complete, readable change. Do not vendor its global rules, duplicate this file, add speculative abstractions or weaken scoped verification. Project safety, recovery authorization, compatibility, localization, provenance and release gates above always take precedence over minimal-diff preferences. For sensitive changes, review the full affected call path and run risk-appropriate regression/security checks, even if this requires more code or tests. Without the plugin these repository instructions remain sufficient. Install per upstream `INSTALL.md`; review third-party lifecycle hooks before enabling them.
+
+<!-- graphify-rules-start (managed by `graphify init`) -->
+## Use Graphify before grep
+
+This repository is indexed by Graphify: a code graph over its call, dependency, and test structure, exposed through a connected Graphify MCP server. Before reaching for grep or reading files, use the Graphify tools your MCP client lists (their exact names and descriptions are in the server's tool list) for what the graph knows and a text search does not:
+
+- find where a symbol, function, or class is defined (instead of grepping for it)
+- understand how something works, or where a behavior is handled
+- find who calls a function, or what it calls
+- see what a change affects (its blast radius) and which tests cover it
+- map a file's dependencies and dependents
+
+Fall back to grep or file reads only for what the graph does not model: literal string or comment matches, non-indexed files, or reading a file you have already located. If no Graphify tools are listed, check the MCP server connection.
+<!-- graphify-rules-end -->
