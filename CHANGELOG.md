@@ -64,6 +64,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1980] Include both Python policy test suites in hosted coverage collection.
 - [VS-1980] Bind hosted analysis and native evidence to identical source commits.
 - [VS-1980] Refresh shared documentation screenshots from 1.8.10 and separate 1.9 development previews.
 - [VS-1904] Verify recovery admission refusals and capture cancellation with isolated fixtures.
@@ -116,6 +117,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19050] Restrict issue-triage write permissions to the trusted reconciliation job.
 - [BUG-19049] Backport 1.8.10 backup destination, directory-alias and archive-output guards.
 - [BUG-19048] Refresh exclusion files and preset mappings even when timestamps are preserved, retaining custom-preset compatibility. (@ameenalqershi)
 - [BUG-19047] Remove temporary rsync exclusion files when external tool startup fails. (@ameenalqershi)

@@ -11,6 +11,18 @@ from work_tracking import TrackingError
 
 
 class IssueAutoTriageTests(unittest.TestCase):
+    def test_pull_request_policy_job_has_no_issue_write_token(self):
+        workflow = (Path(__file__).resolve().parents[2] /
+                    ".github/workflows/issue-auto-triage.yml").read_text()
+        self.assertIn("\npermissions: {}\n", workflow.split("\njobs:", 1)[0])
+        policy = workflow.split("  policy-tests:\n", 1)[1].split("  triage:\n", 1)[0]
+        self.assertIn("    permissions:\n      contents: read\n", policy)
+        self.assertNotIn("issues: write", policy)
+        self.assertNotIn("pull-requests: read", policy)
+        triage = workflow.split("  triage:\n", 1)[1]
+        self.assertIn("    if: github.event_name != 'pull_request'", triage)
+        self.assertIn("    permissions:\n      contents: read\n      issues: write\n      pull-requests: read\n", triage)
+
     def test_issue_form_bug(self):
         self.assertEqual(classify_kind({"bug", "release:1.8.x"}), "bug")
 

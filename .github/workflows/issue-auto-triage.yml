@@ -21,10 +21,7 @@ on:
         required: true
         type: number
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: read
+permissions: {}
 
 # ID assignment must be serialized across all issue events in this workflow.
 # It cannot serialize independent local ./dev allocations; review the audit.
@@ -34,6 +31,8 @@ concurrency:
 
 jobs:
   policy-tests:
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -50,6 +49,10 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p "test_project_date_sync.py" -v
 
   triage:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10

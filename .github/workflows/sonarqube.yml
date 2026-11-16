@@ -118,7 +118,7 @@ jobs:
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
             /d:sonar.exclusions="TestResults/**,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
             /d:sonar.coverage.exclusions="benchmarks/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
-            /d:sonar.test.inclusions="tests/**/*" \
+            /d:sonar.test.inclusions="tests/**/*,scripts/tests/**/*" \
             /d:sonar.python.version="3"
 
       - name: Build
@@ -169,6 +169,7 @@ jobs:
         if: steps.config.outputs.configured == 'true'
         run: |
           python -m coverage run --source=scripts,experiments -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --append --source=scripts,experiments -m unittest discover -s scripts/tests -p 'test_*.py'
           python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis
