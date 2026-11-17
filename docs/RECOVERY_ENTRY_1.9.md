@@ -46,6 +46,12 @@ private network can otherwise imply a private mount namespace and change `/sys`.
 See [systemd's namespace semantics](https://www.freedesktop.org/software/systemd/man/258/systemd.exec.html).
 Native measurements must prove the installed unit and admission agree.
 
+The worker/media producers reject executable `VaultSync.Core.dll` inputs in every
+role before executing build identity probes or creating an installation. The
+inspection broker requires the caller's Core assembly to be a non-executable
+regular file; matching bytes alone do not make incompatible file modes usable.
+This check does not alter installed admission or repair existing image permissions.
+
 The host checks the launched controller's actual executable/Core, exact kernel
 credentials, process lifetime and zero privilege state. The controller checks
 its immutable installation, root-owned rendezvous and actual kernel parent/peer;

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Create a new, source-bound headless Linux recovery installation (not signing).
 
-Inputs: --host-dir/--controller-dir self-contained linux-x64 publishes; --reader-dir
+Inputs: --host-dir/--controller-dir self-contained linux-x64 publishes; Core assemblies
+must not be executable, matching the installed inspection broker. --reader-dir
 is the UNCHANGED, already staged DiskWorker closure including worker.installation.json.
 --launcher is the fixed reviewed native controller-launch executable. --systemd is
 a regular copy of the target media's /usr/lib/systemd/systemd, within build roots.
@@ -142,6 +143,9 @@ def stage(host_dir, controller_dir, reader_dir, launcher, systemd, output, commi
     sources = []
     for prefix, directory in (("host", host), ("controller", controller), ("host/DiskWorker", reader)):
         files = controller_files(directory) if prefix == "controller" else [(file.name, file) for file in flat(directory)]
+        core = directory / "VaultSync.Core.dll"
+        if core.is_file() and core.stat().st_mode & 0o111:
+            raise ValueError("Core assembly must not be executable")
         sources.extend((prefix + "/" + name, file) for name, file in files)
     if launcher.name != "recovery-controller-launch" or not launcher.stat().st_mode & 0o111:
         raise ValueError("fixed launcher required")

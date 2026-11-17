@@ -129,6 +129,8 @@ def stage(worker_dir, app_dir, commit):
     app_core = app_dir / "VaultSync.Core.dll"
     if app_core.is_symlink() or not app_core.is_file() or digest(app_core) != digest(worker_dir / "VaultSync.Core.dll"):
         raise ValueError("worker and application Core builds differ")
+    if next(record for record in records if record["name"] == "VaultSync.Core.dll")["executable"] or app_core.stat().st_mode & 0o111:
+        raise ValueError("Core assembly must not be executable")
     config = strict_json((worker_dir / "VaultSync.DiskWorker.runtimeconfig.json").read_bytes())["runtimeOptions"]
     if ("framework" in config or "frameworks" in config or "additionalProbingPaths" in config
             or not config.get("includedFrameworks")):

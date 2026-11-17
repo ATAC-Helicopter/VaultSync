@@ -117,6 +117,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19051] Reject executable Core assemblies before staging worker and recovery installations.
 - [BUG-19050] Restrict issue-triage write permissions to the trusted reconciliation job.
 - [BUG-19049] Backport 1.8.10 backup destination, directory-alias and archive-output guards.
 - [BUG-19048] Refresh exclusion files and preset mappings even when timestamps are preserved, retaining custom-preset compatibility. (@ameenalqershi)

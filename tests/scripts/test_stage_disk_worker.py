@@ -72,6 +72,19 @@ class StageDiskWorkerTests(unittest.TestCase):
         with patch.dict(os.environ, {"RUNNER_TEMP": os.path.abspath(os.sep)}):
             self.assertNotIn(Path(os.path.abspath(os.sep)), worker.allowed_build_roots())
 
+    @unittest.skipUnless(os.name == "posix", "Unix executable modes required")
+    def test_executable_core_is_rejected_before_execution_or_output(self):
+        for directory in (self.app, self.source):
+            core = directory / "VaultSync.Core.dll"
+            core.chmod(0o755)
+            with patch.object(worker, "read_identity", return_value=IDENTITY) as execute:
+                with self.assertRaisesRegex(ValueError, "Core assembly must not be executable"):
+                    worker.stage(self.source, self.app, COMMIT)
+                execute.assert_not_called()
+            self.assertFalse((self.app / "DiskWorker").exists())
+            self.assertTrue(core.stat().st_mode & 0o111)
+            core.chmod(0o644)
+
     def test_stages_exact_complete_closure_and_manifest_without_changing_source(self):
         before = {path.name: path.read_bytes() for path in self.source.iterdir()}
         self.assertEqual(self.run_stage(), len(before))

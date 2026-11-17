@@ -51,6 +51,23 @@ class StageRecoveryHostTests(unittest.TestCase):
         with patch.object(media.worker, "read_identity", side_effect=identity or self.identity):
             return media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en")
 
+    def test_executable_core_in_any_role_is_rejected_before_execution_or_output(self):
+        for directory in (self.host, self.controller, self.reader):
+            core = directory / "VaultSync.Core.dll"
+            core.chmod(0o755)
+            if directory == self.reader:
+                manifest = json.loads(self.original_reader)
+                next(record for record in manifest["files"] if record["name"] == "VaultSync.Core.dll")["executable"] = True
+                (self.reader / "worker.installation.json").write_text(json.dumps(manifest))
+            with patch.object(media.worker, "read_identity", side_effect=self.identity) as execute:
+                with self.assertRaisesRegex(ValueError, "Core assembly must not be executable"):
+                    media.stage(self.host, self.controller, self.reader, self.launcher, self.systemd, self.output, COMMIT, "en")
+                execute.assert_not_called()
+            self.assertFalse(self.output.exists())
+            self.assertTrue(core.stat().st_mode & 0o111)
+            core.chmod(0o644)
+            (self.reader / "worker.installation.json").write_bytes(self.original_reader)
+
     def test_source_bound_create_only_installation_keeps_reader_and_sources_unchanged(self):
         count = self.run_stage()
         value = media.worker.strict_json((self.output / media.MANIFEST).read_bytes())
