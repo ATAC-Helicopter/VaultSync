@@ -13,6 +13,42 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Installed 8 GiB Linux loop and redraw repair — 2026-11-17
+
+Frozen runtime source `680f7c963301724c356e0bc62d760f7f58dfb508`, runtime 10.0.15,
+completes physical-console capture, verified private publication/shared export,
+and an offline graphical restore of a disposable 8 GiB Debian 13 GPT/UEFI/ext4 disk.
+The final durable receipt records Completed, 8,589,934,592 acknowledged bytes,
+terminal journal and confirmed cleanup, with no retained staging. Independent
+pre-boot `qemu-img compare` exits 0: source and restored disk are identical.
+With fresh firmware and only the restored disk attached, UEFI reaches Xorg/xterm;
+original markers survive and keyboard input creates an independently observed
+marker. Guest-requested shutdown is observed and the owned VM is absent.
+
+The capture service exits 0. The restore service's final exit was not collected:
+host systemd terminated that VM after durable completion. Positive progress/final
+GUI frames are also absent. The source fixture lacks SSH host keys, so restored
+systemd is degraded; SSH/network and general application continuity are unqualified.
+The separate stale-target negative case refuses before consent/writes (zero bytes).
+See the [bounded loop receipt](release-evidence/1.9-installed-linux-os-loop-2026-11-17.json).
+
+BUG-19044/#827 removes retained software frames and the explicit root-clip layer
+override. The first change alone still reproduced black regions; together they
+preserve readable expansion, keyboard entry, catalog, target and review screens.
+Cancel/refusal/Close cleanup is separately recorded in the
+[redraw receipt](release-evidence/1.9-linux-wizard-redraw-2026-11-16.json).
+The affected Controller Release build passes with warnings as errors.
+BUG-19051/#870 rejects executable Core inputs before producer identity execution
+or output creation, preserving the installed broker's permission requirement.
+The two focused producer modules pass 20 tests; no general suite is repeated.
+
+These results advance #492/#495 and the redraw regression; they do not qualify
+final media, physical profiles, capacity/interruption matrices, installed VaultSync
+continuity, 1.8.10 upgrades or native signed desktop packages. Sonar still reports
+78.0% new coverage (80% required) on the preceding hosted source. All support
+profiles remain candidates and #736 stays draft. Earlier dated failures below
+remain historical observations; no beta is published.
+
 ## Recovery confidence and application-semantic boundary — 2026-11-11
 
 The [maintained evidence-scope contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
