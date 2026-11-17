@@ -1,16 +1,78 @@
 """No-network policy regression cases for issue auto-triage."""
 import sys
+import contextlib
+import copy
+import io
+import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from issue_auto_triage import (classify_kind, classify_form_title,
                                required_assignee, release_family, owning_id,
                                target_status, clean_title)
 from work_tracking import TrackingError
+import issue_auto_triage as triage
 
 
 class IssueAutoTriageTests(unittest.TestCase):
+    def test_triage_mutations_preserve_ownership_and_fail_closed(self):
+        root = Path(__file__).resolve().parents[2]
+        issue = {"number": 99, "title": "[Bug]: recovery fails", "state": "OPEN",
+                 "assignees": [{"login": "existing-owner"}], "milestone": None,
+                 "labels": [{"name": label} for label in (
+                     "bug", "release:1.9.0", "priority:p1", "status:in-progress")]}
+        available = {"bug", "kind:bug", "priority:p1", "priority:p2", "status:in-progress", "status:done"}
+        with patch.object(triage, "repo_root", return_value=root), \
+                patch.object(triage, "github_repo", return_value="owner/repo"), \
+                patch.object(triage, "labels_available", return_value=available), \
+                patch.object(triage, "collect_used_ids", return_value={19051}) as audit, \
+                patch.object(triage, "run") as command, contextlib.redirect_stdout(io.StringIO()):
+            command.return_value.stdout = json.dumps(issue)
+            triage.run_triage(99)
+            edits = command.call_args_list[-1].args[0]
+            self.assertIn("BUG-19052: recovery fails", edits)
+            self.assertEqual(edits[edits.index("--milestone") + 1], "1.9.0")
+            self.assertNotIn("--add-assignee", edits)
+            self.assertNotIn("--remove-label", edits)
+            self.assertNotIn("priority:p2", edits)
+            for change in ({"title": "[Feature]: conflicting form"},
+                           {"milestone": {"title": "1.9.1"}},
+                           {"title": "VS-1999: wrong owning ID"},
+                           {"labels": issue["labels"] + [{"name": "priority:p2"}]}):
+                invalid = {**copy.deepcopy(issue), **change}
+                command.reset_mock()
+                command.return_value.stdout = json.dumps(invalid)
+                with self.subTest(change=change), self.assertRaises(TrackingError):
+                    triage.run_triage(99)
+                self.assertEqual(command.call_count, 1, "must refuse before issuing an edit")
+            command.reset_mock()
+            command.return_value.stdout = json.dumps(issue)
+            audit.side_effect = TrackingError("incomplete remote allocation audit")
+            with self.assertRaises(TrackingError):
+                triage.run_triage(99)
+            self.assertEqual(command.call_count, 1)
+
+    def test_pending_reconciliation_is_sorted_bounded_and_conservative(self):
+        def item(number, title="Unnumbered", state="open", labels=("bug", "release:1.9.0")):
+            return {"number": number, "title": title, "state": state,
+                    "labels": [{"name": label} for label in labels]}
+        rows = [item(8), item(2), item(1, state="closed"), item(3, title="BUG-19051: owned"),
+                item(4, labels=("bug", "enhancement", "release:1.9.0")),
+                item(5, labels=("bug", "release:1.9.x")), item(6, labels=("question",))]
+        with patch.object(triage, "repo_root", return_value=Path("fixture")), \
+                patch.object(triage, "github_repo", return_value="owner/repo"), \
+                patch.object(triage, "fetch_remote_work_items", return_value=rows) as fetch, \
+                patch.object(triage, "run_triage") as edit, contextlib.redirect_stdout(io.StringIO()):
+            triage.reconcile_pending(limit=1)
+            edit.assert_called_once_with(2)
+            edit.reset_mock()
+            fetch.side_effect = TrackingError("incomplete remote scan")
+            with self.assertRaises(TrackingError):
+                triage.reconcile_pending()
+            edit.assert_not_called()
+
     def test_pull_request_policy_job_has_no_issue_write_token(self):
         workflow = (Path(__file__).resolve().parents[2] /
                     ".github/workflows/issue-auto-triage.yml").read_text()

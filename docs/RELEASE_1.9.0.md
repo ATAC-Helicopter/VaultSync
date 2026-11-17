@@ -45,9 +45,22 @@ The two focused producer modules pass 20 tests; no general suite is repeated.
 These results advance #492/#495 and the redraw regression; they do not qualify
 final media, physical profiles, capacity/interruption matrices, installed VaultSync
 continuity, 1.8.10 upgrades or native signed desktop packages. Sonar still reports
-78.0% new coverage (80% required) on the preceding hosted source. All support
+78.1% new coverage (80% required) on hosted source `0d8ff7a3`. All support
 profiles remain candidates and #736 stays draft. Earlier dated failures below
 remain historical observations; no beta is published.
+
+## Tracking-policy qualification — 2026-11-17
+
+VS-1980/#673 adds five focused offline cases across the existing three tracking
+modules (42 tests pass). They exercise complete Project pagination, safe date
+mutations, refusal before any write on incomplete/oversized scans, conservative
+bounded issue reconciliation, preserved owner/priority/status, conflicting
+metadata and failed ID-allocation audits. Draft PR creation preserves `Refs`
+when the owner issue must remain open; missing branch tracking refuses creation.
+No live GitHub mutation occurs in these tests and no product behavior changes.
+The hosted source `0d8ff7a3` passes cross-platform builds/tests and other technical
+checks; its separate Sonar gate remains blocked solely at78.1% coverage. Fresh
+analysis of these policy regressions is required; no gate is waived.
 
 ## Recovery confidence and application-semantic boundary — 2026-11-11
 

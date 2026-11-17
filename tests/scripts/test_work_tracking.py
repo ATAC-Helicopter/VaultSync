@@ -1,4 +1,7 @@
 import importlib.util
+import argparse
+import contextlib
+import io
 import pathlib
 import sys
 import unittest
@@ -14,6 +17,33 @@ spec.loader.exec_module(work_tracking)
 
 
 class WorkTrackingTests(unittest.TestCase):
+    def test_draft_pr_keeps_owner_issue_open_and_refuses_missing_tracking(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        args = argparse.Namespace(keep_open=True, draft=True, base=None)
+        tracking = {"fgIssue": "870", "fgWorkId": "BUG-19051",
+                    "fgWorkTitle": "Reject incompatible Core permissions", "fgWorkType": "bug"}
+        with patch.object(work_tracking, "repo_root", return_value=root), \
+                patch.object(work_tracking, "current_branch", return_value="work/preparation"), \
+                patch.object(work_tracking, "branch_tracking", return_value=tracking) as association, \
+                patch.object(work_tracking, "labels_available", return_value={"kind:bug"}), \
+                patch.object(work_tracking, "run", return_value=work_tracking.CommandResult(
+                    "https://github.com/owner/repo/pull/99", "", 0)) as command, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(work_tracking.cmd_pr(args), 0)
+            create = command.call_args_list[0]
+            self.assertEqual(create.args[0][:5], ["gh", "pr", "create", "--base", "Dev"])
+            self.assertIn("--draft", create.args[0])
+            self.assertIn("Refs #870", create.kwargs["input_text"])
+            self.assertNotIn("Closes #870", create.kwargs["input_text"])
+            self.assertIn("\n## Tracking\n", create.kwargs["input_text"])
+            self.assertEqual(command.call_args_list[1].args[0], ["gh", "pr", "edit",
+                "https://github.com/owner/repo/pull/99", "--add-label", "kind:bug"])
+            command.reset_mock()
+            association.return_value = {}
+            with self.assertRaisesRegex(work_tracking.TrackingError, "not tracked"):
+                work_tracking.cmd_pr(args)
+            command.assert_not_called()
+
     def test_command_output_is_decoded_as_utf8(self):
         result = work_tracking.run([sys.executable, "-c",
             "import sys; sys.stdout.buffer.write(bytes([0xE2, 0x80, 0x9D]))"])
