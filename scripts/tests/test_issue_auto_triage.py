@@ -53,6 +53,22 @@ class IssueAutoTriageTests(unittest.TestCase):
             with self.assertRaises(TrackingError):
                 triage.run_triage(99)
             self.assertEqual(command.call_count, 1)
+            command.reset_mock()
+            audit.reset_mock()
+            closed = {**issue, "state": "CLOSED", "assignees": [], "labels": [
+                {"name": name} for name in ("bug", "release:1.9.0", "status:in-progress")]}
+            command.return_value.stdout = json.dumps(closed)
+            triage.run_triage(99)
+            edits = command.call_args_list[-1].args[0]
+            self.assertIn("status:done", edits)
+            self.assertIn("priority:p2", edits)
+            self.assertIn("--add-assignee", edits)
+            self.assertNotIn("--title", edits, "never allocate a new ID to closed history")
+            audit.assert_not_called()
+            command.reset_mock()
+            command.return_value.stdout = json.dumps({**issue, "title": "Unclassified question", "labels": []})
+            triage.run_triage(99)
+            self.assertEqual(command.call_count, 1, "preserve unclassified owned work without guessing a type")
 
     def test_pending_reconciliation_is_sorted_bounded_and_conservative(self):
         def item(number, title="Unnumbered", state="open", labels=("bug", "release:1.9.0")):

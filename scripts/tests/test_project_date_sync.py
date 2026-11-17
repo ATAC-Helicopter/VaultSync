@@ -3,6 +3,7 @@ import sys
 import copy
 import contextlib
 import io
+import json
 import unittest
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -14,6 +15,26 @@ import project_date_sync as sync
 
 
 class ProjectDateSyncTests(unittest.TestCase):
+    def test_graphql_errors_and_missing_authorization_prevent_writes(self):
+        with patch.object(sync, "run") as command:
+            command.return_value.stdout = '{"data":{"accepted":true}}'
+            self.assertEqual(sync.graphql(sync.QUERY, {"cursor": None}), {"accepted": True})
+            request = json.loads(command.call_args.kwargs["input_text"])
+            self.assertEqual(request, {"query": sync.QUERY, "variables": {"cursor": None}})
+            command.return_value.stdout = '{"errors":[{"message":"forbidden"}]}'
+            with self.assertRaisesRegex(sync.TrackingError, "GraphQL request failed"):
+                sync.graphql(sync.MUTATE_CLEAR, {})
+        with patch.dict(sync.os.environ, {}, clear=True), patch.object(sync, "load_project") as load:
+            with self.assertRaisesRegex(sync.TrackingError, "required"):
+                sync.main()
+            load.assert_not_called()
+        with patch.dict(sync.os.environ, {"GH_TOKEN": "fixture-only"}), \
+                patch.object(sync, "load_project", return_value=("project", {}, [])), \
+                patch.object(sync, "graphql") as api:
+            with self.assertRaisesRegex(sync.TrackingError, "Missing Project field"):
+                sync.main()
+            api.assert_not_called()
+
     def test_complete_project_scan_and_incomplete_pages_fail_closed(self):
         def page(nodes, more=False, cursor=None, total=2):
             return {"user": {"projectV2": {"id": "project", "fields": {

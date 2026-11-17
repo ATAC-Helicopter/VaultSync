@@ -17,6 +17,25 @@ spec.loader.exec_module(work_tracking)
 
 
 class WorkTrackingTests(unittest.TestCase):
+    def test_status_preserves_local_context_when_remote_is_unavailable(self):
+        tracking = {"fgIssue": "870", "fgWorkId": "BUG-19051",
+                    "fgWorkTitle": "Core permission guard", "fgWorkType": "bug"}
+        with patch.object(work_tracking, "repo_root", return_value=pathlib.Path("fixture")), \
+                patch.object(work_tracking, "current_branch", return_value="work/preparation"), \
+                patch.object(work_tracking, "branch_tracking", return_value=tracking) as association, \
+                patch.object(work_tracking, "run", return_value=work_tracking.CommandResult(
+                    "", "offline", 1)) as command, contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 0)
+            self.assertIn("ID: BUG-19051", output.getvalue())
+            self.assertNotIn("GitHub:", output.getvalue())
+            command.return_value = work_tracking.CommandResult("OPEN https://github.com/owner/repo/issues/870", "", 0)
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 0)
+            self.assertIn("GitHub: OPEN", output.getvalue())
+            association.return_value = {}
+            command.reset_mock()
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 1)
+            command.assert_not_called()
+
     def test_draft_pr_keeps_owner_issue_open_and_refuses_missing_tracking(self):
         root = pathlib.Path(__file__).resolve().parents[2]
         args = argparse.Namespace(keep_open=True, draft=True, base=None)
