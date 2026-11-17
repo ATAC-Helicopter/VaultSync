@@ -83,6 +83,16 @@ boot; fresh firmware variables and no network restricted hidden dependencies.
 The measured record is the
 [installed Linux OS loop receipt](release-evidence/1.9-installed-linux-os-loop-2026-11-10.json).
 
+The [2026-11-17 8 GiB checkpoint](release-evidence/1.9-installed-linux-os-loop-2026-11-17.json)
+adds source-bound capture/export, durable restore/read-back/cleanup, independent
+whole-disk equality and target-only UEFI/Xorg/keyboard evidence on runtime10.0.15.
+Readable wizard transitions are recorded separately. A bounded repeat also
+records service exit0, readable progress/final UI, actual Close, final cleanup,
+normal shutdown and a fresh identical whole-disk comparison. The preceding
+interrupted observer remains historical; restored SSH remains unqualified
+because the source fixture lacks host keys. These limits do
+not negate the measured byte/boot results or admit a supported profile.
+
 This is evidence **for that exact fixture and build**, not public beta admission,
 a packaged rescue-media qualification, multi-terabyte testing, hardware
 certification or blanket Linux/Windows/macOS support. In particular:
@@ -96,7 +106,7 @@ certification or blanket Linux/Windows/macOS support. In particular:
 - A checksum success is not an independent restored-OS boot.
 - A successful boot is not a complete application/configuration qualification.
 
-The public stable version remains **1.8.9**. The 1.9.0-beta.1/2/3 names in the
+The public stable version is **1.8.10**. The 1.9.0-beta.1/2/3 names in the
 [beta program](BETA_PROGRAM_1.9.0.md) describe intended staged **disk**
 qualification, not released assets. The desktop application remains supported
 on Windows, macOS and Linux across those stages.

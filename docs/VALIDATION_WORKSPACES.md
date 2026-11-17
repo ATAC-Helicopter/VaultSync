@@ -143,3 +143,23 @@ physical recovery on APFS. Compact source-bound receipts, failed-run logs, PNGs
 and regeneration scripts remain. Selected real screenshots are held only in the
 private editorial workspace. Remove the retained guest inputs when the immediate
 qualification dependency ends, after preserving required evidence.
+
+## Installed 8 GiB checkpoint — 2026-11-17
+
+The bounded Debian/QEMU fixture records complete restore/read-back, clean service
+exit, final staging cleanup and identical whole-disk comparison before target
+removal. The separate display-only source records actual X11 timeout0, expected
+Cancel/refusal and Close. All recorded guest processes are absent after normal
+guest-requested shutdown; no orphan process exit code is invented.
+
+Two cleanup steps remove13,500,477,440 allocated bytes of known regenerable
+artifacts; observed free-space recovery across those steps is13,499,142,144 bytes.
+Duplicate publishes/installations/ISOs, the disposable restored target and
+synthetic SSH private key/seed are removed. Compact receipts, logs, frame hashes
+and private native frames remain. One existing guest/base, frozen source,
+product-created capture/export fixtures, tool inputs and latest assembled
+installation remain as immediate dependencies for independent-media/fault work:
+43,084,226,560 allocated bytes within a44GiB budget, review by2026-11-23.
+Expiry requires ownership/dependency review, not unconditional deletion.
+See the [loop](release-evidence/1.9-installed-linux-os-loop-2026-11-17.json) and
+[display](release-evidence/1.9-linux-idle-display-2026-11-17.json) receipts.

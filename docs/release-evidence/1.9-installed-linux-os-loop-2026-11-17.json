@@ -142,7 +142,6 @@
     }
   ],
   "remaining": [
-    "Clean successful restore-service exit and positive progress/final UI evidence",
     "Final media, capacity, interruption/refusal matrix and physical profile qualification",
     "Installed VaultSync and application/configuration continuity; 1.8.10 upgrade",
     "Native cross-platform packages, signing/provenance, Sonar 80% gate and protected review"
@@ -161,5 +160,104 @@
       "fileCount": 675,
       "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508"
     }
-  ]
+  ],
+  "completedRepeat": {
+    "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+    "reusedVerifiedImage": true,
+    "finalReceipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+      "operation": "989be5d5-a74a-48ad-8573-f138808b78d9",
+      "phase": "Completed",
+      "review": "2341b9a1-d83a-4820-8183-7ae87dd6a8d1",
+      "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+      "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+      "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "serviceResult": "success",
+    "serviceExitCode": 0,
+    "serviceInactive": true,
+    "progressAndFinalUiReadable": true,
+    "actualCloseObserved": true,
+    "wholeDiskComparison": {
+      "exitCode": 0,
+      "result": "Images are identical."
+    },
+    "shutdown": {
+      "observedAt": "2026-11-17T10:09:47.145718+00:00",
+      "shutdownEvent": {
+        "timestamp": {
+          "seconds": 1794910186,
+          "microseconds": 945237
+        },
+        "event": "SHUTDOWN",
+        "data": {
+          "guest": true,
+          "reason": "guest-shutdown"
+        }
+      },
+      "processAbsent": true,
+      "qemuExitCode": null,
+      "note": "Guest shutdown event retained; orphan process exit status is not available."
+    },
+    "idleDisplayLimitation": "X11 screen saver blanked the display after 600 seconds; pointer motion restored it. BUG-19052 fixes this separately on source 3eac35c2; this repeat does not claim that fix.",
+    "observerLimitation": "The long-running polling helper received SIGTERM; QEMU continued independently and final receipt/service/shutdown evidence was collected through fresh observers.",
+    "privateEvidence": [
+      {
+        "artifact": "repeat-receipt.final.json",
+        "sha256": "856309f471a27f667c282644f092324023050af4c76d0bfb7c687454a2485d02"
+      },
+      {
+        "artifact": "repeat-service-final.log",
+        "sha256": "4ddea6545cb70645fe7a5f2f1ef14b687ad4b05d9c339065b574de3d4a7a1f83"
+      },
+      {
+        "artifact": "repeat-disk-compare.log",
+        "sha256": "45c4d472e996560294f5829abf4e511b3f3d3a7a319e0f4f0fb8c7f2dea8fc26"
+      },
+      {
+        "artifact": "repeat-shutdown.json",
+        "sha256": "3861eb7729733299942a4591026037322838feb0ad7ed4cff020c3191f007fae"
+      },
+      {
+        "artifact": "repeat-10-final.png",
+        "sha256": "df93b2aa66825b19fb5585d632763de01a99e87d4df8d9619135c321011585e5"
+      },
+      {
+        "artifact": "repeat-12-progress-awake.png",
+        "sha256": "6f8f84dfa0b87a75383c97531644dbc99b18b9a6ddec1ba754d31c7f54d0bd64"
+      },
+      {
+        "artifact": "repeat-13-late-progress.png",
+        "sha256": "0cc03fbbb161062b33bbf071a3e34003fc6c149eae0d4519177f4528df787fdf"
+      }
+    ]
+  },
+  "workspace": {
+    "allRecordedGuestProcessesAbsent": true,
+    "restoredTargetRemovedAfterFinalComparison": true,
+    "allocatedRegenerableFileBytesRemoved": 13500477440,
+    "observedFreeBytesRecoveredAcrossCleanupSteps": 13499142144,
+    "retainedAllocatedBytes": 43084226560,
+    "retentionBudgetGiB": 44,
+    "reviewBy": "2026-11-23",
+    "retainedReason": "Existing guest/base, frozen source, product capture/export fixtures, tool inputs and latest installation for the next bounded independent-media/fault checkpoint; no duplicate lab",
+    "ephemeralSshPrivateKeyAndSeedRemoved": true
+  }
 }

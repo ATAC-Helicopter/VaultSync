@@ -1,0 +1,132 @@
+{
+  "owner": "BUG-19052",
+  "issue": 871,
+  "observedOn": "2026-11-17",
+  "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+  "qualification": false,
+  "scope": "Installed offline Linux X11 display configuration, catalog refresh, expected Cancel/refusal and Close; no repeat disk restore or final media/profile/beta acceptance",
+  "environment": {
+    "guest": "Debian 13 x64",
+    "kernel": "6.12.117+deb13-amd64",
+    "root": "read-only ext4",
+    "network": "No virtual NIC; only loopback",
+    "display": "1280x800 Xorg modesetting on QEMU Bochs",
+    "memoryMiB": 2048,
+    "vcpus": 2
+  },
+  "installation": {
+    "manifestSha256": "26cd6ce3cbb873ca6039de2d7eb149fd1a4398c3386df3c96ee625ca625844a2",
+    "files": 675
+  },
+  "baseline": {
+    "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+    "observed": "Full display blank after ten minutes of idle during 8 GiB restore; pointer movement restores complete progress",
+    "XGetScreenSaverTimeoutSeconds": 600
+  },
+  "corrected": {
+    "actualXorgFlags": [
+      "-s",
+      "0",
+      "-dpms"
+    ],
+    "XGetScreenSaverTimeoutSeconds": 0,
+    "XGetScreenSaverIntervalSeconds": 600,
+    "catalogRefreshAndRefusalReadable": true,
+    "actualCloseObserved": true,
+    "controllerProcessAbsentAfterClose": true,
+    "tenMinuteIdleWaitRepeated": false,
+    "diskRestoreRepeated": false
+  },
+  "expectedNegativeOutcome": {
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+      "operation": "1b43ef80-ba11-4f6d-bc0f-00613e0bcf03",
+      "phase": "Refused",
+      "review": null,
+      "image": null,
+      "capture": null,
+      "manifestRoot": null,
+      "acknowledgedBytes": 0,
+      "execution": null,
+      "stagingRetained": true,
+      "stagingCleanupPending": false
+    },
+    "serviceExitCode": 74,
+    "interpretation": "Expected refused operation with no image/review/target execution; not a successful restore or accepted release"
+  },
+  "checks": {
+    "selfContainedReleasePublish": "host, controller and isolated reader exit 0 on the same source",
+    "nativeLaunchers": "both compile with -Wall -Wextra -Werror and existing hardening",
+    "unrelatedCoreOrSolutionSuites": "not repeated for fixed display arguments"
+  },
+  "shutdown": {
+    "observedAt": "2026-11-17T10:14:02.615128+00:00",
+    "shutdownEvent": {
+      "timestamp": {
+        "seconds": 1794910442,
+        "microseconds": 414605
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    },
+    "processAbsent": true,
+    "qemuExitCode": null
+  },
+  "privateEvidence": [
+    {
+      "artifact": "display-fixed-start.log",
+      "sha256": "4876c8071e65b8c12e4d957ecaa8a890c83c2555e374a53b52cc2a9e643b71dc"
+    },
+    {
+      "artifact": "display-fixed-x11-query.log",
+      "sha256": "5f7c8532dcd9c242b796b73aef88b8fedf65e1dc6cabd2fc9365c9003c45c798"
+    },
+    {
+      "artifact": "display-fixed-result.log",
+      "sha256": "c1a2f6ffea45b2f6a1a0cb70779c09e1d8ca9085ab27ed8082522e0434151c24"
+    },
+    {
+      "artifact": "display-fixed-01-chooser.png",
+      "sha256": "f54b98856ebc422b7a138239425d4aef343850c2566394adb80f80f6ddbc62f8"
+    },
+    {
+      "artifact": "display-fixed-02-refresh.png",
+      "sha256": "87ab7df1f5d8a8f77f76839aacb210c89fdebf492e3dcd26bef5e6dbb3a95f85"
+    },
+    {
+      "artifact": "display-fixed-04-refused.png",
+      "sha256": "e9aff4360588669d537394a0ccaedd9814635b65115c2afe9f54d52e68b9e383"
+    },
+    {
+      "artifact": "display-fixed-05-close.png",
+      "sha256": "1c0dedbc0fbe448511d43766768027ce2ef548d5148bdf93a9cb542d63550512"
+    },
+    {
+      "artifact": "display-fixed-shutdown.json",
+      "sha256": "a8230e117bfe27e5001bc76b4effc23c128c610887e6587c6045172e74536b9e"
+    },
+    {
+      "artifact": "screen-saver-query.log",
+      "sha256": "d9801bf0aa25fab183f366a4dcdd7f96cd945a1a9516fdc7644247a1b0983bad"
+    }
+  ],
+  "remaining": [
+    "Final media/profile and shared upgrade/package/signature/provenance/review qualification",
+    "Separate Sonar coverage gate; no thresholds or exclusions changed"
+  ],
+  "workspace": {
+    "allRecordedGuestProcessesAbsent": true,
+    "restoredTargetRemovedAfterFinalComparison": true,
+    "allocatedRegenerableFileBytesRemoved": 13500477440,
+    "observedFreeBytesRecoveredAcrossCleanupSteps": 13499142144,
+    "retainedAllocatedBytes": 43084226560,
+    "retentionBudgetGiB": 44,
+    "reviewBy": "2026-11-23",
+    "retainedReason": "Existing guest/base, frozen source, product capture/export fixtures, tool inputs and latest installation for the next bounded independent-media/fault checkpoint; no duplicate lab",
+    "ephemeralSshPrivateKeyAndSeedRemoved": true
+  }
+}

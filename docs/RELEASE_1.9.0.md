@@ -25,11 +25,14 @@ With fresh firmware and only the restored disk attached, UEFI reaches Xorg/xterm
 original markers survive and keyboard input creates an independently observed
 marker. Guest-requested shutdown is observed and the owned VM is absent.
 
-The capture service exits 0. The restore service's final exit was not collected:
-host systemd terminated that VM after durable completion. Positive progress/final
-GUI frames are also absent. The source fixture lacks SSH host keys, so restored
-systemd is degraded; SSH/network and general application continuity are unqualified.
-The separate stale-target negative case refuses before consent/writes (zero bytes).
+The capture service exits 0. A bounded restore repeat now captures readable
+progress/final screens, actual Close, service exit0, final staging cleanup and
+normal guest shutdown; a fresh whole-disk comparison again reports identical
+bytes. The preceding restore lost its final service status after host termination
+and remains a separate historical limitation. The source fixture lacks SSH host
+keys, so restored systemd is degraded; SSH/network and general application
+continuity are unqualified. The separate stale-target negative case refuses
+before consent/writes (zero bytes).
 See the [bounded loop receipt](release-evidence/1.9-installed-linux-os-loop-2026-11-17.json).
 
 BUG-19044/#827 removes retained software frames and the explicit root-clip layer
@@ -45,22 +48,36 @@ The two focused producer modules pass 20 tests; no general suite is repeated.
 These results advance #492/#495 and the redraw regression; they do not qualify
 final media, physical profiles, capacity/interruption matrices, installed VaultSync
 continuity, 1.8.10 upgrades or native signed desktop packages. Sonar still reports
-78.1% new coverage (80% required) on hosted source `0d8ff7a3`. All support
+79.7% new coverage (80% required) on hosted source `bd4fb44f`. All support
 profiles remain candidates and #736 stays draft. Earlier dated failures below
 remain historical observations; no beta is published.
 
 ## Tracking-policy qualification — 2026-11-17
 
-VS-1980/#673 adds five focused offline cases across the existing three tracking
-modules (42 tests pass). They exercise complete Project pagination, safe date
+VS-1980/#673 adds seven focused offline cases across the existing three tracking
+modules (44 tests pass). They exercise complete Project pagination, safe date
 mutations, refusal before any write on incomplete/oversized scans, conservative
 bounded issue reconciliation, preserved owner/priority/status, conflicting
 metadata and failed ID-allocation audits. Draft PR creation preserves `Refs`
 when the owner issue must remain open; missing branch tracking refuses creation.
 No live GitHub mutation occurs in these tests and no product behavior changes.
-The hosted source `0d8ff7a3` passes cross-platform builds/tests and other technical
-checks; its separate Sonar gate remains blocked solely at78.1% coverage. Fresh
+The hosted source `bd4fb44f` passes cross-platform builds/tests and other technical
+checks; its separate Sonar gate remains blocked solely at79.7% coverage. Fresh
 analysis of these policy regressions is required; no gate is waived.
+
+## Keep recovery progress visible — 2026-11-17
+
+BUG-19052/#871 records a distinct full-screen idle blank during the long restore:
+X11 reports a600-second screen-saver timeout, and pointer motion restores the
+complete window. Frozen source `3eac35c2b3f85e73f305b16bd604cde77133ea16`
+adds fixed `-s 0 -dpms` arguments to the isolated display launcher. A fresh offline,
+readonly-root installed launch proves the actual arguments and X11 timeout0;
+catalog, refresh, Cancel/refusal and Close remain readable. The expected refused
+operation acknowledges zero bytes and exits74; this is not a successful restore.
+All three self-contained roles publish and both native launchers compile with
+`-Werror`. No disk restore is repeated for a display-only change. The native
+configuration is measured; a new ten-minute idle wait is not claimed.
+See the [display receipt](release-evidence/1.9-linux-idle-display-2026-11-17.json).
 
 ## Recovery confidence and application-semantic boundary — 2026-11-11
 
