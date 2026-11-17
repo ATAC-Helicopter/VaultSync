@@ -117,6 +117,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19052] Keep recovery progress visible during long operations by disabling X11 idle blanking.
 - [BUG-19051] Reject executable Core assemblies before staging worker and recovery installations.
 - [BUG-19050] Restrict issue-triage write permissions to the trusted reconciliation job.
 - [BUG-19049] Backport 1.8.10 backup destination, directory-alias and archive-output guards.

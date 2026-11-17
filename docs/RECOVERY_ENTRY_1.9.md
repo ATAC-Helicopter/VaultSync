@@ -52,6 +52,9 @@ inspection broker requires the caller's Core assembly to be a non-executable
 regular file; matching bytes alone do not make incompatible file modes usable.
 This check does not alter installed admission or repair existing image permissions.
 
+The fixed graphical display disables X11 idle blanking and DPMS so long-running
+recovery progress remains visible without keyboard or pointer input.
+
 The host checks the launched controller's actual executable/Core, exact kernel
 credentials, process lifetime and zero privilege state. The controller checks
 its immutable installation, root-owned rendezvous and actual kernel parent/peer;

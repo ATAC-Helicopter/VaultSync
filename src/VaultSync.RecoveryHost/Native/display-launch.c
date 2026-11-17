@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     if (child < 0) return 77;
     if (child == 0) {
         char *const arguments[] = { "/usr/lib/xorg/Xorg", ":0", "vt2", "-keeptty", "-nolisten", "tcp", "-nolisten", "local",
-            "-auth", ROOT "/Xauthority", "-noreset", "-nopn", "-logfile", ROOT "/Xorg.log", NULL };
+            "-auth", ROOT "/Xauthority", "-noreset", "-nopn", "-s", "0", "-dpms", "-logfile", ROOT "/Xorg.log", NULL };
         char *const environment[] = { "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "HOME=/", NULL };
         execve(arguments[0], arguments, environment);
         _exit(74);
