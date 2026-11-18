@@ -13,6 +13,20 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Repeatable GPT image assembly — 2026-11-18
+
+The boot configuration generator accepts explicit, distinct filesystem UUIDs.
+For the standalone media test fixture below, its fstab and GRUB configuration
+match the files extracted from the boot-tested disk byte for byte. The disk
+assembler verifies the EFI and ext4 payload digests and recreates the 8 GiB
+image using the recorded GPT identifiers. GPT verification finds no errors
+and the full image comparison and SHA-256 match the tested disk. See the
+[assembly receipt](release-evidence/1.9-linux-media-assembly-2026-11-18.json).
+
+This checkpoint makes assembly repeatable from prepared partition files.
+Pinned Debian provisioning, asset signing and final-media acceptance remain
+open. The disk profile is still a candidate.
+
 ## Standalone recovery image restores and boots Debian — 2026-11-18
 
 A standalone raw GPT/UEFI recovery image boots from fresh firmware with its

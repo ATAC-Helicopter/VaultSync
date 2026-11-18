@@ -1,0 +1,33 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "observedOn": "2026-11-18",
+  "qualification": false,
+  "sourceEvidence": "1.9-standalone-linux-media-restore-2026-11-18.json",
+  "checks": {
+    "fstabByteComparison": "match",
+    "grubByteComparison": "match",
+    "gptVerify": "no problems found",
+    "fullMediaByteComparison": "match"
+  },
+  "sgdisk": {
+    "version": "1.0.10",
+    "sha256": "9aeff3a6a91fc6f17eb6e2ab9713bf1d97bd848ebe13e446c149b4cf6dc622f8"
+  },
+  "configSha256": {
+    "fstab": "f75f295636ec2d87d3ef8925e1f3cc389756316befe768d7cce939fa19f8ae5c",
+    "grub.cfg": "7311962fc9648c9e06c0534d0f3bf4ddde94f0f7bebfa48079eb839e85bf2042"
+  },
+  "partitionSha256": {
+    "efi": "ca254cd6d737a1030e0d85031d36974e089fde4a0c1e059baf638d5d3a4d3caa",
+    "root": "b6c1fc8511c57228533226459f5b94e097bfdd5f704546b5760717c24a81f807"
+  },
+  "gptGuids": {
+    "disk": "2ea3ac4d-3242-49fc-89d8-e3f0f66eb6fa",
+    "efi": "b2a7edc5-758d-45f6-bd36-4254d5361097",
+    "root": "d1469c2b-56a3-46af-974c-6bf33feaa6a3"
+  },
+  "assembledSha256": "53fa8f7cf30db0147a4cc4fe86f9c43dd3a4aff407576c92e8cdd393695ea9dc",
+  "imageBytes": 8589934592,
+  "limits": "Prepared partitions extracted from the previously boot-tested disposable image. This proves deterministic configuration and assembly, not reproducible OS provisioning, a clean final package run or signing."
+}

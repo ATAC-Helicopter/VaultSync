@@ -67,8 +67,39 @@ admission, including the export mount used by the read-only image catalog. In
 qualification, expose the export through a disposable writable overlay and
 keep the original backing file read-only to the guest. The read-only media
 root and device admission checks stay in force. The image made for this fixture
-contains its volume UUIDs. A distribution build still needs a safe way to
-configure those bindings and retain the exact build provenance.
+contains its volume UUIDs.
+
+Generate the two build files with the same configuration format using:
+
+```sh
+python3 scripts/recovery_boot_config.py \
+  --root-uuid "$media_root_uuid" \
+  --scratch-uuid "$scratch_uuid" \
+  --export-uuid "$export_uuid" \
+  --kernel-release "$kernel_release" \
+  --output "$new_boot_config_dir"
+```
+
+Use the UUIDs of the three specifically prepared, distinct ext4 filesystems
+and verify that each occurs once among the attached disks. The assembler places
+`fstab` in `/etc` and `grub.cfg` in `/boot/grub` inside the offline image. Both
+refer to the chosen root, which must already have passed its offline
+filesystem check before the medium is sealed. The generator neither opens nor
+formats devices.
+
+After staging the installed closure and preparing the filesystem images, use
+`scripts/assemble_recovery_disk.py` to combine a 256 MiB EFI partition image and
+the checked ext4 root into a new 512-byte-sector GPT image. Supply the two
+partition SHA-256 digests from the build record and three distinct GPT GUIDs
+for the disk and its partitions. These GUIDs are separate from the filesystem
+UUIDs in the boot configuration. Record the input hashes, GUIDs and version of
+the pinned `sgdisk` binary used by the builder. The assembler refuses mismatched
+inputs and only exposes the new image after both payloads and the partition
+table have been written. The EFI partition must already contain the removable
+x64 UEFI loader configured for the chosen root filesystem.
+
+The distribution build still needs pinned OS provisioning, asset signing and
+qualification of the resulting candidate.
 
 The host checks the launched controller's actual executable/Core, exact kernel
 credentials, process lifetime and zero privilege state. The controller checks
