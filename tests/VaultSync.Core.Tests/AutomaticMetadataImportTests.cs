@@ -18,6 +18,10 @@ using Xunit;
 
 namespace VaultSync.Core.Tests;
 
+[CollectionDefinition("Automatic metadata import configuration", DisableParallelization = true)]
+public sealed class AutomaticMetadataImportConfigurationCollection;
+
+[Collection("Automatic metadata import configuration")]
 public sealed class AutomaticMetadataImportTests
 {
     [Fact]
