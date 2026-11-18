@@ -13,6 +13,32 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Linux desktop predecessor and payload check — 2026-11-18
+
+The official 1.8.10 Linux x64 tarball matched the GitHub asset SHA-256
+`0c6dfa9e362ab243728b136c68796ac830eff0e3a6c0a26a4abfbf531edbe401`.
+Its shipped Core (`35822687`) wrote a disposable app configuration and SQLite
+database. The candidate Core (`681d543e`), from a fresh self-contained desktop
+publish, opened the same data and ran schema setup twice. A second candidate
+process reopened it. Project identity, preset, tags, snapshot counts/bytes,
+database path, project root and backup settings survived. The probe exercised
+the application storage APIs on synthetic data. The installed updater,
+installer, desktop UI and actual backup-file recovery still require evidence.
+
+The extracted predecessor desktop tarball contains 126,239,774 logical file
+bytes across 292 files. The candidate desktop publish contains 124,077,884
+bytes across 286 files. The existing producer stages the matching isolated
+worker after setting non-executable Core permissions on the disposable build
+inputs. Together they occupy 211,257,117 bytes across 488 files. Of the worker's
+87,179,233 bytes, 87,005,616 are in 196 files with identical names and contents
+in both roles. The largest size opportunity is packaging that preserves worker
+isolation and verification. These are logical file sizes before compression
+and platform packaging. The previously removed Inter
+assembly alone occupied 1,892,864 bytes in the predecessor. WebAssembly
+Skia/HarfBuzz pins keep the restore graph aligned and contribute no files to
+this Linux x64 publish. Avalonia ColorPicker still supplies the active theme
+and project-tag editors. The dependency audit made no additional removals.
+
 ## Installed 8 GiB Linux loop and redraw repair — 2026-11-17
 
 Frozen runtime source `680f7c963301724c356e0bc62d760f7f58dfb508`, runtime 10.0.15,

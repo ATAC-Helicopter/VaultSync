@@ -11,173 +11,44 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Added
 
-- [VS-1907] List recovery image candidates without requiring manually typed folder paths.
-- [VS-1904] Prepare verified recovery copies while preserving private captured originals.
-- [VS-1904] Prototype offline disk capture through the admitted recovery console.
+- [VS-1904] Capture Linux system disks offline and create verified recovery copies while preserving private originals.
+- [VS-1907] Browse recovery images and restore them through a graphical wizard with separate overwrite confirmation and disk read-back.
 - [VS-1910] Open disk image tools from a dedicated, localized cloning page.
-- [VS-1907] Prototype verified graphical Linux recovery with independent physical overwrite confirmation.
-- [VS-1907] Prototype isolated recovery startup with verified files and owned staging cleanup.
-- [VS-1907] Prototype independent local confirmation before recovery disk overwrites.
-- [VS-1907] Prototype coordinated recovery messages, consent barriers, durable progress and consistent cleanup.
-- [VS-1907] Prototype bounded recovery responses with explicit device and completion checks.
-- [VS-1907] Prototype authenticated recovery messages with independently owned read-only image handles.
-- [VS-1907] Select recovery images and inspect their contents through the isolated Linux reader.
-- [VS-1907] Coordinate reviewed disk restoration and interrupted cleanup under one resource owner.
-- [VS-1904] Bind packaged Linux readers to verified files and matching application builds.
-- [VS-1904] Validate matching desktop and worker builds before Linux package assembly.
-- [VS-1904] Inspect capture layouts separately and verify sealed images before publication.
-- [VS-1907] Require isolated staging inspection and byte-bound verification throughout disk restoration.
-- [VS-1904] Prototype isolated image inspection with bounded reads and Linux syscall restrictions.
-- [VS-1904] Prototype exclusive restore target acquisition with bounded image and journal checks.
-- [VS-1907] Persist restore journals with ordered records and explicit interrupted outcomes.
-- [VS-1907] Prototype bounded disk writes with journal ordering and complete target read-back.
-- [VS-1904] Bind Linux inventory worker startup and response validation to kernel peers.
-- [VS-1904] Prototype Linux worker peer binding with kernel credentials and process lifetimes.
-- [VS-1905] Bind single-use overwrite reviews to verified images and fresh target observations.
-- [VS-1905] Prototype Linux restore previews with fresh handles and repository exclusion.
-- [VS-1907] Stage verified raw images privately and close writable access before recovery.
-- [VS-1904] Prototype verified Linux raw captures with private storage and interruption handling.
-- [VS-1998] Enable richer beta diagnostics by default with private review and opt-out.
-- [VS-1904] Isolate disk observations and reject malformed or incomplete worker responses.
-- [VS-1904] Prototype Linux disk reads with exclusive handles and native identity checks.
-- [VS-1905] Observe Linux disk geometry, mounted descendants and ambiguous device identities.
-- [VS-1917] Encode raw image metadata and verify payload layouts against strict limits.
-- [VS-1917] Bind draft image source and tool claims to captured GPT layouts.
-- [VS-1917] Inspect GPT metadata with bounded reads and matching backup tables.
-- [VS-1996] Prototype content-guided numeric and GUID compression with exact spelling recovery.
-- [VS-1980] Audit release issues and Project metadata before tracked pushes.
-- [VS-1905] Model whole-disk overwrite previews that reject unsafe or changed destinations.
-- [VS-1996] Add isolated compression experiments and repeatable archive size measurements.
-- [VS-1996] Prototype bounded Huffman coding with verified raw and LZ fallback.
-- [VS-1996] Prototype byte-exact numeric context lanes with adaptive compression selection.
-- [VS-1995] Show imported projects with recognizable labels and local source availability.
-- [VS-1907] Reconstruct verified synthetic images into new files using staged payloads.
-- [VS-1904] Capture synthetic raw images with explicit incomplete and interrupted outcomes.
-- [VS-1917] Bind raw payload verification to image manifests and completion records.
-- [VS-1917] Check raw image payload integrity without accessing restore destinations.
-- [VS-1917] Recognize disk image headers without treating them as verified recovery data.
-- [VS-1917] Prototype image coverage validation without reading payloads or authorizing restore.
 - [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
-- [VS-1919] Prototype bounded recovery dependency checks; overall recoverability remains unqualified.
-- [VS-1919] Simulate shared failure domains while preserving unknown correlation and historical evidence.
-- [VS-1919] Combine simultaneous modeled failures and flag ambiguous current recovery observations.
+- [VS-1995] Identify imported projects and see whether their source folders are available locally.
+- [VS-1998] Review beta diagnostics privately and opt out of sending them.
 
 ### Changed
 
-- [VS-1980] Include both Python policy test suites in hosted coverage collection.
-- [VS-1980] Bind hosted analysis and native evidence to identical source commits.
-- [VS-1980] Refresh shared documentation screenshots from 1.8.10 and separate 1.9 development previews.
-- [VS-1904] Verify recovery admission refusals and capture cancellation with isolated fixtures.
-- [VS-1904] Record bounded local inspection outcomes for failed offline captures.
-- [VS-1910] Explain offline recovery steps and conditional post-restore VaultSync availability.
-- [VS-1918] Plan progressive Linux, Windows and macOS disk-recovery beta qualification.
-- [VS-1907] Allow bounded recovery verification time and preserve independent cleanup after cancellation.
-- [VS-1907] Separate recovery choices from worker progress and independent overwrite authorization.
-- [VS-1907] Validate recovery admission, cancellation and stalled-stage liveness alongside isolated storage cleanup.
-- [VS-1980] Route repository tasks with bounded concurrency and preserved release safeguards.
-- [VS-1980] Bound local validation storage and clean completed test environments.
-- [VS-1902] Assemble beta drafts from qualified preparation commits without Microsoft Store assets.
-- [VS-1905] Use explicit native identity checks before describing restore targets.
-- [VS-1980] Track measured recovery prerequisites separately from remaining beta release blockers.
-- [VS-1902] Permit verified beta builds from the unmerged 1.9.0 preparation branch.
-- [VS-1918] Record isolated UEFI guest boot measurements for recovery development.
-- [VS-1980] Keep diaries outside GitHub and document automatic publication notifications.
+- [VS-1994] Use native Avalonia charts for dashboard storage and backup usage.
 - [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
-- [VS-1902] Require verified release provenance for manifests, packages and updater patches.
-- [VS-1980] Block beta asset builds until recovery evidence qualifies a disk profile.
-- [VS-1980] Set complete-feature beta safety gates before wider recovery testing.
-- [VS-1994] Refresh desktop dependencies and use native Avalonia storage charts.
-- [VS-1980] Retain legacy watcher safety during release scope realignment.
 - [VS-1980] Extend updater compatibility to official transferred repository URLs.
-- [VS-1980] Require BUG identifiers for active fixes and preserve historical ownership.
-- [VS-1910] Document navigation behavior and recovery limits with actual desktop screenshots.
-- [VS-1980] Automate issue tracking while preserving release ownership and existing work IDs.
-- [VS-1980] Preserve planning-source checksums and portable updater fixtures on Windows.
-- [VS-1918] Approve offline recovery architecture while keeping untested disk profiles explicitly unsupported.
-- [BUG-19012] Document the Linux startup block; visible-window qualification remains open.
-- [VS-1919] Draft recovery identities and evidence provenance for joint architecture review.
-- [VS-1980] Keep release notes brief and consecutive entries adjacent.
-- [VS-1917] Draft image integrity and compatibility requirements; disk implementation remains gated.
-- [VS-1980] Add reusable Rider validation with concise output and retained logs.
-- [VS-1980] Define the active development branch and sole preparation PR.
-- [VS-1980] Import Recovery Horizon planning while preserving work IDs and release ownership.
-- [VS-1980] Prepare nine release contracts without inventing future publication dates.
-- [VS-1980] Assign CLI discovery to 1.9.1 and resource automation to 1.9.5.
-- [VS-1980] Align Project tracking and consolidate one preparation PR per release.
-- [VS-1980] Fix paginated Project date audits and require candidate publication dates.
-- [VS-1910] Draft typed routes and adaptive navigation; architecture approval remains open.
-- [VS-1980] Integrate the verified test SDK patch and retain coordinated dependency updates.
-- [VS-1980] Correct ruleset updates while preserving required reviews and merge protections.
-
-### Removed
-
-- [VS-1980] Remove repository video production assets and obsolete guide links.
-- [VS-1994] Remove LiveCharts packages and unused weekly chart construction.
-- [VS-1980] Remove unused Inter font packaging while preserving existing font fallbacks.
 
 ### Fixed
 
-- [BUG-19052] Keep recovery progress visible during long operations by disabling X11 idle blanking.
-- [BUG-19051] Reject executable Core assemblies before staging worker and recovery installations.
-- [BUG-19050] Restrict issue-triage write permissions to the trusted reconciliation job.
-- [BUG-19049] Backport 1.8.10 backup destination, directory-alias and archive-output guards.
-- [BUG-19048] Refresh exclusion files and preset mappings even when timestamps are preserved, retaining custom-preset compatibility. (@ameenalqershi)
+- [BUG-19048] Refresh exclusion files and presets even when timestamps are preserved, including custom presets. (@ameenalqershi)
 - [BUG-19047] Remove temporary rsync exclusion files when external tool startup fails. (@ameenalqershi)
-- [BUG-19046] Avoid repeated full payload reads during disk image verification.
-- [BUG-19045] Observe image-list refresh failures and preserve cancellation when refreshing.
-- [BUG-19044] Repaint complete recovery wizard frames to preserve content during software redraws.
-- [BUG-19043] Keep keyboard focus working in the isolated recovery wizard.
+- [BUG-19046] Verify disk images without rereading the entire payload unnecessarily.
 - [BUG-19042] Check enabled destinations for metadata updates periodically after startup.
-- [BUG-19042] Keep metadata previews and read-only imports on private copies.
-- [BUG-19041] Draw the preset edit icon consistently without platform-specific fonts.
-- [BUG-19040] Open sandboxed macOS validation builds with the required GUI registration permission.
-- [BUG-19040] Sign isolated macOS validation packages using fixed command arguments.
-- [BUG-19039] Verify disk-image digests with bounded reads instead of tiny exchanges.
-- [BUG-19038] Confine Linux worker staging to repository and build temporary directories.
-- [BUG-19037] Require complete remote tracking snapshots before audits and identifier allocation.
-- [BUG-19036] Recheck sealed recovery files without retaining stale buffered bytes.
-- [BUG-19025] Reject missing Sonar coverage before importing reports from the pinned runner.
-- [BUG-19034] Make restore cleanup outcomes explicit and preserve failure reporting.
-- [BUG-19034] Protect worker handles automatically during native process lifetime checks.
-- [BUG-19034] Restrict beta draft inputs to fixed workspace files and reject links.
-- [BUG-19035] Preserve beta and candidate identities in packaged release builds.
-- [BUG-19034] Harden signing arguments, preserve release evidence, and restore measured quality checks.
-- [BUG-19025] Reconnect SonarQube organization binding with access limited to VaultSync.
-- [BUG-19031] Reject oversized image reconstruction before reading or staging payloads.
-- [BUG-19033] Preserve canonical issue priorities when adopting existing work.
+- [BUG-19041] Draw the preset edit icon consistently across platforms.
 - [BUG-19032] Keep destination totals complete when backup pages load partial history.
-- [BUG-19031] Refuse oversized synthetic image captures before allocating temporary storage.
-- [BUG-19030] Require fresh release packages after changes to shipped UI translations.
-- [BUG-19030] Translate omitted desktop messages and preserve distinct updater outcome instructions.
+- [BUG-19030] Translate missing desktop messages and clarify updater results.
 - [BUG-19029] Unmount SMB share roots when destinations use nested folders.
-- [BUG-19028] Exclude saved Unity profiling captures from source project backups.
+- [BUG-19028] Exclude saved Unity profiling captures from project backups.
 - [BUG-19027] Apply indexed exclusion presets consistently in projects, CLI and backups.
-- [BUG-19026] Reject unaligned raw payload offsets before image verification or reconstruction.
-- [BUG-19024] Keep macOS beta bundle versions valid and ordered before the final release.
-- [BUG-19023] Show release-neutral descriptions in Linux package metadata.
-- [BUG-19013] Preserve Unicode decoding and local ID reservations in repository tracking.
 - [BUG-19016] Keep project names readable in narrow cards beside snapshot statistics.
 - [BUG-19014] Preserve unfinished History drafts when refreshing the same selected snapshot.
-- [BUG-19015] Save visited pages in order so startup restores the newest location.
-- [BUG-19017] Restore the saved page before accepting initial user navigation.
-- [BUG-19018] Apply consistent evidence JSON nesting limits across Python runtimes.
-- [BUG-19019] Reject future-dated checks when evaluating current recovery confidence.
-- [BUG-19020] Reject ambiguous qualification JSON and bound growing evidence reads.
-- [BUG-19021] Reject recovery evidence collected before valid engine approval.
+- [BUG-19015] Restore the most recently visited page at startup.
 - [BUG-19001] Require explicit authorization before removing projects during unattended execution.
-- [BUG-19009] Run required platform and analysis checks for documentation changes.
-- [BUG-19010] Align managed and native rendering packages before compatibility qualification.
-- [BUG-19011] Update Spectre parsing atomically while preserving existing CLI behavior.
-- [BUG-19022] Handle root-owned AppImage extraction during packaging.
 
 ### Security
 
-- [VS-1980] Restrict native evidence reads to fixed, verified runner files.
-- [VS-1997] Prepare scoped runtime security backports across maintained source branches.
+- [VS-1902] Verify release provenance for manifests, packages and updater patches.
 - [VS-1997] Require serviced .NET runtimes and validate every framework included in release packages.
 
-Disk capture, independent boot and disk restore remain unimplemented/unqualified.
-See the [release contract](docs/RELEASE_1.9.0.md) and [work ledger](docs/release-evidence/1.9-work-2026-10-04.md).
+Offline disk recovery has been exercised in an isolated Linux VM. Supported disk
+profiles and release media remain subject to qualification.
+See the [release contract](docs/RELEASE_1.9.0.md) and [development ledger](docs/release-evidence/1.9-changelog-development-ledger-2026-11-18.md).
 
 ## [1.8.10] - 2026-11-15
 

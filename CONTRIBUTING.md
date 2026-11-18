@@ -142,8 +142,8 @@ versions and publication dates. At release cut, rename Unreleased to the
 published version/date and open a fresh Unreleased section for the next version.
 
 Group entries under these exact headings, omitting empty groups:
-- `Added`: new capabilities or documentation actually present on the branch.
-- `Changed`: changes to existing behavior, dependencies or maintained contracts.
+- `Added`: new capabilities or documentation that helps users use the release.
+- `Changed`: notable changes to existing behavior, compatibility or requirements.
 - `Deprecated`: capabilities scheduled for removal, with migration guidance.
 - `Removed`: capabilities or dependencies actually removed.
 - `Fixed`: corrected defects.
@@ -154,8 +154,9 @@ Group entries under these exact headings, omitting empty groups:
 
 Use that order. Do not add Maintenance, Planning, daily-date or implementation
 subheadings. Pending architecture documents must explicitly say draft/review;
-plans do not establish shipped behavior. Keep development ledgers and historical
-technical detail in docs/release-evidence rather than changelog entries.
+plans do not establish shipped behavior. Combine implementation steps into the
+user-visible result. Keep CI changes, intermediate fixes to unreleased features,
+and detailed qualification records in the owning issue or development ledger.
 Run `python3 scripts/changelog.py check` before commit; shared documentation
 standards must be propagated to every owning release PR without importing its
 siblings' unreleased features. Never rewrite published Git tags or packages
