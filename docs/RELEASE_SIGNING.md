@@ -105,6 +105,11 @@ before publication. No release, tag or candidate was published for these checks.
 
 ## Unmerged 1.9.0 beta source — VS-1902
 
+For the requested Beta 1 build on the actual `Dev` ref, use the
+[Dev promotion path](BETA_PROGRAM_1.9.0.md#beta-promotion-through-dev--2026-11-18).
+The preparation-head route below documents the earlier supported path. In both
+cases, record and verify the real workflow ref and commit.
+
 The maintainer requests beta distribution without merging sole release PR #736.
 The build/source authorization above enables packaging from its preparation head,
 not release qualification or automatic publication. Canonical version and project
@@ -193,5 +198,5 @@ The [beta program](BETA_PROGRAM_1.9.0.md) stages cloning/recovery profiles only;
 Windows, macOS and Linux application assets remain supported in every beta.
 All declared final assets still require the same manifest, signatures and
 exact-source verification. A milestone plan does not select a release identity
-or waive platform package/updater checks. Keep the unmerged preparation-ref and
-legacy Dev updater discovery contract above; exclude MSStore assets as requested.
+or waive platform package/updater checks. Preserve legacy Dev updater discovery
+for either source route and exclude MSStore assets as requested.

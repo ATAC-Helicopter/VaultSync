@@ -23,6 +23,28 @@ releases. Repairs can require additional beta builds; never move a released tag
 or reuse its version. Beta numbering must remain unique and monotonic. Each
 published release states its exact measured profile list and unresolved limits.
 
+## Beta promotion through Dev — 2026-11-18
+
+Keep #736 as the long-running release review. Once the Beta 1 source and
+qualification evidence are ready, retarget #736 to `Stable` before promoting
+the reviewed candidate. Open a separate promotion PR from the frozen candidate
+to `Dev` and use the normal protected merge with commit history preserved.
+Review the new target and diff on #736 after retargeting. `Stable` receives the
+final release through its separate protected review.
+
+Select `1.9.0-beta.1` in the canonical release and project metadata and keep
+`1.8.10` as the qualified predecessor. Freeze the actual promoted `Dev` commit
+for the beta cut, including that metadata. Run asset builds and draft assembly
+from `refs/heads/Dev` and verify the tag, asset manifest and attestations
+against that commit and ref. Create the unpublished prerelease
+with `target_commitish=Dev` after verifying the tag binding. See
+[release signing](RELEASE_SIGNING.md) for the asset and publication checks.
+For the initial asset run use `release_channel=beta`,
+`target_version=1.9.0-beta.1` and `previous_version=1.8.10` on `Dev`.
+Keep Store upload off and enable patch assets only for qualified bases.
+The earlier preparation-branch path remains available as historical tooling.
+This workflow starts only after the maintainer agrees to the cut.
+
 The Linux and Windows candidates currently use the **offline Linux x64 recovery
 environment**. A Windows source OS is distinct from running an elevated disk
 worker inside Windows. Native live capture, snapshots, encryption and Secure
