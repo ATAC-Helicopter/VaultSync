@@ -55,6 +55,21 @@ This check does not alter installed admission or repair existing image permissio
 The fixed graphical display disables X11 idle blanking and DPMS so long-running
 recovery progress remains visible without keyboard or pointer input.
 
+The experimental standalone Linux x64 disk boots through the removable UEFI
+path into a read-only ext4 root. Writable operating-system state lives in
+tmpfs. The graphical recovery service starts at boot and owns VT1 for overwrite
+confirmation. The image contains no fixture login or serial autologin. Build
+and review an image from trusted, pinned distribution inputs before delivery.
+
+The candidate binds scratch and the shared export to separate explicit
+filesystem UUIDs. It currently expects both ext4 mounts to be writable for
+admission, including the export mount used by the read-only image catalog. In
+qualification, expose the export through a disposable writable overlay and
+keep the original backing file read-only to the guest. The read-only media
+root and device admission checks stay in force. The image made for this fixture
+contains its volume UUIDs. A distribution build still needs a safe way to
+configure those bindings and retain the exact build provenance.
+
 The host checks the launched controller's actual executable/Core, exact kernel
 credentials, process lifetime and zero privilege state. The controller checks
 its immutable installation, root-owned rendezvous and actual kernel parent/peer;

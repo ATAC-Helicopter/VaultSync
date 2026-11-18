@@ -13,6 +13,29 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Standalone recovery image restores and boots Debian — 2026-11-18
+
+A standalone raw GPT/UEFI recovery image boots from fresh firmware with its
+root read-only, no virtual network and the original source detached. The
+compressed image decompresses to the exact raw image SHA-256. The wizard
+verifies the existing 8 GiB capture, displays the destination for review and
+requires separate console confirmation. The final receipt records all bytes
+written and read back, a terminal journal record and confirmed staging cleanup.
+The pre-boot whole-disk comparison reports identical source and destination
+bytes. The destination then boots alone with fresh UEFI variables, preserves
+both fixture markers and accepts keyboard input in Xorg/xterm.
+
+Two earlier confirmations failed with no writes. In the successful restore the
+IDE interruption prevented observation of the final screen and Close. The host
+saved the completed receipt before its ten-minute presentation timeout and
+exited 74. Both the recovery and target-only guests shut down normally.
+See the [source-bound receipt](release-evidence/1.9-standalone-linux-media-restore-2026-11-18.json).
+
+The candidate uses fixed fixture volume UUIDs and derives from the disposable
+Debian builder. The distribution build still needs configurable volume bindings,
+pinned and reproducible input provenance, signing and its own clean end-to-end
+acceptance. The support matrix remains unchanged.
+
 ## Independent recovery boot and Linux tar installer — 2026-11-18
 
 An autonomous QCOW2 disk with no backing file starts the installed recovery
