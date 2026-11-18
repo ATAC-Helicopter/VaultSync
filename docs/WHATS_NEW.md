@@ -1,6 +1,6 @@
 # What's New
 
-## [1.9.0]
+## [1.9.0-beta.1]
 
 The [staged disk beta program](BETA_PROGRAM_1.9.0.md) keeps the desktop app on
 Windows, macOS and Linux throughout. Only disk cloning/recovery is phased:

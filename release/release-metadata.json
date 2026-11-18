@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "activeRelease": {
-    "version": "1.9.0",
-    "channel": "stable",
+    "version": "1.9.0-beta.1",
+    "channel": "beta",
     "stage": "planned",
-    "tag": "v1.9.0",
-    "targetDate": "2027-03-26",
+    "tag": "v1.9.0-beta.1",
+    "targetDate": null,
     "previousVersion": "1.8.10",
     "compatiblePredecessors": [
       "1.8.10"

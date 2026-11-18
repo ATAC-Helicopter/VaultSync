@@ -1,8 +1,9 @@
 # VaultSync 1.9.0 — Disk and Bootable Recovery Foundation
 
 Planning release; current stable is 1.8.10. Stable target: 2027-03-26.
-Active development branch: `work/1.9-roadmap-realignment`; sole release PR:
-[#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) into `Dev`.
+Active development branch: `work/1.9-roadmap-realignment`. Draft
+[#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) retains the
+release review. Beta 1 uses a separate promotion PR into `Dev`.
 Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
 The Debian GPT/UEFI/ext4 512-byte virtual profile has measured recovery

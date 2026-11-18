@@ -2,7 +2,8 @@
 
 Owner: VS-1918 / #575, with VS-1904–VS-1909 implementation and qualification.
 Maintainer direction and clarification: 2026-11-05. Preparation remains
-`work/1.9-roadmap-realignment`, sole draft PR #736 into Dev.
+`work/1.9-roadmap-realignment`. Draft PR #736 retains the overall review, with
+a separate promotion PR for the Beta 1 merge into `Dev`.
 
 ## Desktop support and staged disk support
 
