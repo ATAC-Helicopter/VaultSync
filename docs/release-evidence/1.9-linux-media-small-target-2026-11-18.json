@@ -1,0 +1,88 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "observedOn": "2026-11-18",
+  "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+  "qualification": false,
+  "scope": "Independent disposable VM recovery disk and undersized target refusal",
+  "media": {
+    "format": "standalone QCOW2",
+    "backingFile": false,
+    "prebootSha256": "6213629fcdc2daf975b6cf48b832811df731c8b4a14d0d92575a6826ee0f51c0",
+    "firmware": "UEFI",
+    "rootFilesystem": "ext4 read-only",
+    "network": "loopback only",
+    "originalSourceAttached": false
+  },
+  "image": {
+    "id": "1d35b508-2317-4d56-8702-34e3becd09d2",
+    "capacityBytes": 8589934592,
+    "isolatedVerificationAndInventoryObserved": true
+  },
+  "destination": {
+    "serial": "VS_SMALL",
+    "capacityBytes": 4294967296,
+    "allocatedBytesBefore": 0,
+    "allocatedBytesAfter": 0,
+    "selectedInWizard": true,
+    "overwriteReviewShown": false
+  },
+  "receipt": {
+    "schemaVersion": 1,
+    "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+    "operation": "e98b2e88-5f90-48de-8642-494c10f00197",
+    "phase": "Refused",
+    "review": null,
+    "image": null,
+    "capture": null,
+    "manifestRoot": null,
+    "acknowledgedBytes": 0,
+    "execution": null,
+    "stagingRetained": true,
+    "stagingCleanupPending": false
+  },
+  "serviceExitCode": 74,
+  "shutdown": {
+    "observedAt": "2026-11-18T09:45:39.078281+00:00",
+    "shutdownEvent": {
+      "timestamp": {
+        "seconds": 1794995138,
+        "microseconds": 877638
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    },
+    "processAbsent": true,
+    "qemuExitCode": null
+  },
+  "privateEvidence": [
+    {
+      "artifact": "fault-start.log",
+      "sha256": "9fe9f7d1f1c881631f880f725483032c63adfee2df3c650287da97a2761f082d"
+    },
+    {
+      "artifact": "fault-state.png",
+      "sha256": "1488aec9b73b951a3a27d3063af50ab9b814bf4801a6a105a0bd9f38d3780560"
+    },
+    {
+      "artifact": "fault-refusal.png",
+      "sha256": "6aa370d36117681e808dba60f10c2811b802da5aaede581f6f75bd058601f09c"
+    },
+    {
+      "artifact": "fault-final.log",
+      "sha256": "b7e11a594c529fbc516eb31b62f99df746bdaf58dea5b979da0f7db7887d9e32"
+    },
+    {
+      "artifact": "fault-shutdown.json",
+      "sha256": "88f4a211c00feb89c14f86dab387c4b90fd71c2fdc8d38ff4d85d32ef8ba827b"
+    }
+  ],
+  "limits": [
+    "Disposable media built by copying the previously provisioned recovery VM. No redistributable ISO or USB artifact tested.",
+    "Generic refusal UI and receipt do not expose a more specific reason code.",
+    "Staging retained after refusal. Positive restore and target-only boot recorded separately."
+  ]
+}

@@ -13,6 +13,28 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Independent recovery boot and Linux tar installer — 2026-11-18
+
+An autonomous QCOW2 disk with no backing file starts the installed recovery
+build `3eac35c2` in UEFI, with read-only ext4 root and no network or original
+source. The wizard discovers and verifies the existing 8 GiB image. Selecting
+the disposable 4 GiB destination reaches Refused before any overwrite review.
+The receipt records zero acknowledged bytes and no execution, and the target
+remains wholly sparse. The guest shuts down normally. The UI shows a generic
+refusal. See the [native receipt](release-evidence/1.9-linux-media-small-target-2026-11-18.json).
+The standalone test disk derives from the provisioned fixture. A distributable
+recovery medium and a positive run bound to that medium still require evidence.
+
+The Linux x64 release builder produces a local tarball and AppImage from
+payload source `b3ef8a82`, with the matching isolated worker staged. The
+tarball installer upgrades the official 1.8.10 tar installation in a private
+profile. The updated Core reopens the synthetic project, preset, tags, snapshot
+and settings. The installer now removes four known obsolete Inter/LiveCharts
+DLLs when absent from the incoming archive, reclaiming 3,444,736 bytes on this
+upgrade while preserving the launcher and an unrelated local file.
+The AppImage extracts to a usable layout. Native UI startup, Debian package
+installation, signed packages and updater discovery remain open.
+
 ## Linux desktop predecessor and payload check — 2026-11-18
 
 The official 1.8.10 Linux x64 tarball matched the GitHub asset SHA-256

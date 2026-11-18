@@ -57,6 +57,12 @@ LEGACY_ICON_TARGET="${ICON_DIR}/vaultsync.png"
 
 mkdir -p "$INSTALL_ROOT" "$BIN_DIR" "$APPLICATIONS_DIR" "$ICON_DIR"
 cp -a "${SOURCE_DIR}/." "$INSTALL_ROOT/"
+# Upgrades overlay the previous payload, so retire only these former bundled DLLs.
+for obsolete in Avalonia.Fonts.Inter.dll LiveChartsCore.dll LiveChartsCore.SkiaSharpView.dll LiveChartsCore.SkiaSharpView.Avalonia.dll; do
+  if [ ! -e "${SOURCE_DIR}/${obsolete}" ] && [ -f "${INSTALL_ROOT}/${obsolete}" ]; then
+    rm -- "${INSTALL_ROOT}/${obsolete}"
+  fi
+done
 chmod +x "${INSTALL_ROOT}/VaultSync.UI" 2>/dev/null || true
 ln -sfn "${INSTALL_ROOT}/VaultSync.UI" "${BIN_DIR}/vaultsync"
 rm -f "$LEGACY_DESKTOP_FILE" "$LEGACY_COMPAT_DESKTOP_FILE" "$LEGACY_ICON_TARGET"
