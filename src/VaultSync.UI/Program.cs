@@ -126,8 +126,8 @@ internal static class Program
                      Environment.SpecialFolder.LocalApplicationData
                  })
         {
-            string root = Environment.GetFolderPath(folder);
-            if (!string.IsNullOrWhiteSpace(root))
+            string root = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
+            if (Path.IsPathFullyQualified(root))
             {
                 try
                 {
