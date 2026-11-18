@@ -25,6 +25,7 @@ class DiskSupportTests(unittest.TestCase):
         procedure.write_text('Unit-test procedure fixture. No device operation.')
         self.data = json.loads((ROOT / 'release/disk-support-1.9.0.json').read_text())
         self.data['profiles'] = self.data['profiles'][:1]
+        self.data['profiles'][0].update(status='candidate', evidence=[])
         # Unit chronology is fixed in October 4; real approvals and their files
         # belong only to the explicit canonical-plan check below.
         self.data['engine'].update(decision='proposed', approval=None)

@@ -52,6 +52,9 @@ class PublicReleaseMetadataTests(unittest.TestCase):
         bad_store = copy.deepcopy(self.metadata)
         bad_store["store"]["packageVersion"] = "1.8.6.0"
         cases.append(bad_store)
+        wrong_channel = copy.deepcopy(self.metadata)
+        wrong_channel["activeRelease"]["channel"] = "beta" if "-" not in self.metadata["activeRelease"]["version"] else "stable"
+        cases.append(wrong_channel)
 
         for value in cases:
             with self.subTest(value=value), tempfile.TemporaryDirectory(dir=REPO_ROOT) as temp_dir:
@@ -77,6 +80,43 @@ class PublicReleaseMetadataTests(unittest.TestCase):
 
     def test_repository_consumers_match_contract(self) -> None:
         self.assertEqual([], public_release_metadata.validate_consumers(REPO_ROOT, self.metadata))
+
+    def test_beta_keeps_numeric_binary_versions_and_stable_release_contract(self) -> None:
+        metadata = copy.deepcopy(self.metadata)
+        active = metadata["activeRelease"]
+        base = active["version"].split("-", 1)[0]
+        beta = f"{base}-beta.1"
+        active.update(version=beta, tag=f"v{beta}", channel="beta", stage="candidate", targetDate="2026-11-18")
+        cli = f"""
+<Version>{beta}</Version>
+<PackageVersion>{beta}</PackageVersion>
+<AssemblyVersion>{base}.0</AssemblyVersion>
+<FileVersion>{base}.0</FileVersion>
+<AssemblyInformationalVersion>{beta}</AssemblyInformationalVersion>
+"""
+        files = {
+            "release/release-metadata.json": json.dumps(metadata),
+            "src/VaultSync.UI/VaultSync.UI.csproj": f"<Version>{beta}</Version>",
+            "src/VaultSync.CLI/VaultSync.CLI.csproj": cli,
+            "installer/VaultSyncInstaller.iss": f'#define MyAppVersion "{beta}"',
+            "packaging/VaultSync.Store/Package.appxmanifest": f'Version="{base}.0"',
+            "docs/WHATS_NEW.md": f"## [{beta}]\n",
+            "CHANGELOG.md": f"## [Unreleased]\n**Target version:** `{beta}`\n",
+            "ROADMAP.md": f"## {base} — Recovery Horizon\n**Stable target:** 2027-03-26",
+            f"docs/RELEASE_{base}.md": f"VaultSync {base}; protected release/{base}.",
+            "docs/UPDATER.md": f"Update from {active['previousVersion']} to {beta}.",
+            "release-metadata.json": json.dumps(public_release_metadata.build_public_metadata(metadata)),
+            "index.html": '<span id="latest-release-version"></span>release-metadata.json',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative, content in files.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+            actual = public_release_metadata.load_metadata(root / "release/release-metadata.json", root)
+            self.assertEqual([], public_release_metadata.validate_consumers(root, actual))
+            self.assertEqual(base, public_release_metadata.build_store_metadata(actual)["productVersion"])
 
     def test_changelog_target_does_not_fall_back_to_historical_markers(self) -> None:
         consumers = (
