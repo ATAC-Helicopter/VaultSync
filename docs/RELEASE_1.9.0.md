@@ -31,6 +31,14 @@ Both guests shut down normally. See the
 The medium uses fixture volume bindings and remains an unsigned local build.
 The profile still awaits release qualification and review.
 
+The [recovery builder](RECOVERY_ENTRY_1.9.md) now accepts operator-supplied
+scratch and export UUIDs and assembles both capture and graphical restore
+media from installed closures. In a fresh offline UEFI guest, the graphical
+build verified the 8 GiB export and refused a 4 GiB target with zero bytes
+written. The capture build found the offline read-only source and accepted
+console cancellation, leaving its capture directory empty. See the
+[builder checks](release-evidence/1.9-debian-media-builder-2026-11-18.json).
+
 ## Repeatable GPT image assembly — 2026-11-18
 
 The boot configuration generator accepts explicit, distinct filesystem UUIDs.
@@ -89,8 +97,22 @@ upgrade while preserving the launcher and an unrelated local file.
 The installed tarball opens the VaultSync dashboard in an isolated Fedora 45
 X11 session with a disposable profile and no network. This smoke check used
 the tarball with SHA-256 `4fc77f96da2772f07903b60de5d16d68edb125d1f7b21f491393142220f84952`.
-The AppImage extracts to a usable layout. AppImage launch acceptance, Debian
-package installation, signed packages and updater discovery remain open.
+The x64 Debian package installs in a disposable Debian 13.7 container and
+upgrades the published 1.8.10 `.deb` in place. The predecessor matched
+GitHub's asset digest and passed its Stable attestation check. `dpkg` found
+no missing or changed files after the upgrade.
+
+An empty Linux home exposed a startup failure while resolving the instance
+lock and the installation identity. VaultSync now provisions its private data
+roots before diagnostics and resolves the default paths on first use. The
+local AppImage from `2b4ee3af` reached the dashboard and onboarding from an
+empty disposable home after extraction, with the database and lock under
+that home. The same AppImage mounted through FUSE in a separate probe. The
+`.deb` upgrade was repeated with the same corrected source. Twelve focused
+lock and identity tests passed with XDG directories that did not yet exist.
+The AppImage SHA-256 is `16955e25e849dec609777f96e7247d3dd3982c8576085e623a18bdd1c8f2da7e`.
+The `.deb` SHA-256 is `a138329c3cc2780eebdae2d1dd3e1a2aade8ffe2c1180770a7f2ba7737487bfe`.
+Signed candidate packages and updater discovery remain open.
 
 ## Linux desktop predecessor and payload check — 2026-11-18
 

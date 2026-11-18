@@ -69,7 +69,27 @@ keep the original backing file read-only to the guest. The read-only media
 root and device admission checks stay in force. The image made for this fixture
 contains its volume UUIDs.
 
-Generate the two build files with the same configuration format using:
+The builder takes the explicitly selected scratch and export filesystem UUIDs
+from the operator. Check that they identify the dedicated, separate volumes
+and each occurs once among the attached disks. Prepare scratch and export
+ownership and permissions as documented in [offline capture](RECOVERY_CAPTURE_1.9.md).
+The media root gets its own UUID. Use a private directory with the trusted
+`installation/` from `scripts/stage_recovery_host.py`, in `capture` or
+`graphical` mode.
+
+```sh
+bash "$vaultsync_checkout/packaging/recovery/build-debian-media.sh" \
+  "$local_debian_image_id" "$scratch_uuid" "$export_uuid"
+```
+
+Pass the full local image ID from the Debian recipe below. The Linux x64
+builder uses rootless Podman, Python 3, `uuidgen`, e2fsprogs, dosfstools, mtools
+and GPT fdisk. It verifies the ext4 root and GPT before creating
+`recovery.raw` and prints its SHA-256. A fresh workspace is required for a
+second build. The builder operates on regular image files and leaves the
+operator's scratch and export volumes to the boot environment.
+
+To inspect the boot files separately, use the same configuration generator.
 
 ```sh
 python3 scripts/recovery_boot_config.py \
@@ -80,8 +100,7 @@ python3 scripts/recovery_boot_config.py \
   --output "$new_boot_config_dir"
 ```
 
-Use the UUIDs of the three specifically prepared, distinct ext4 filesystems
-and verify that each occurs once among the attached disks. Root staging places
+Root staging places
 `fstab` in `/etc` and `grub.cfg` in `/boot/grub` inside the offline image. Both
 refer to the chosen root, which must already have passed its offline
 filesystem check before the medium is sealed. The generator neither opens nor
@@ -110,9 +129,10 @@ build with `--network none`. Mount only the build inputs and output directories.
 The read-only `/inputs` contains `installation` from the recovery stager,
 `boot-config` from the generator above and a copy of
 `packaging/recovery/stage-debian-root.sh`. The writable `/output` receives
-`recovery-root.tar` and `BOOTX64.EFI`. The staged
-systemd and Xorg hashes must match the Debian input. The unit paths inside the
-root match the immutable installation checks at boot.
+`recovery-root.tar` and `BOOTX64.EFI`. The staged systemd hash must match the
+Debian input. The graphical closure also binds Xorg and includes the display
+unit. The capture closure uses its fixed console unit. The installed unit
+paths match the immutable installation checks at boot.
 
 Extract the tar with numeric owners in a rootless user namespace, and create
 the empty `dev`, `proc`, `sys` and `run` mountpoint directories. Build the ext4

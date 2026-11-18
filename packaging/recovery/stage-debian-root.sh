@@ -11,10 +11,14 @@ test ! -e /usr/lib/vaultsync-recovery
 
 manifest=/inputs/installation/recovery.installation.json
 systemd_sha=$(sha256sum /usr/lib/systemd/systemd)
-xorg_sha=$(sha256sum /usr/lib/xorg/Xorg)
 grep -Fq "\"systemdSha256\": \"${systemd_sha%% *}\"" "$manifest"
-grep -Fq "\"xorgSha256\": \"${xorg_sha%% *}\"" "$manifest"
-grep -Fq '"controllerMode": "graphical"' "$manifest"
+if grep -Fq '"controllerMode": "graphical"' "$manifest"; then
+    xorg_sha=$(sha256sum /usr/lib/xorg/Xorg)
+    grep -Fq "\"xorgSha256\": \"${xorg_sha%% *}\"" "$manifest"
+    install -m 0644 /inputs/installation/boot/vaultsync-recovery-display.service /usr/lib/systemd/system/vaultsync-recovery-display.service
+else
+    grep -Fq '"controllerMode": "capture"' "$manifest"
+fi
 
 cp -a /inputs/installation /usr/lib/vaultsync-recovery
 chown -R 0:0 /usr/lib/vaultsync-recovery
@@ -24,7 +28,6 @@ install -d /boot/grub /srv/vaultsync-recovery /srv/vaultsync-recovery-exports \
 install -m 0644 /inputs/boot-config/fstab /etc/fstab
 install -m 0644 /inputs/boot-config/grub.cfg /boot/grub/grub.cfg
 install -m 0644 /usr/lib/vaultsync-recovery/boot/vaultsync-recovery.service /usr/lib/systemd/system/vaultsync-recovery.service
-install -m 0644 /usr/lib/vaultsync-recovery/boot/vaultsync-recovery-display.service /usr/lib/systemd/system/vaultsync-recovery-display.service
 ln -s /usr/lib/systemd/system/vaultsync-recovery.service /etc/systemd/system/multi-user.target.wants/vaultsync-recovery.service
 touch /etc/cloud/cloud-init.disabled
 for service in ssh.service ssh.socket systemd-networkd.service systemd-networkd.socket \

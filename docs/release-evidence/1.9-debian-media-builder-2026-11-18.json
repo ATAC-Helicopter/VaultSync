@@ -1,0 +1,74 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "observedOn": "2026-11-18",
+  "qualification": false,
+  "runtimeSourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+  "debianInputs": "Debian 13.7, pinned amd64 recipe and 20261117T000000Z snapshots",
+  "scope": "Two independently booted QEMU UEFI x64 recovery media with a fresh operator-selected scratch UUID. Each medium was read-only and each guest had no virtual NIC.",
+  "builder": {
+    "workspaceOnly": true,
+    "filesystemAndGptChecksPassed": true,
+    "existingOutputRefused": true,
+    "compressedRoundTripsVerified": true
+  },
+  "graphicalRestore": {
+    "rawSha256": "0cd63375cdb5ed41b05c2334b37b1c269b547bafea3d39e8309b5b114572dbcf",
+    "compressedSha256": "2180909392d9f3b3c900053949ddee67148fceef1e68fadebfe1b4a701a0e453",
+    "evidenceFrameSha256": "3372cbef8f3f214368d95e64d0800e77e741e0572ad693c3e921a110b72e6d52",
+    "shutdownEvent": {
+      "timestamp": {
+        "seconds": 1795016001,
+        "microseconds": 707543
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    },
+    "verifiedExportBytes": 8589934592,
+    "targetBytes": 4294967296,
+    "targetAllocatedBlocksBefore": 0,
+    "targetAllocatedBlocksAfter": 0,
+    "overwriteReviewIssued": false,
+    "serviceExitCode": 74,
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+      "operation": "ac3c606f-2449-42dc-97e6-23901da5b76a",
+      "phase": "Refused",
+      "review": null,
+      "image": null,
+      "capture": null,
+      "manifestRoot": null,
+      "acknowledgedBytes": 0,
+      "execution": null,
+      "stagingRetained": true,
+      "stagingCleanupPending": false
+    }
+  },
+  "consoleCapture": {
+    "rawSha256": "d99f2bfccd94d4150fecde6571a9abee8fc313cae29cc4b946d5fa59aa8605a4",
+    "compressedSha256": "976456f941f63c3905413c40ca23ebac2e66a4c0c678cb751e8b43e7c09e0ae2",
+    "evidenceFrameSha256": "899fadce2bbb3df18427b262a5cd084895d292d2a9a94ed32a5a5ff5cefe1589",
+    "shutdownEvent": {
+      "timestamp": {
+        "seconds": 1795016125,
+        "microseconds": 884239
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    },
+    "sourceBytes": 8589934592,
+    "sectorBytes": 512,
+    "sourceAttachedReadOnly": true,
+    "cancelObserved": true,
+    "capturesDirectoryEmptyAfterShutdown": true,
+    "serviceExitCode": 76
+  },
+  "limits": "This measures the new builder, a restore refusal and a capture cancellation. The independent positive restore is recorded separately. These assets are local and unsigned."
+}
