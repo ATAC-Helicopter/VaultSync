@@ -13,6 +13,24 @@ are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersede
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
 
+## Pinned Debian recovery medium — 2026-11-18
+
+A clean Debian 13.7 x64 root was built from a pinned base image and verified
+APT snapshots. The resulting standalone UEFI medium opened the graphical
+wizard with a read-only root and no virtual NIC or original source disk. It
+verified the existing capture and restored 8,589,934,592 bytes after review of
+the disposable destination and a separate console confirmation. The final
+screen was readable, Close ended the service successfully, and the receipt
+confirmed full read-back and staging cleanup.
+
+`qemu-img compare` found the entire restored disk identical to the source
+before boot. With fresh firmware and only the restored disk attached, Debian
+booted to Xorg/xterm, preserved the fixture markers and accepted keyboard input.
+Both guests shut down normally. See the
+[measured recovery receipt](release-evidence/1.9-pinned-debian-media-restore-2026-11-18.json).
+The medium uses fixture volume bindings and remains an unsigned local build.
+The profile still awaits release qualification and review.
+
 ## Repeatable GPT image assembly — 2026-11-18
 
 The boot configuration generator accepts explicit, distinct filesystem UUIDs.
@@ -23,9 +41,8 @@ image using the recorded GPT identifiers. GPT verification finds no errors
 and the full image comparison and SHA-256 match the tested disk. See the
 [assembly receipt](release-evidence/1.9-linux-media-assembly-2026-11-18.json).
 
-This checkpoint makes assembly repeatable from prepared partition files.
-Pinned Debian provisioning, asset signing and final-media acceptance remain
-open. The disk profile is still a candidate.
+This earlier checkpoint made assembly repeatable from prepared partition files.
+Asset signing and final-media acceptance remain open.
 
 ## Standalone recovery image restores and boots Debian — 2026-11-18
 
@@ -69,8 +86,11 @@ profile. The updated Core reopens the synthetic project, preset, tags, snapshot
 and settings. The installer now removes four known obsolete Inter/LiveCharts
 DLLs when absent from the incoming archive, reclaiming 3,444,736 bytes on this
 upgrade while preserving the launcher and an unrelated local file.
-The AppImage extracts to a usable layout. Native UI startup, Debian package
-installation, signed packages and updater discovery remain open.
+The installed tarball opens the VaultSync dashboard in an isolated Fedora 45
+X11 session with a disposable profile and no network. This smoke check used
+the tarball with SHA-256 `4fc77f96da2772f07903b60de5d16d68edb125d1f7b21f491393142220f84952`.
+The AppImage extracts to a usable layout. AppImage launch acceptance, Debian
+package installation, signed packages and updater discovery remain open.
 
 ## Linux desktop predecessor and payload check — 2026-11-18
 

@@ -44,14 +44,14 @@ menuentry 'VaultSync offline recovery' {{
     return fstab, grub
 
 
-def main() -> None:
+def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root-uuid", required=True)
     parser.add_argument("--scratch-uuid", required=True)
     parser.add_argument("--export-uuid", required=True)
     parser.add_argument("--kernel-release", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         fstab, grub = boot_config(args.root_uuid, args.scratch_uuid, args.export_uuid, args.kernel_release)
         args.output.mkdir(mode=0o700)

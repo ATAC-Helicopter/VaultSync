@@ -1,6 +1,7 @@
+from contextlib import redirect_stderr
 import importlib.util
+import io
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -43,12 +44,14 @@ class RecoveryBootConfigTests(unittest.TestCase):
     def test_cli_never_replaces_existing_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "boot"
-            args = [sys.executable, str(SCRIPT), "--root-uuid", ROOT, "--scratch-uuid", SCRATCH,
+            args = ["--root-uuid", ROOT, "--scratch-uuid", SCRATCH,
                     "--export-uuid", EXPORT, "--kernel-release", KERNEL, "--output", str(output)]
-            self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
+            config.main(args)
             before = {path.name: path.read_bytes() for path in output.iterdir()}
             self.assertEqual(set(before), {"fstab", "grub.cfg"})
-            self.assertEqual(subprocess.run(args, capture_output=True).returncode, 1)
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as result:
+                config.main(args)
+            self.assertEqual(result.exception.code, 1)
             self.assertEqual(before, {path.name: path.read_bytes() for path in output.iterdir()})
 
 

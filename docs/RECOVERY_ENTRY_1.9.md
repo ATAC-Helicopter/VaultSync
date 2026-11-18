@@ -81,15 +81,15 @@ python3 scripts/recovery_boot_config.py \
 ```
 
 Use the UUIDs of the three specifically prepared, distinct ext4 filesystems
-and verify that each occurs once among the attached disks. The assembler places
+and verify that each occurs once among the attached disks. Root staging places
 `fstab` in `/etc` and `grub.cfg` in `/boot/grub` inside the offline image. Both
 refer to the chosen root, which must already have passed its offline
 filesystem check before the medium is sealed. The generator neither opens nor
 formats devices.
 
-After staging the installed closure and preparing the filesystem images, use
-`scripts/assemble_recovery_disk.py` to combine a 256 MiB EFI partition image and
-the checked ext4 root into a new 512-byte-sector GPT image. Supply the two
+Run `scripts/assemble_recovery_disk.py` from the private build directory
+containing `esp.fat` (256 MiB) and the checked `root.ext4`. It creates
+`recovery.raw` there as a new 512-byte-sector GPT image. Supply the two
 partition SHA-256 digests from the build record and three distinct GPT GUIDs
 for the disk and its partitions. These GUIDs are separate from the filesystem
 UUIDs in the boot configuration. Record the input hashes, GUIDs and version of
@@ -98,8 +98,29 @@ inputs and only exposes the new image after both payloads and the partition
 table have been written. The EFI partition must already contain the removable
 x64 UEFI loader configured for the chosen root filesystem.
 
-The distribution build still needs pinned OS provisioning, asset signing and
-qualification of the resulting candidate.
+The x64 Debian recipe is in `packaging/recovery/Debian.Containerfile`. Build
+it rootless with Podman, with pulling disabled after resolving its pinned base
+and a read-only CA bundle at `/run/build-ca.pem`. It verifies the signed main
+and security archive metadata against two pinned digests before installing
+packages and records the selected package versions. The snapshots fix the
+inputs. Independently built filesystem timestamps can still differ.
+
+Run `sh /inputs/stage-debian-root.sh` inside a disposable container from that
+build with `--network none`. Mount only the build inputs and output directories.
+The read-only `/inputs` contains `installation` from the recovery stager,
+`boot-config` from the generator above and a copy of
+`packaging/recovery/stage-debian-root.sh`. The writable `/output` receives
+`recovery-root.tar` and `BOOTX64.EFI`. The staged
+systemd and Xorg hashes must match the Debian input. The unit paths inside the
+root match the immutable installation checks at boot.
+
+Extract the tar with numeric owners in a rootless user namespace, and create
+the empty `dev`, `proc`, `sys` and `run` mountpoint directories. Build the ext4
+partition as a regular file with the configured root UUID, then check it
+offline. Create the second regular file containing the 256 MiB FAT32 EFI
+partition and put the loader at `/EFI/BOOT/BOOTX64.EFI`. Hash those two files
+before GPT assembly. Release asset signing and qualification of the final
+image remain separate.
 
 The host checks the launched controller's actual executable/Core, exact kernel
 credentials, process lifetime and zero privilege state. The controller checks
