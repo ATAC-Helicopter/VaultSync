@@ -1974,11 +1974,33 @@
                                   BorderBrush="{DynamicResource CardBorderBrush}"
                                   BorderThickness="0,1,0,0">
                             <StackPanel>
-                              <ItemsControl ItemsSource="{Binding Snapshots}"
+                              <ItemsControl ItemsSource="{Binding InventoryRows}"
                                             Tag="{Binding DataContext, ElementName=Root}">
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate>
-                                    <Border Background="{DynamicResource Surface1}"
+                                    <StackPanel>
+                                      <Grid ColumnDefinitions="Auto,*"
+                                            ColumnSpacing="8"
+                                            IsVisible="{Binding HasVersions}">
+                                        <TextBlock Text="{infra:LocalizedString Key=Backups.Section.InventoryVersions}"
+                                                   VerticalAlignment="Center" />
+                                        <ComboBox Grid.Column="1"
+                                                  HorizontalAlignment="Stretch"
+                                                  Classes="app-filter"
+                                                  ItemsSource="{Binding Versions}"
+                                                  SelectedItem="{Binding SelectedSnapshot, Mode=TwoWay}"
+                                                  AutomationProperties.Name="{infra:LocalizedString Key=Backups.Section.InventoryVersions}">
+                                          <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                              <TextBlock Text="{Binding InventoryVersionLabel}"
+                                                         TextTrimming="CharacterEllipsis"
+                                                         ToolTip.Tip="{Binding DestinationRootPath}" />
+                                            </DataTemplate>
+                                          </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                      </Grid>
+                                    <Border DataContext="{Binding SelectedSnapshot}"
+                                            Background="{DynamicResource Surface1}"
                                             BorderBrush="{DynamicResource BorderSoft}"
                                             BorderThickness="1"
                                             CornerRadius="14"
@@ -2174,6 +2196,7 @@
                                         </WrapPanel>
                                       </Grid>
                                     </Border>
+                                    </StackPanel>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                               </ItemsControl>
@@ -2185,7 +2208,7 @@
                                       Command="{Binding LoadMoreSnapshotsCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                   <TextBlock Text="{infra:LocalizedString Key=Backups.Section.ShowMore}" />
-                                  <TextBlock Text="{Binding RemainingSnapshotCount, StringFormat='({0})'}"
+                                  <TextBlock Text="{Binding RemainingRowCount, StringFormat='({0})'}"
                                              Foreground="{DynamicResource TextSecondaryBrush}" />
                                 </StackPanel>
                               </Button>

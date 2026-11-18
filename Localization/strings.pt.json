@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Filtrar por projeto",
   "Backups.Section.HistoryTitle": "Histórico de backups",
   "Backups.Section.InventorySearch": "Pesquisar por projeto, destino ou caminho",
+  "Backups.Section.InventoryVersions": "Versões",
   "Backups.Section.InventoryNoMatches": "Nenhuma cópia de segurança corresponde aos filtros.",
   "Backups.Section.SnapshotInventoryTitle": "Inventário de snapshots",
   "Backups.Section.SnapshotInventoryDescription": "Gerencie pontos de restauração, compare snapshots e execute operações de backup. As linhas do tempo completas dos projetos ficam na página Histórico.",

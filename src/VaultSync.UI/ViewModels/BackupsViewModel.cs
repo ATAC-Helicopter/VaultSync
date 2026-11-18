@@ -3062,7 +3062,8 @@ namespace VaultSync.UI.ViewModels
 
             foreach (SnapshotProjectGroup group in SnapshotGroups)
             {
-                foreach (BackupSnapshotItem item in group.Snapshots.Where(item => item.SnapshotId == snapshotId))
+                foreach (BackupSnapshotItem item in group.InventoryRows.SelectMany(row => row.Versions)
+                             .Where(item => item.SnapshotId == snapshotId))
                     item.IsProtected = isProtected;
             }
         }

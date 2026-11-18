@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Lọc theo dự án",
   "Backups.Section.HistoryTitle": "Lịch sử sao lưu",
   "Backups.Section.InventorySearch": "Tìm theo dự án, đích đến hoặc đường dẫn",
+  "Backups.Section.InventoryVersions": "Phiên bản",
   "Backups.Section.InventoryNoMatches": "Không có bản sao lưu nào khớp với bộ lọc.",
   "Backups.Section.SnapshotInventoryTitle": "Kiểm kê ảnh chụp nhanh",
   "Backups.Section.SnapshotInventoryDescription": "Quản lý điểm khôi phục, so sánh ảnh chụp nhanh và chạy các hoạt động sao lưu. Lịch trình dự án đầy đủ trực tiếp trên trang Lịch sử.",

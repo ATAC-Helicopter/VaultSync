@@ -102,18 +102,18 @@ public sealed class RefreshContinuityTests
             ProjectId = "project", IsExpanded = !expanded, ProjectName = "Renamed", Summary = "64 backups"
         };
         incoming.SetSnapshots(points.Skip(1));
-        original.Snapshots.CollectionChanged += (_, args) =>
+        original.InventoryRows.CollectionChanged += (_, args) =>
             Assert.NotEqual(NotifyCollectionChangedAction.Reset, args.Action);
 
         vm.ReplaceSnapshotGroups(new[] { incoming });
 
         Assert.Same(original, Assert.Single(vm.SnapshotGroups));
         Assert.Equal(expanded, original.IsExpanded);
-        Assert.Equal(40, original.VisibleSnapshotCount);
+        Assert.Equal(40, original.VisibleRowCount);
         Assert.Equal(64, original.TotalSnapshotCount);
         Assert.Equal("Renamed", original.ProjectName);
         Assert.Equal("64 backups", original.Summary);
-        Assert.Same(points[1], original.Snapshots[0]);
+        Assert.Same(points[1], original.InventoryRows[0].SelectedSnapshot);
     }
 
     [Fact]

@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Filter op project",
   "Backups.Section.HistoryTitle": "Back-upgeschiedenis",
   "Backups.Section.InventorySearch": "Zoeken op project, bestemming of pad",
+  "Backups.Section.InventoryVersions": "Versies",
   "Backups.Section.InventoryNoMatches": "Geen back-ups komen overeen met de filters.",
   "Backups.Section.SnapshotInventoryTitle": "Snapshot-inventaris",
   "Backups.Section.SnapshotInventoryDescription": "Beheer herstelpunten, vergelijk snapshots en voer back-upoperaties uit. Volledige projecttijdlijnen staan op de pagina Geschiedenis.",

@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "프로젝트별 필터",
   "Backups.Section.HistoryTitle": "백업 이력",
   "Backups.Section.InventorySearch": "프로젝트, 대상 또는 경로로 검색",
+  "Backups.Section.InventoryVersions": "버전",
   "Backups.Section.InventoryNoMatches": "필터와 일치하는 백업이 없습니다.",
   "Backups.Section.SnapshotInventoryTitle": "스냅샷 인벤토리",
   "Backups.Section.SnapshotInventoryDescription": "복원 지점 관리, 스냅샷 비교, 백업 작업 실행. 전체 프로젝트 일정은 역사 페이지에서 실시간으로 확인할 수 있습니다.",

@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Proje Bazında Filtre",
   "Backups.Section.HistoryTitle": "Yedek geçmişi",
   "Backups.Section.InventorySearch": "Proje, hedef veya yola göre ara",
+  "Backups.Section.InventoryVersions": "Sürümler",
   "Backups.Section.InventoryNoMatches": "Filtrelerle eşleşen yedek yok.",
   "Backups.Section.SnapshotInventoryTitle": "Anlık görüntü envanteri",
   "Backups.Section.SnapshotInventoryDescription": "Geri yükleme noktalarını yönetin, anlık görüntüleri karşılaştırın ve yedekleme işlemlerini yapın. Projenin tam zaman çizelgeleri Tarih sayfasında yayınlanmaktadır.",

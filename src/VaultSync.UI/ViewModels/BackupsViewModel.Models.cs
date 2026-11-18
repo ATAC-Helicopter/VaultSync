@@ -542,6 +542,7 @@ namespace VaultSync.UI.ViewModels
         public string SizeFormatted => FormatSize(SizeBytes);
         public string TimelineSelectionLabel =>
             $"{Timestamp:yyyy-MM-dd HH:mm} \u00b7 {TypeLabel} \u00b7 {SizeFormatted}";
+        public string InventoryVersionLabel => $"{TimelineSelectionLabel} \u00b7 #{Id} \u00b7 {BackupRelativePath}";
 
         public bool IsImported
         {
@@ -615,11 +616,64 @@ namespace VaultSync.UI.ViewModels
             UiFormat.FormatBytes(bytes);
     }
 
+    public sealed class SnapshotInventoryRow : ViewModelBase
+    {
+        internal readonly record struct Location(string ProjectId, string Root, string Path, BackupSnapshotItem? Unlocated);
+
+        internal static Location GetLocation(BackupSnapshotItem snapshot)
+        {
+            if (string.IsNullOrWhiteSpace(snapshot.ProjectId) ||
+                string.IsNullOrWhiteSpace(snapshot.DestinationRootPath) ||
+                string.IsNullOrWhiteSpace(snapshot.BackupRelativePath))
+            {
+                return new Location(string.Empty, string.Empty, string.Empty, snapshot);
+            }
+
+            return new Location(
+                snapshot.ProjectId,
+                snapshot.DestinationRootPath.ToUpperInvariant(),
+                snapshot.BackupRelativePath.ToUpperInvariant(),
+                null);
+        }
+
+        internal SnapshotInventoryRow(Location key, IReadOnlyList<BackupSnapshotItem> versions)
+        {
+            Key = key;
+            Versions = versions;
+            _selectedSnapshot = versions[0];
+        }
+
+        internal Location Key { get; }
+        public IReadOnlyList<BackupSnapshotItem> Versions { get; private set; }
+        public bool HasVersions => Versions.Count > 1;
+
+        private BackupSnapshotItem _selectedSnapshot;
+        public BackupSnapshotItem SelectedSnapshot
+        {
+            get => _selectedSnapshot;
+            set
+            {
+                if (value is not null && Versions.Contains(value))
+                    SetField(ref _selectedSnapshot, value);
+            }
+        }
+
+        internal void UpdateVersions(IReadOnlyList<BackupSnapshotItem> versions)
+        {
+            if (Versions.SequenceEqual(versions))
+                return;
+
+            _selectedSnapshot = versions.FirstOrDefault(item => item.Id == _selectedSnapshot.Id) ?? versions[0];
+            Versions = versions;
+            OnPropertiesChanged(nameof(Versions), nameof(HasVersions), nameof(SelectedSnapshot));
+        }
+    }
+
     public class SnapshotProjectGroup : ViewModelBase
     {
         internal const int DefaultPageSize = 20;
 
-        private readonly List<BackupSnapshotItem> _allSnapshots = [];
+        private readonly List<SnapshotInventoryRow> _allRows = [];
         private readonly RelayCommand _loadMoreSnapshotsCommand;
 
         public SnapshotProjectGroup()
@@ -647,17 +701,13 @@ namespace VaultSync.UI.ViewModels
             get; set;
         }
 
-        public ObservableCollection<BackupSnapshotItem> Snapshots
-        {
-            get;
-        } =
-            [];
+        public ObservableCollection<SnapshotInventoryRow> InventoryRows { get; } = [];
 
         public ICommand LoadMoreSnapshotsCommand { get; }
-        public int TotalSnapshotCount => _allSnapshots.Count;
-        public int VisibleSnapshotCount => Snapshots.Count;
-        public int RemainingSnapshotCount => Math.Max(0, TotalSnapshotCount - VisibleSnapshotCount);
-        public bool HasMoreSnapshots => RemainingSnapshotCount > 0;
+        public int TotalSnapshotCount => _allRows.Sum(row => row.Versions.Count);
+        public int VisibleRowCount => InventoryRows.Count;
+        public int RemainingRowCount => _allRows.Count - VisibleRowCount;
+        public bool HasMoreSnapshots => RemainingRowCount > 0;
 
         internal void UpdateFrom(SnapshotProjectGroup incoming)
         {
@@ -668,19 +718,34 @@ namespace VaultSync.UI.ViewModels
             LatestBackupDisplay = incoming.LatestBackupDisplay;
             AccentBrush = incoming.AccentBrush;
             ProjectTagChips.SyncWith(incoming.ProjectTagChips);
-            SetSnapshots(incoming._allSnapshots, Math.Max(DefaultPageSize, VisibleSnapshotCount));
+            SetRows(incoming._allRows, Math.Max(DefaultPageSize, VisibleRowCount));
             OnPropertiesChanged(nameof(ProjectName), nameof(ProjectTagsDisplay), nameof(HasProjectTags),
                 nameof(Summary), nameof(TotalSizeFormatted), nameof(LatestBackupDisplay), nameof(AccentBrush));
         }
 
-        internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots, int initialCount = DefaultPageSize)
+        internal void SetSnapshots(IEnumerable<BackupSnapshotItem> snapshots)
         {
-            ArgumentNullException.ThrowIfNull(snapshots);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(initialCount);
+            SetRows(snapshots.GroupBy(SnapshotInventoryRow.GetLocation)
+                .Select(group => new SnapshotInventoryRow(group.Key, group.ToArray())), DefaultPageSize);
+        }
 
-            _allSnapshots.Clear();
-            _allSnapshots.AddRange(snapshots);
-            Snapshots.SyncWith(_allSnapshots.Take(initialCount).ToList());
+        private void SetRows(IEnumerable<SnapshotInventoryRow> rows, int initialCount)
+        {
+            var previous = _allRows.ToDictionary(row => row.Key);
+            _allRows.Clear();
+            foreach (SnapshotInventoryRow row in rows)
+            {
+                if (previous.TryGetValue(row.Key, out SnapshotInventoryRow? existing))
+                {
+                    existing.UpdateVersions(row.Versions);
+                    _allRows.Add(existing);
+                }
+                else
+                {
+                    _allRows.Add(row);
+                }
+            }
+            InventoryRows.SyncWith(_allRows.Take(initialCount).ToList());
             AppendSnapshots(0);
         }
 
@@ -693,14 +758,14 @@ namespace VaultSync.UI.ViewModels
 
         private void AppendSnapshots(int count)
         {
-            int targetCount = Math.Min(TotalSnapshotCount, VisibleSnapshotCount + count);
-            for (int index = VisibleSnapshotCount; index < targetCount; index++)
-                Snapshots.Add(_allSnapshots[index]);
+            int targetCount = Math.Min(_allRows.Count, VisibleRowCount + count);
+            for (int index = VisibleRowCount; index < targetCount; index++)
+                InventoryRows.Add(_allRows[index]);
 
             OnPropertiesChanged(
                 nameof(TotalSnapshotCount),
-                nameof(VisibleSnapshotCount),
-                nameof(RemainingSnapshotCount),
+                nameof(VisibleRowCount),
+                nameof(RemainingRowCount),
                 nameof(HasMoreSnapshots));
             _loadMoreSnapshotsCommand.RaiseCanExecuteChanged();
         }

@@ -15,7 +15,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1907] Browse recovery images and restore them through a graphical wizard with separate overwrite confirmation and disk read-back.
 - [VS-1910] Open disk image tools from a dedicated, localized cloning page.
 - [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
-- [VS-1813] Search backups by project, destination or path, with filters for recent and locally created backups.
+- [VS-1813] Search and filter backups, and browse versions at the same location from one row.
 - [VS-1995] Identify imported projects and see whether their source folders are available locally.
 - [VS-1998] Review beta diagnostics privately and opt out of sending them.
 

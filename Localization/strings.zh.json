@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "项目筛选",
   "Backups.Section.HistoryTitle": "备份历史",
   "Backups.Section.InventorySearch": "按项目、目标位置或路径搜索",
+  "Backups.Section.InventoryVersions": "版本",
   "Backups.Section.InventoryNoMatches": "没有符合筛选条件的备份。",
   "Backups.Section.SnapshotInventoryTitle": "快照清单",
   "Backups.Section.SnapshotInventoryDescription": "管理还原点、比较快照并执行备份操作。完整项目时间线请前往“历史记录”页面查看。",

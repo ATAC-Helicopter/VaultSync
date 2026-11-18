@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Filtruj według projektu",
   "Backups.Section.HistoryTitle": "Historia kopii zapasowej",
   "Backups.Section.InventorySearch": "Szukaj według projektu, miejsca docelowego lub ścieżki",
+  "Backups.Section.InventoryVersions": "Wersje",
   "Backups.Section.InventoryNoMatches": "Żadna kopia zapasowa nie pasuje do filtrów.",
   "Backups.Section.SnapshotInventoryTitle": "Inwentaryzacja migawkowa",
   "Backups.Section.SnapshotInventoryDescription": "Zarządzaj punktami przywracania, porównuj migawki i wykonuj operacje backup. Pełne harmonogramy projektów dostępne na stronie Historia.",

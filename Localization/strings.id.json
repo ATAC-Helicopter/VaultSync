@@ -290,6 +290,7 @@
   "Backups.Section.HistoryFilterLabel": "Filter berdasarkan proyek",
   "Backups.Section.HistoryTitle": "Riwayat cadangan",
   "Backups.Section.InventorySearch": "Cari menurut proyek, tujuan, atau jalur",
+  "Backups.Section.InventoryVersions": "Versi",
   "Backups.Section.InventoryNoMatches": "Tidak ada cadangan yang sesuai dengan filter.",
   "Backups.Section.SnapshotInventoryTitle": "Inventaris snapshot",
   "Backups.Section.SnapshotInventoryDescription": "Kelola titik pemulihan, bandingkan rekam jepret, dan jalankan operasi pencadangan. Linimasa proyek lengkap ditayangkan di halaman Riwayat.",
