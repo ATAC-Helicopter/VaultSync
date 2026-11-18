@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "Alle Projekte",
   "Backups.Section.HistoryFilterLabel": "Nach Projekt filtern",
   "Backups.Section.HistoryTitle": "Sicherungsverlauf",
+  "Backups.Section.InventorySearch": "Nach Projekt, Ziel oder Pfad suchen",
+  "Backups.Section.InventoryNoMatches": "Keine Sicherungen entsprechen den Filtern.",
   "Backups.Section.SnapshotInventoryTitle": "Snapshot-Bestand",
   "Backups.Section.SnapshotInventoryDescription": "Wiederherstellungspunkte verwalten, Snapshots vergleichen und Backup-Vorgänge ausführen. Vollständige Projektverläufe befinden sich auf der Seite „Verlauf“.",
   "Backups.Section.Keep": "Behalten",

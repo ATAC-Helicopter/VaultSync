@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "Все проекты",
   "Backups.Section.HistoryFilterLabel": "Фильтр по проекту",
   "Backups.Section.HistoryTitle": "История резервного копирования",
+  "Backups.Section.InventorySearch": "Поиск по проекту, месту хранения или пути",
+  "Backups.Section.InventoryNoMatches": "Нет резервных копий, соответствующих фильтрам.",
   "Backups.Section.SnapshotInventoryTitle": "Снимки и точки восстановления",
   "Backups.Section.SnapshotInventoryDescription": "Управляйте точками восстановления, сравнивайте снимки и запускайте резервное копирование. Полная хронология проектов доступна на странице «История».",
   "Backups.Section.Keep": "Оставить",

@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "সব প্রকল্প",
   "Backups.Section.HistoryFilterLabel": "প্রকল্প অনুযায়ী ফিল্টার",
   "Backups.Section.HistoryTitle": "ব্যাকআপ ইতিহাস",
+  "Backups.Section.InventorySearch": "প্রকল্প, গন্তব্য বা পাথ দিয়ে খুঁজুন",
+  "Backups.Section.InventoryNoMatches": "ফিল্টারের সঙ্গে কোনো ব্যাকআপ মেলেনি।",
   "Backups.Section.SnapshotInventoryTitle": "স্ন্যাপশট তালিকা",
   "Backups.Section.SnapshotInventoryDescription": "রিস্টোর পয়েন্ট পরিচালনা করুন, স্ন্যাপশট তুলনা করুন এবং ব্যাকআপ কার্যক্রম চালান। প্রকল্পের সম্পূর্ণ টাইমলাইন ইতিহাস পৃষ্ঠায় রয়েছে।",
   "Backups.Section.Keep": "রাখুন",

@@ -1751,10 +1751,20 @@
                   </WrapPanel>
                 </Grid>
 
+                <TextBox Text="{Binding SnapshotInventorySearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="{infra:LocalizedString Key=Backups.Section.InventorySearch}"
+                         AutomationProperties.Name="{infra:LocalizedString Key=Backups.Section.InventorySearch}" />
+
                 <WrapPanel Orientation="Horizontal"
                            ItemSpacing="6"
                            LineSpacing="6"
                            Margin="0,2,0,0">
+                  <ToggleButton Content="{infra:LocalizedString Key=History.Range.30Days}"
+                                Classes="small-pill"
+                                IsChecked="{Binding RecentSnapshotInventoryOnly, Mode=TwoWay}" />
+                  <ToggleButton Content="{infra:LocalizedString Key=Backups.Summary.LocalBackupsLabel}"
+                                Classes="small-pill"
+                                IsChecked="{Binding LocalSnapshotInventoryOnly, Mode=TwoWay}" />
                   <ToggleButton Content="{infra:LocalizedString Key=Backups.Section.FilterOnlyErrors}"
                                 Classes="small-pill"
                                 IsChecked="{Binding OnlyErrorsFilter, Mode=TwoWay}" />
@@ -1849,7 +1859,13 @@
                 <Border Height="1"
                         Background="{DynamicResource DividerBrush}" />
 
-                  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  <TextBlock IsVisible="{Binding !HasSnapshotInventoryResults}"
+                             Text="{infra:LocalizedString Key=Backups.Section.InventoryNoMatches}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             TextWrapping="Wrap" />
+
+                  <ScrollViewer IsVisible="{Binding HasSnapshotInventoryResults}"
+                                VerticalScrollBarVisibility="Auto"
                                 HorizontalScrollBarVisibility="Disabled"
                                 Height="560"
                                 MaxHeight="560"

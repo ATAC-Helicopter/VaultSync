@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "Todos los proyectos",
   "Backups.Section.HistoryFilterLabel": "Filtrar por proyecto",
   "Backups.Section.HistoryTitle": "Historial de respaldos",
+  "Backups.Section.InventorySearch": "Buscar por proyecto, destino o ruta",
+  "Backups.Section.InventoryNoMatches": "Ninguna copia de seguridad coincide con los filtros.",
   "Backups.Section.SnapshotInventoryTitle": "Inventario de instantáneas",
   "Backups.Section.SnapshotInventoryDescription": "Gestiona puntos de restauración, compara instantáneas y ejecuta operaciones de respaldo. Las cronologías completas de los proyectos están en la página Historial.",
   "Backups.Section.Keep": "Mantener",

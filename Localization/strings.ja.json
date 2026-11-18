@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "すべてのプロジェクト",
   "Backups.Section.HistoryFilterLabel": "プロジェクト別フィルター",
   "Backups.Section.HistoryTitle": "バックアップ履歴",
+  "Backups.Section.InventorySearch": "プロジェクト、保存先、パスで検索",
+  "Backups.Section.InventoryNoMatches": "フィルターに一致するバックアップはありません。",
   "Backups.Section.SnapshotInventoryTitle": "スナップショットインベントリ",
   "Backups.Section.SnapshotInventoryDescription": "復元ポイントの管理、スナップショットの比較、バックアップ操作の実行。プロジェクトの全タイムラインは「歴史」ページでご覧いただけます。",
   "Backups.Section.Keep": "キープ",

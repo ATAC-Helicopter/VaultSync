@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "Всі проєкти",
   "Backups.Section.HistoryFilterLabel": "Фільтрація за проєктами",
   "Backups.Section.HistoryTitle": "Історія резервних копій",
+  "Backups.Section.InventorySearch": "Пошук за проєктом, місцем зберігання або шляхом",
+  "Backups.Section.InventoryNoMatches": "Немає резервних копій, що відповідають фільтрам.",
   "Backups.Section.SnapshotInventoryTitle": "Інвентар знімків",
   "Backups.Section.SnapshotInventoryDescription": "Керуйте точками відновлення, порівнюйте знімки та запускайте операції резервного копіювання. Повні хронології проєкту доступні на сторінці Історії.",
   "Backups.Section.Keep": "Тримай",

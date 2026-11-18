@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "جميع المشاريع",
   "Backups.Section.HistoryFilterLabel": "تصفية حسب المشروع",
   "Backups.Section.HistoryTitle": "تاريخ النسخ الاحتياطي",
+  "Backups.Section.InventorySearch": "ابحث حسب المشروع أو الوجهة أو المسار",
+  "Backups.Section.InventoryNoMatches": "لا توجد نسخ احتياطية تطابق عوامل التصفية.",
   "Backups.Section.SnapshotInventoryTitle": "مخزون اللقطات",
   "Backups.Section.SnapshotInventoryDescription": "أدر نقاط الاستعادة، وقارن اللقطات، ونفّذ عمليات النسخ الاحتياطي. تتوفر المخططات الزمنية الكاملة للمشاريع في صفحة السجل.",
   "Backups.Section.Keep": "الاحتفاظ",

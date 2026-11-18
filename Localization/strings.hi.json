@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "सभी प्रोजेक्ट",
   "Backups.Section.HistoryFilterLabel": "प्रोजेक्ट द्वारा फ़िल्टर",
   "Backups.Section.HistoryTitle": "बैकअप इतिहास",
+  "Backups.Section.InventorySearch": "प्रोजेक्ट, गंतव्य या पाथ से खोजें",
+  "Backups.Section.InventoryNoMatches": "फ़िल्टर से कोई बैकअप मेल नहीं खाता।",
   "Backups.Section.SnapshotInventoryTitle": "स्नैपशॉट सूची",
   "Backups.Section.SnapshotInventoryDescription": "रिस्टोर पॉइंट प्रबंधित करें, स्नैपशॉट की तुलना करें और बैकअप कार्य चलाएँ। प्रोजेक्ट की पूरी टाइमलाइन इतिहास पेज पर उपलब्ध है।",
   "Backups.Section.Keep": "रखें",

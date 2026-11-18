@@ -181,6 +181,50 @@ namespace VaultSync.UI.ViewModels
         public string HistoryFilterProjectLabel { get; private set; } = L(AllProjectsKey, AllProjectsFallback);
         private bool _onlyErrorsFilter;
         private bool _onlyManualFilter;
+        private string _snapshotInventorySearch = string.Empty;
+        private bool _recentSnapshotInventoryOnly;
+        private bool _localSnapshotInventoryOnly;
+
+        public string SnapshotInventorySearch
+        {
+            get => _snapshotInventorySearch;
+            set
+            {
+                if (SetProperty(ref _snapshotInventorySearch, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(SnapshotInventorySearch));
+                    RefreshSnapshotsView();
+                }
+            }
+        }
+
+        public bool RecentSnapshotInventoryOnly
+        {
+            get => _recentSnapshotInventoryOnly;
+            set
+            {
+                if (SetProperty(ref _recentSnapshotInventoryOnly, value))
+                {
+                    OnPropertyChanged(nameof(RecentSnapshotInventoryOnly));
+                    RefreshSnapshotsView();
+                }
+            }
+        }
+
+        public bool HasSnapshotInventoryResults => SnapshotGroups.Count > 0;
+
+        public bool LocalSnapshotInventoryOnly
+        {
+            get => _localSnapshotInventoryOnly;
+            set
+            {
+                if (SetProperty(ref _localSnapshotInventoryOnly, value))
+                {
+                    OnPropertyChanged(nameof(LocalSnapshotInventoryOnly));
+                    RefreshSnapshotsView();
+                }
+            }
+        }
 
         public bool OnlyErrorsFilter
         {
@@ -304,44 +348,16 @@ namespace VaultSync.UI.ViewModels
         private bool _refreshSnapshotsForceResetQueued;
         private string? _preferredExpandedProjectId;
 
-        private readonly struct SnapshotFilterState : IEquatable<SnapshotFilterState>
+        private readonly record struct SnapshotFilterState(
+            string TypeFilter,
+            string? ProjectId,
+            bool OnlyErrors,
+            bool OnlyManual,
+            string InventorySearch,
+            DateTime? InventorySince,
+            bool InventoryLocalOnly)
         {
-            public static readonly SnapshotFilterState Empty = new("All", null, false, false);
-
-            public readonly string TypeFilter;
-            public readonly string? ProjectId;
-            public readonly bool OnlyErrors;
-            public readonly bool OnlyManual;
-
-            public SnapshotFilterState(string typeFilter, string? projectId, bool onlyErrors, bool onlyManual)
-            {
-                TypeFilter = typeFilter ?? "All";
-                ProjectId = projectId;
-                OnlyErrors = onlyErrors;
-                OnlyManual = onlyManual;
-            }
-
-            public bool Equals(SnapshotFilterState other)
-            {
-                return string.Equals(TypeFilter, other.TypeFilter, StringComparison.Ordinal) &&
-                    string.Equals(ProjectId, other.ProjectId, StringComparison.Ordinal) &&
-                    OnlyErrors == other.OnlyErrors &&
-                    OnlyManual == other.OnlyManual;
-            }
-
-            public override bool Equals(object? obj)
-            {
-                return obj is SnapshotFilterState other && Equals(other);
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(
-                    TypeFilter,
-                    ProjectId ?? string.Empty,
-                    OnlyErrors,
-                    OnlyManual);
-            }
+            public static readonly SnapshotFilterState Empty = new("All", null, false, false, string.Empty, null, false);
         }
 
         private sealed record SnapshotViewRefreshResult(
@@ -3150,7 +3166,10 @@ namespace VaultSync.UI.ViewModels
                     _currentTypeFilter,
                     _currentProjectIdFilter,
                     OnlyErrorsFilter,
-                    OnlyManualFilter);
+                    OnlyManualFilter,
+                    SnapshotInventorySearch.Trim(),
+                    RecentSnapshotInventoryOnly ? DateTime.Today.AddDays(-29) : null,
+                    LocalSnapshotInventoryOnly);
 
                 if (!forceResetCompare &&
                     _lastFilterRevision == _snapshotRevision &&
@@ -3223,11 +3242,35 @@ namespace VaultSync.UI.ViewModels
                 filtered.Add(snapshot);
             }
 
+            List<BackupSnapshotItem> inventory = filtered;
+            if (filterState.InventorySearch.Length != 0 || filterState.InventorySince.HasValue || filterState.InventoryLocalOnly)
+            {
+                inventory = filtered.Where(snapshot => MatchesSnapshotInventory(
+                    snapshot,
+                    ResolveSnapshotGroupName(snapshot.ProjectId ?? string.Empty, projectLookup, groupText),
+                    filterState.InventorySearch,
+                    filterState.InventorySince,
+                    filterState.InventoryLocalOnly)).ToList();
+            }
+
             return new SnapshotViewRefreshResult(
                 filterState,
                 revision,
                 filtered,
-                BuildSnapshotGroups(filtered, projectLookup, preferredExpandedProjectId, currentProjectIdFilter, groupText));
+                BuildSnapshotGroups(inventory, projectLookup, preferredExpandedProjectId, currentProjectIdFilter, groupText));
+        }
+
+        internal static bool MatchesSnapshotInventory(BackupSnapshotItem snapshot, string projectName, string search, DateTime? since, bool localOnly)
+        {
+            if ((localOnly && snapshot.IsImported) || (since is { } cutoff && snapshot.Timestamp < cutoff))
+                return false;
+
+            return search.Length == 0 ||
+                   projectName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                   snapshot.DestinationDisplay?.Contains(search, StringComparison.OrdinalIgnoreCase) == true ||
+                   snapshot.DestinationRootPath?.Contains(search, StringComparison.OrdinalIgnoreCase) == true ||
+                   snapshot.BackupRelativePath?.Contains(search, StringComparison.OrdinalIgnoreCase) == true ||
+                   snapshot.OriginMachineName?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private static bool MatchesSnapshotFilter(BackupSnapshotItem snapshot, SnapshotFilterState filterState)
@@ -3268,6 +3311,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
             SnapshotGroups.SyncWith(reconciled);
+            OnPropertyChanged(nameof(HasSnapshotInventoryResults));
         }
 
         private List<SnapshotProjectGroup> BuildSnapshotGroups(
@@ -4689,6 +4733,10 @@ namespace VaultSync.UI.ViewModels
                     hash = (hash * 397) ^ backup.CreatedUtc.GetHashCode();
                     hash = (hash * 397) ^ backup.TotalBytes.GetHashCode();
                     hash = (hash * 397) ^ (backup.IsImported ? 1 : 0);
+                    hash = (hash * 397) ^ (backup.Path?.GetHashCode(StringComparison.Ordinal) ?? 0);
+                    hash = (hash * 397) ^ (backup.DestinationPath?.GetHashCode(StringComparison.Ordinal) ?? 0);
+                    hash = (hash * 397) ^ (backup.DestinationAlias?.GetHashCode(StringComparison.Ordinal) ?? 0);
+                    hash = (hash * 397) ^ (backup.OriginMachineName?.GetHashCode(StringComparison.Ordinal) ?? 0);
                 }
                 return hash;
             }

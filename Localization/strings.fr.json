@@ -289,6 +289,8 @@
   "Backups.Section.HistoryFilterAllProjects": "Tous les projets",
   "Backups.Section.HistoryFilterLabel": "Filtrer par projet",
   "Backups.Section.HistoryTitle": "Historique des sauvegardes",
+  "Backups.Section.InventorySearch": "Rechercher par projet, destination ou chemin",
+  "Backups.Section.InventoryNoMatches": "Aucune sauvegarde ne correspond aux filtres.",
   "Backups.Section.SnapshotInventoryTitle": "Inventaire des snapshots",
   "Backups.Section.SnapshotInventoryDescription": "Gérez les points de restauration, comparez les snapshots et lancez des sauvegardes. Les chronologies complètes des projets se trouvent dans Historique.",
   "Backups.Section.Keep": "Garder",
