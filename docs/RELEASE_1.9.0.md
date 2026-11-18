@@ -5,13 +5,33 @@ Active development branch: `work/1.9-roadmap-realignment`; sole release PR:
 [#736](https://github.com/ATAC-Helicopter/VaultSync/pull/736) into `Dev`.
 Protected release identity: `release/1.9.0`; its older ref is not the assembled
 working tree. Promotion to `Stable` uses reviewed merge commits.
-No disk support or predecessor upgrade is qualified yet.
+The Debian GPT/UEFI/ext4 512-byte virtual profile has measured recovery
+qualification. Signed release assets and cross-platform update qualification
+remain open.
 
 The maintainer's [2026-11-05 beta program](BETA_PROGRAM_1.9.0.md) keeps all
 three desktop platforms supported throughout. Only disk cloning and recovery
 are staged: beta 1 Linux, beta 2 adds Windows, beta 3 adds macOS. This supersedes
 older all-disk-platforms-in-beta-1 statements below, without waiving complete
 installed Linux workflows, qualified profiles or shared release gates.
+
+## Beta 1 virtual Linux profile qualification — 2026-11-18
+
+The same source `e84715a5` built the standalone capture and graphical
+restore media using pinned Debian inputs. An offline 8 GiB Debian disk was
+captured read-only and exported. With the capture guest stopped, an independent
+SHA-256 pass over the export matched the saved source digest. The recovery
+wizard verified that export and refused an expired confirmation with zero
+destination writes. A fresh session accepted explicit console confirmation
+for the disposable target, completed full read-back and exited after Close.
+
+The whole restored disk matched the source before boot. The restored disk
+alone booted with fresh UEFI variables, preserved both fixture markers, and
+accepted keyboard input in Xorg/xterm. All guests shut down normally. The
+[measured receipt](release-evidence/1.9-beta1-debian-512-loop-2026-11-18.json)
+binds the source and both media hashes. The support matrix qualifies this
+virtual 512-byte profile. The asset workflow still needs to build and attest
+the final packages from the protected `Dev` source.
 
 ## Pinned Debian recovery medium — 2026-11-18
 
