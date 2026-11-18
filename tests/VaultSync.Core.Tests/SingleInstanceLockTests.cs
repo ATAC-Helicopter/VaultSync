@@ -49,8 +49,8 @@ public sealed class SingleInstanceLockTests : IDisposable
     [Fact]
     public void DefaultFileLockDirectory_UsesPrivateApplicationData()
     {
-        string localData = Path.GetFullPath(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        string localData = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
         string lockDirectory = SingleInstanceLock.ResolveFileLockDirectory();
 
         Assert.True(Path.IsPathFullyQualified(lockDirectory));
