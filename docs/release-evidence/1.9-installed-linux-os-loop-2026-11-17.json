@@ -1,0 +1,263 @@
+{
+  "owners": [
+    "VS-1904",
+    "VS-1907",
+    "BUG-19044"
+  ],
+  "issues": [
+    492,
+    495,
+    827
+  ],
+  "observedOn": "2026-11-17",
+  "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+  "qualification": false,
+  "scope": "Disposable 8 GiB installed Linux capture/export/restore/read-back and target-only UEFI cold boot; not final media/profile or beta acceptance",
+  "environment": {
+    "guest": "Debian 13 x64",
+    "kernel": "6.12.117+deb13-amd64",
+    "hypervisor": "QEMU 11.1.3 KVM",
+    "memoryMiB": 2048,
+    "vcpus": 2,
+    "secureBoot": false,
+    "recoveryRoot": "read-only ext4",
+    "network": "No virtual NIC; only loopback",
+    "sourceBytes": 8589934592
+  },
+  "sourceSha256": "e9783ca0022a2de73f3b8bab9d8a66f81d7abc0d084c0d9eec6c59255885a0cf",
+  "capture": {
+    "serviceExitCode": 0,
+    "startedUtc": "2026-11-16T23:14:45Z",
+    "completedUtc": "2026-11-16T23:18:25Z",
+    "privatePublishAndSharedExportVerified": true
+  },
+  "restore": {
+    "finalDurableReceipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+      "operation": "4c0911f4-c923-4da8-9933-55803d4e9560",
+      "phase": "Completed",
+      "review": "fad86da0-0e95-4809-b8fd-9ac0a616765c",
+      "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+      "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+      "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "sourceDetached": true,
+    "freshPhysicalConsoleConsent": true,
+    "prebootWholeDiskComparison": {
+      "tool": "qemu-img compare -f raw -F raw",
+      "exitCode": 0,
+      "result": "Images are identical"
+    },
+    "serviceExitCode": null,
+    "limitation": "Host systemd terminated the recovery VM with SIGTERM after durable completion; final service status and positive final GUI frame were not collected"
+  },
+  "negativeCase": {
+    "operation": "b470f048-26b4-45e7-91e0-c99085ee6051",
+    "result": "Stale target inventory refused before physical consent or writes",
+    "acknowledgedBytes": 0,
+    "targetAllocatedBytes": 0
+  },
+  "coldBoot": {
+    "onlyRestoredTargetAttached": true,
+    "freshFirmwareVariables": true,
+    "originalSourceAndRepositoriesDetached": true,
+    "uefiObserved": true,
+    "root": "/dev/vda1 ext4 rw",
+    "originalMarkersPreserved": true,
+    "xorgXtermObserved": true,
+    "physicalVirtualKeyboardMarkerIndependentlyObserved": true,
+    "desktopService": "active",
+    "systemd": "degraded",
+    "degradedReason": "Source fixture has no SSH host keys; SSH/network and general service continuity are not qualified",
+    "shutdown": {
+      "observedAt": "2026-11-17T09:32:00.562182+00:00",
+      "checksCoordinatorExit": 0,
+      "shutdownCoordinatorExit": 0,
+      "shutdownEvent": {
+        "timestamp": {
+          "seconds": 1794907920,
+          "microseconds": 460396
+        },
+        "event": "SHUTDOWN",
+        "data": {
+          "guest": true,
+          "reason": "guest-shutdown"
+        }
+      },
+      "processAbsent": true,
+      "qemuExitCode": null,
+      "qemuExitCodeNote": "Background process exit status was not collected; guest shutdown event retained."
+    }
+  },
+  "wizard": {
+    "imageCatalogTargetListAndReviewReadable": true,
+    "negativeCancelAndClose": "See 1.9-linux-wizard-redraw-2026-11-16.json",
+    "positiveProgressAndFinalFrameCollected": false
+  },
+  "privateEvidence": [
+    {
+      "artifact": "completed-receipt.final.json",
+      "sha256": "a86424893ad5d395bd5e259c54d016311eb5360a725ca0e2f10a729c860185a2"
+    },
+    {
+      "artifact": "target-boot-checks.log",
+      "sha256": "23429846c16cf5ba3dc67ef535d0ea9d4d987d82796283efdb9a86167e656c4e"
+    },
+    {
+      "artifact": "target-boot-result.json",
+      "sha256": "7792a1b6e2d37bdfb1dcd7a903f74258e31385f5e03ff6e96a0d5a36de08e12f"
+    },
+    {
+      "artifact": "target-boot-01.png",
+      "sha256": "d1923ff052007ebbb99272527f0d24bac57c8a85d8c584b1473a060ec0951d06"
+    },
+    {
+      "artifact": "target-boot-02-keyboard.png",
+      "sha256": "f7ab3ffa02886e097d47990361105ea763ef21688cb896ca1818914b94013c7b"
+    },
+    {
+      "artifact": "positive-03-review.png",
+      "sha256": "a20191ac967780c86af56dd9f2c98030e57a2cecd96e98f4045834320053aacc"
+    },
+    {
+      "artifact": "source-frozen.json",
+      "sha256": "bcd918e5542331441f4fc7a9a0d44c3a69068b609474b47b9a3c38ab2e25f821"
+    }
+  ],
+  "remaining": [
+    "Final media, capacity, interruption/refusal matrix and physical profile qualification",
+    "Installed VaultSync and application/configuration continuity; 1.8.10 upgrade",
+    "Native cross-platform packages, signing/provenance, Sonar 80% gate and protected review"
+  ],
+  "disposition": "All support profiles remain candidates; PR #736 stays draft; no beta published",
+  "installations": [
+    {
+      "role": "capture",
+      "manifestSha256": "32365757d28ba6259ec143fe3ad49f84b46cf1c6a803b40ea04d01c5fafa621c",
+      "fileCount": 673,
+      "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508"
+    },
+    {
+      "role": "graphical",
+      "manifestSha256": "1c891f832f0efc23258b2336ca2c5b0fa311c0b20ebe58ab5122ccbbe1fa410c",
+      "fileCount": 675,
+      "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508"
+    }
+  ],
+  "completedRepeat": {
+    "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+    "reusedVerifiedImage": true,
+    "finalReceipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+      "operation": "989be5d5-a74a-48ad-8573-f138808b78d9",
+      "phase": "Completed",
+      "review": "2341b9a1-d83a-4820-8183-7ae87dd6a8d1",
+      "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+      "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+      "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "serviceResult": "success",
+    "serviceExitCode": 0,
+    "serviceInactive": true,
+    "progressAndFinalUiReadable": true,
+    "actualCloseObserved": true,
+    "wholeDiskComparison": {
+      "exitCode": 0,
+      "result": "Images are identical."
+    },
+    "shutdown": {
+      "observedAt": "2026-11-17T10:09:47.145718+00:00",
+      "shutdownEvent": {
+        "timestamp": {
+          "seconds": 1794910186,
+          "microseconds": 945237
+        },
+        "event": "SHUTDOWN",
+        "data": {
+          "guest": true,
+          "reason": "guest-shutdown"
+        }
+      },
+      "processAbsent": true,
+      "qemuExitCode": null,
+      "note": "Guest shutdown event retained; orphan process exit status is not available."
+    },
+    "idleDisplayLimitation": "X11 screen saver blanked the display after 600 seconds; pointer motion restored it. BUG-19052 fixes this separately on source 3eac35c2; this repeat does not claim that fix.",
+    "observerLimitation": "The long-running polling helper received SIGTERM; QEMU continued independently and final receipt/service/shutdown evidence was collected through fresh observers.",
+    "privateEvidence": [
+      {
+        "artifact": "repeat-receipt.final.json",
+        "sha256": "856309f471a27f667c282644f092324023050af4c76d0bfb7c687454a2485d02"
+      },
+      {
+        "artifact": "repeat-service-final.log",
+        "sha256": "4ddea6545cb70645fe7a5f2f1ef14b687ad4b05d9c339065b574de3d4a7a1f83"
+      },
+      {
+        "artifact": "repeat-disk-compare.log",
+        "sha256": "45c4d472e996560294f5829abf4e511b3f3d3a7a319e0f4f0fb8c7f2dea8fc26"
+      },
+      {
+        "artifact": "repeat-shutdown.json",
+        "sha256": "3861eb7729733299942a4591026037322838feb0ad7ed4cff020c3191f007fae"
+      },
+      {
+        "artifact": "repeat-10-final.png",
+        "sha256": "df93b2aa66825b19fb5585d632763de01a99e87d4df8d9619135c321011585e5"
+      },
+      {
+        "artifact": "repeat-12-progress-awake.png",
+        "sha256": "6f8f84dfa0b87a75383c97531644dbc99b18b9a6ddec1ba754d31c7f54d0bd64"
+      },
+      {
+        "artifact": "repeat-13-late-progress.png",
+        "sha256": "0cc03fbbb161062b33bbf071a3e34003fc6c149eae0d4519177f4528df787fdf"
+      }
+    ]
+  },
+  "workspace": {
+    "allRecordedGuestProcessesAbsent": true,
+    "restoredTargetRemovedAfterFinalComparison": true,
+    "allocatedRegenerableFileBytesRemoved": 13500477440,
+    "observedFreeBytesRecoveredAcrossCleanupSteps": 13499142144,
+    "retainedAllocatedBytes": 43084226560,
+    "retentionBudgetGiB": 44,
+    "reviewBy": "2026-11-23",
+    "retainedReason": "Existing guest/base, frozen source, product capture/export fixtures, tool inputs and latest installation for the next bounded independent-media/fault checkpoint; no duplicate lab",
+    "ephemeralSshPrivateKeyAndSeedRemoved": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "stage": "boot",
+  "profileId": "uefi-gpt-ext4-512",
+  "kind": "measured",
+  "outcome": "passed",
+  "observedAt": "2026-11-18T16:28:23Z",
+  "environment": "Debian 13 x64 in QEMU 11.1.3/KVM, OVMF UEFI, one 8 GiB GPT/ext4 virtual disk, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+  "hardwareKind": "virtual",
+  "runId": "2026-11-18-debian-gpt-ext4-512-e84715a5",
+  "imageRoot": "88a3f427c265a87f10faa0a94bf07b0428f02b3768a3bb41685126c7afca2b34",
+  "captureBuild": "e84715a50b33d311611d83e73255d010ae73bf69 / media SHA-256 612eb6c26230c771cd4476adbd20df534998036c1375aea57bb33259cddd2a98",
+  "recoveryBuild": "e84715a50b33d311611d83e73255d010ae73bf69 / media SHA-256 8f7f938e45612d07e58008ee631087088a63066529e7c841185ea7db1783b3c3",
+  "checks": {
+    "independent-media": "passed",
+    "device-discovery": "passed"
+  },
+  "receipt": {
+    "path": "docs/release-evidence/1.9-beta1-debian-512-loop-2026-11-18.json",
+    "sha256": "f3eb6b9fb0835b02f743ef3c665d2d8e3faac803229591996588e83b7ac58daa"
+  }
+}

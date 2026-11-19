@@ -25,7 +25,8 @@ namespace VaultSync.Core.Services
         {
         }
 
-        // The test names its own file instead of enumerating any shared temporary directory.
+        // Allows a regression test to observe only its own temporary file, rather
+        // than enumerating or reading other applications' files in shared temp.
         internal RsyncRunner(bool useWholeFile, string? rsyncPath, Func<string> excludeFilePathFactory)
         {
             _useWholeFile = useWholeFile;
@@ -241,7 +242,8 @@ namespace VaultSync.Core.Services
             }
         }
 
-        // Own the exclusion file from allocation through write, process startup and exit.
+        // Own the exclude path from allocation onward, including failed writes
+        // and process startup exceptions that occur before WaitForExitAsync.
         private sealed class TemporaryExcludeFile : IDisposable
         {
             public string? Path { get; set; }

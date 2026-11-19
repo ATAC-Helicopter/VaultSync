@@ -32,6 +32,21 @@ public sealed class OnboardingTourOverlayTests
         Assert.NotNull(tourCard.Attribute("Background"));
     }
 
+    [Fact]
+    public void MainWindow_ReservesSeparateSpaceForGuidedSetup()
+    {
+        XDocument document = XDocument.Load(FindRepositoryFile("src", "VaultSync.UI", "MainWindow.axaml"));
+        XElement tour = Assert.Single(document.Descendants(), element => element.Name.LocalName == "OnboardingTourOverlay");
+        XElement shell = tour.Parent!;
+        XNamespace avalonia = "https://github.com/avaloniaui";
+        XElement page = Assert.Single(shell.Elements(avalonia + "Border"), border => (string?)border.Attribute("Grid.Row") == "1");
+
+        Assert.Equal("Auto,*,Auto", (string?)shell.Attribute("RowDefinitions"));
+        Assert.Equal("2", (string?)tour.Attribute("Grid.Row"));
+        Assert.Null(tour.Attribute("Grid.RowSpan"));
+        Assert.Null(page.Attribute("Grid.RowSpan"));
+    }
+
     private static string FindRepositoryFile(params string[] relativeParts)
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);

@@ -1,0 +1,44 @@
+name: Project date synchronization
+
+on:
+  issues:
+    types: [opened, reopened, labeled, unlabeled, assigned, closed]
+  schedule:
+    - cron: "47 2 * * *" # UTC, discovers Project board status changes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vaultsync-project-dates
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.x"
+      - name: Check Project token availability
+        id: token
+        env:
+          PROJECT_TOKEN: ${{ secrets.VAULTSYNC_PROJECT_TOKEN }}
+        run: |
+          if [ -z "$PROJECT_TOKEN" ]; then
+            echo 'Project token not configured; custom date synchronization is not active.' >&2
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Synchronize existing Project date fields
+        if: steps.token.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.VAULTSYNC_PROJECT_TOKEN }}
+        run: python3 scripts/project_date_sync.py

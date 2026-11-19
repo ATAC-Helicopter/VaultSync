@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-06",
+  "owner": "VS-1907",
+  "issue": 495,
+  "release": "1.9.0",
+  "preparationBranch": "work/1.9-roadmap-realignment",
+  "baseCommit": "37d7b8014468ae73a87b4d67b404d9511b93c0b4",
+  "sourceFiles": {
+    "src/VaultSync.Core/Services/LinuxRecoveryImageCatalog.cs": "07ab544c993ddf615c64af6f8cbae7cd2378472618073f03bdee9c1a0601ca60",
+    "src/VaultSync.Core/Services/LinuxRecoveryCaptureExport.cs": "bbda6d7e79156d56f8261fc265a84d7a117e70a4fe54e87069457faf4f69832e",
+    "src/VaultSync.RecoveryController/RecoveryViewModel.cs": "053e0ebd69b0af0e1c7e09f1311cba4ca9602305677eebdaf96d0f926fc44a80",
+    "src/VaultSync.RecoveryController/RecoveryWindow.axaml": "273886a4b064366004e7d4d53ddb4b97f53d9b969de5a4653a60939af26f963b",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryImageCatalogTests.cs": "ebcd3504495d5fb7a2fdcf5ee8ce796e7e7a02fdcb69b2acbfa67616cc03afdf",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryStorageNativeTests.cs": "69de82eb9e5b7c954107b71e2759025a3d336aa2cd53305281b1f710d60670b8",
+    "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "449950233ac1a04f3b176fa79a6fa6f181bc4e767a82a995faee0352c0cc84f3"
+  },
+  "checks": {
+    "focusedReleaseCheckpoint": {
+      "passed": 63,
+      "scope": "catalog, capture export and presentation before final synchronous manual-choice repair"
+    },
+    "finalPresentationRelease": {
+      "passed": 23,
+      "scope": "includes immediate manual/list mutual exclusion and stale refresh cancellation"
+    },
+    "producerCases": {
+      "passed": 10
+    },
+    "localization": {
+      "keys": 2023,
+      "locales": 19,
+      "passed": true
+    },
+    "controllerReleaseBuild": {
+      "warnings": 0,
+      "errors": 0
+    }
+  },
+  "historicalFailures": [
+    "Initial new test compilation lacked imports/nullable context; repaired before passing checkpoint.",
+    "A stronger presentation test exposed deferred text notification; synchronous property observation repaired before final23pass."
+  ],
+  "nativeFixture": "0750copied parent,0710children; rootC#catalog and isolated nonroot60999/60998 kernel checks added. Compiled onmacOS but not executed as nativeproof.",
+  "invariants": [
+    "private original0700/0400 unchanged",
+    "copied files0440; no write grant",
+    "fixed root bounded16entries; canonical IDs only",
+    "metadata not parsed inGUI; candidates not claimed verified",
+    "isolated verification, descriptor transport and independent physical consent unchanged"
+  ],
+  "limits": [
+    "No new native permissions/UI/OSprofile qualification.",
+    "No product bootmedia or desktop auto-reboot workflow.",
+    "No universalpostrestore installer/config injection.",
+    "No full test suite rerun; exacthead hostedchecks separate.",
+    "Earlier37d7nativecapture results remain bound to that source, not this change."
+  ]
+}

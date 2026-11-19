@@ -2,20 +2,21 @@
 
 This document defines the current release packaging flow.
 
-## Stable promotion and patch-release safety
+## Promotion and private remediation
 
-All non-Stable PRs use **Create a merge commit** and retain original commits.
-The Stable branch has **one qualified release/hotfix merge commit on the
-first-parent history** per promotion; Git's full graph still contains the
-source commits, so this is not squash. No direct Stable feature/fix commits,
-rebase, fast-forward or force-push. Do not confuse `Squash and merge` with
-an actual merge commit.
+Use merge commits preserving original work on every non-Stable integration
+branch. Stable's **first-parent history** contains only qualified release or
+hotfix promotion merge commits; the complete Git graph retains incoming
+individual commits. Do not squash, rebase, fast-forward or push standalone
+changes directly to Stable. Release promotion requires its independent checks.
 
-The 1.8.10 preparation isolates already-shipped 1.8.9 code regressions from
-future 1.9 features and from the private embargoed advisory fix. Candidates
-need exact SHA approval, cross-platform builds, native package tests,
-runtime servicing, updater/rollback, provenance and security qualification
-before stable promotion. See [engineering workflow](ENGINEERING_WORKFLOW.md).
+Privately reported vulnerabilities belong in a draft private GitHub Security
+Advisory, with confidential patches and reproduction held in its temporary
+private fork until coordinated disclosure. Target the shipped stable lineage
+rather than adding unreleased 1.9 features to a maintenance release. A small
+regression pass alone cannot qualify a public update: native Windows, macOS,
+Linux artifacts, updater/rollback and provenance/review gates remain required.
+See [engineering workflow](ENGINEERING_WORKFLOW.md) and [security](../SECURITY.md).
 
 ## Release cadence
 
@@ -28,16 +29,20 @@ before stable promotion. See [engineering workflow](ENGINEERING_WORKFLOW.md).
 - Major releases begin after their planned minor train is complete and use one
   or more explicit betas when the combined feature set is stable enough for
   broader qualification.
-- The published stable is `1.8.9` (2026-09-16). Planned maintenance patch `1.8.10` targets 2026-11-14 subject to all platform and release gates; see `docs/RELEASE_1.8.10.md`.
+- Recovery Horizon 1.9.0 follows its explicit release contract and gates; later
+  family releases remain unscheduled until their predecessor is qualified.
 
 ## Prerequisites
-- Serviced .NET 10 SDK pinned by `global.json` (currently 10.0.404)
+- Serviced .NET 10 SDK from `global.json` (currently 10.0.404 on the 1.9 preparation branch), with embedded
+  runtime verification against the [runtime security contract](RUNTIME_SECURITY.md)
 - Inno Setup (Windows installer)
 - Repo version/changelog already updated for the target release
-- The current public stable release is `1.8.9`.
-- The maintenance candidate is prepared from published `Stable` on `release/1.8.10`.
-  It must meet protected review and exact-source gates before promotion; no
-  unreleased 1.9 features or private vulnerability details are imported.
+- The current stable release is `1.8.10` (2026-11-15).
+- Active development is `1.9.0` on `work/1.9-roadmap-realignment`, sole draft
+  PR #736 into `Dev`. Read AGENTS.md, release/1.9-family.json and the owning
+  release contract before changing an existing preparation PR.
+- `release/1.9.0` is a protected release identity, not the assembled head.
+  Promotion to `Stable` still requires the actual release gates and reviews.
 - The owner-approved 1.8.9 maintainer exception is recorded on
   [PR #634](https://github.com/ATAC-Helicopter/VaultSync/pull/634#issuecomment-5694495168).
   It allowed missing review approval and documented interactive/Store-runtime
@@ -46,6 +51,21 @@ before stable promotion. See [engineering workflow](ENGINEERING_WORKFLOW.md).
   draft, or authorize a Store submission. Follow-up gate #633 remains open.
 - Do not create a beta or prerelease implicitly. A prerelease requires an
   explicit release decision, a version suffix, and the beta workflow inputs.
+
+## Changelog protocol
+
+Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) and
+CONTRIBUTING.md. Keep one linked `Unreleased` section with the explicit active
+target, standard ordered categories and at most 22 words per entry excluding
+its work ID. Historical dates use `YYYY-MM-DD`; preserve IDs and shipped scope.
+Run `python3 scripts/changelog.py check` before pushing.
+
+At publication, freeze only the qualified target notes under
+`## [<version>] - YYYY-MM-DD`, create a fresh `Unreleased` section for the next
+authorized target, update comparison links and synchronize release metadata.
+Extract reviewable notes with `python3 scripts/changelog.py notes --version <version>`.
+Backfills update documentation only; never rewrite release tags, assets or
+publication dates. Keep original detail in the linked evidence archive.
 
 ## 1) Windows Installer
 1. Publish:
@@ -118,10 +138,17 @@ Optional prerelease example (only after an explicit release decision):
 - branch: `Dev` after the beta changes are merged there
 - release channel: `beta`
 - `release_candidate = false`
-- `previous_version = 1.8.8`
-- `target_version = <next-version>-Beta.1`
+- `previous_version = 1.8.10` for the first 1.9.0 beta, after exact predecessor
+  qualification
+- `target_version = <approved-1.9.0-beta-suffix>`; the exact value must also
+  match `activeRelease.version` and the UI project version on `Dev`
 - `include_linux_patches = false` when the previous Linux build can be installed under `/opt/vaultsync`, so Linux users receive installer fallback instead of an unwritable patch apply.
 - Omit patch assets for package-managed Windows, macOS, or Linux releases unless the exact package/install layout has been update-tested on that OS.
+
+See the [staged beta program](BETA_PROGRAM_1.9.0.md) before changing canonical
+versions or dispatching assets. The beta package and informational versions
+carry the prerelease suffix. The release line, CLI assembly and file versions,
+and Store package version use the numeric version.
 
 The `release_candidate` switch is not used for beta builds. It exists only to
 build unpublished, stable-version candidate assets from a matching release
@@ -276,11 +303,18 @@ python3 scripts/release_sbom.py validate \
 
 GitHub attestations bind the final installer, DMG, tarball, Debian package, or
 AppImage bytes—not an intermediate publish directory—to this repository,
-workflow run, triggering event, and commit. Verify a downloaded package online:
+workflow run, triggering event, and commit. The shared release rule additionally
+attests the canonical manifest and every patch JSON/ZIP, retains offline proof,
+and verifies all subjects against the exact signer/ref/commit before draft upload.
+See [release signing policy](RELEASE_SIGNING.md). Verify a downloaded package online:
 
 ```bash
 gh attestation verify VaultSync-Setup-1.8.9.exe \
-  --repo ATAC-Helicopter/VaultSync
+  --repo ATAC-Helicopter/VaultSync \
+  --signer-workflow ATAC-Helicopter/VaultSync/.github/workflows/release-assets.yml \
+  --source-ref refs/heads/Stable \
+  --source-digest ce0f7dbd1c674814c9454c110767986d5cc3414c \
+  --deny-self-hosted-runners
 ```
 
 For later offline verification, prepare the bundle and current public trusted
@@ -298,6 +332,10 @@ CLI to the offline machine, then run:
 ```bash
 gh attestation verify VaultSync-Setup-1.8.9.exe \
   --repo ATAC-Helicopter/VaultSync \
+  --signer-workflow ATAC-Helicopter/VaultSync/.github/workflows/release-assets.yml \
+  --source-ref refs/heads/Stable \
+  --source-digest ce0f7dbd1c674814c9454c110767986d5cc3414c \
+  --deny-self-hosted-runners \
   --bundle 'sha256:DIGEST.jsonl' \
   --custom-trusted-root trusted_root.jsonl
 ```
@@ -322,15 +360,16 @@ copy cannot reveal trust-root revocations that occurred after it was captured.
 - canonical release manifest generated from the final direct-download assets
   and validated against the same bytes before upload
 - one validated SPDX 2.3 SBOM per self-contained package, with final-byte
-  provenance and SBOM attestations plus candidate online/offline verification
+  provenance and SBOM attestations plus mandatory full-inventory online/offline verification
 - every direct-download asset exposes a GitHub SHA-256 digest and the updater
   rejects missing, mismatched, or non-official integrity metadata
 - Windows SmartScreen and macOS Gatekeeper instructions remain current
 
 ## 6) Unsigned Distribution Policy
 VaultSync direct-download builds are intentionally unsigned because paid
-platform signing programs are outside the supported release budget. Signing
-and notarization are not release gates. Integrity verification and clear user
+platform signing programs are outside the supported release budget. Native publisher signing
+and notarization are not release gates. Provenance signatures are mandatory
+under [the release signing policy](RELEASE_SIGNING.md). Integrity verification and clear user
 disclosure are mandatory compensating controls:
 
 - publish only through the official `ATAC-Helicopter/VaultSync` release page;

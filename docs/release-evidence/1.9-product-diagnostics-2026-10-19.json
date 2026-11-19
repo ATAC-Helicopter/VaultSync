@@ -1,0 +1,65 @@
+{
+  "recordedOn": "2026-10-19",
+  "owner": "VS-1998",
+  "issue": 805,
+  "preparationPr": 736,
+  "parentCommit": "d2a39f2213d92ef9be4e4d27052d2bde09f384d2",
+  "scope": "Uncommitted source state qualified by file hashes; delivery commit follows in issue/PR",
+  "sourceSha256": {
+    "src/VaultSync.Core/Models/ProductDiagnosticReport.cs": "84fe60e4e21b647486a3f98cf70bb38c4c38f6f4fc3d33e5d668de37ca8b33ee",
+    "src/VaultSync.Core/Services/ProductDiagnosticReporter.cs": "e912fab9f55f96444728d186f6049f1265544835778f79e69990bbaa6852d983",
+    "src/VaultSync.Core/Services/ProductDiagnostics.cs": "cacf0ec61833015f0c6f28474afe745fc0d83ef83f459b5938129804fdd54663",
+    "src/VaultSync.UI/Infrastructure/ProductDiagnosticWindows.cs": "83cf87fc83028d1f0b161426f4d613b2c0def8a4999af82b3f7f0275c97581b9",
+    "src/VaultSync.UI/App.axaml.cs": "945cc58588335792f6c9040c5ebdc72de1cdb7dcdcc2fe93faf8b46c4837994e",
+    "src/VaultSync.UI/Views/SettingsView.axaml": "f845e36722d8203f21b8831544c3091a064c6a4287ce98db6f1634b5bbff1510",
+    "tests/VaultSync.Core.Tests/ProductDiagnosticReporterTests.cs": "e4891ba82a2bf5321924fd592fcf92537ed4f323f8a4d0df133a4d2c904012c8"
+  },
+  "companionSourceSha256": {
+    "src/lib/vaultsync-diagnostics.ts": "730ddb69f25c790de8a982a5060cde57e1eb0ff930ab5f031d22d466fad11cd1",
+    "src/lib/diagnostics-http.ts": "7b78c6e3e8b223c81210968adc12317d4e52047b3e3297c8a380c4ed01052fde",
+    "src/app/api/vaultsync/diagnostics/route.ts": "8ba5a6ddf19c7600a850819dedbd75333a53b1277793316d9e92cec0fcc541ec",
+    "src/app/internal/vaultsync-diagnostics/page.tsx": "ec175355c723e906c5af865701d7d3ef4590810184a716f6044c2f816990e9cb",
+    "tests/diagnostics.test.cjs": "6bc6dc080f9a798091247c6cb30c199751531b623e465f5c9a603342dea01ac9",
+    "tests/diagnostics-storage.cjs": "26deecd410d89036bd87fa93dffc12b021187bba9c13b296088d628cd8cbb550",
+    "tests/diagnostics-http.cjs": "10c1f38de6c97e113a4a1600032bc2a37dc958bc81d5fc9f4554cbbb7370cd5e"
+  },
+  "checks": {
+    "releaseGate": {
+      "passed": true,
+      "buildWarnings": 0,
+      "buildErrors": 0,
+      "corePassed": 1428,
+      "coreSkipped": 0,
+      "scriptTestsPassed": 221,
+      "localizationKeys": 1942,
+      "localeFilesChecked": 19
+    },
+    "siteUnitPassed": 50,
+    "siteNewsletterRegressionPassed": 52,
+    "siteHttpChecksPassed": 16,
+    "siteStorageChecksPassed": 12,
+    "siteBuildPassed": true,
+    "siteLintPassed": true,
+    "nativeConsentReviewRevocationPassed": true,
+    "nativeErrorReceivedWithoutSentinel": true,
+    "nativeWatchdogHangReceived": true,
+    "trackingItems": 43,
+    "trackingDiscrepancies": 0
+  },
+  "nativeLabBinarySha256": {
+    "VaultSync.UI.dll": "d2dfdc3e7a6ff183595ec9170dd45f52c8003ecfd0bc605a8e95a42bcca8dddd",
+    "VaultSync.Core.dll": "6cda405913dc4656aa7e7d421e71ba45354b104fe7fac2ae7cfd71b0fc450406"
+  },
+  "releaseGateLogSha256": "b337e53ac34b207927788ad0e65b610cf2e5265c3d117d858c53d57155d20ce0",
+  "productionEnabled": true,
+  "externalEmailQualified": true,
+  "remaining": [
+    "Platform/provider operational-retention review remains separate from diagnostic record expiry",
+    "Actual daily cron inbox observation; deterministic summary tests passed locally",
+    "Platform/recovery/upgrade/signing/beta release gates remain separate"
+  ],
+  "externalEmailQualificationScope": "One synthetic development-version hang alert independently found in operator inbox; future delivery and real daily cron inbox outcome not guaranteed.",
+  "deployment": "dpl_A3JPBbHsDve1uV9os9M8eK9oZq9N",
+  "companionCommit": "121c5c5",
+  "companionDeploymentReady": true
+}

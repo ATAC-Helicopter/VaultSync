@@ -69,7 +69,8 @@ namespace VaultSync.CLI.Presets
                     return null;
 
                 string json = File.ReadAllText(indexPath);
-                PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json);
+                PresetIndex? index = JsonSerializer.Deserialize<PresetIndex>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 return index;
             }
             catch

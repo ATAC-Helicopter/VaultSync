@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-26",
+  "owner": "BUG-19040",
+  "issue": 819,
+  "pullRequest": 736,
+  "uiSourceCommit": "ec24de768160fd6e240b773aeb6ed7257d3eaef8",
+  "platform": "Native macOS 27.2 / arm64 / .NET 10.0.13",
+  "failure": {
+    "automaticAndManualReproductions": true,
+    "signal": "SIGABRT",
+    "nativeStage": "NSApplication registration",
+    "sandboxDenial": "mach-lookup com.apple.coreservices.launchservicesd",
+    "previousConnectionAttribution": "Incorrect; the private QA package lacked a required entitlement."
+  },
+  "correction": {
+    "sandboxPreserved": true,
+    "jitPermission": true,
+    "machLookupServices": [
+      "com.apple.coreservices.launchservicesd"
+    ],
+    "networkClient": false,
+    "networkServer": false,
+    "broadFilesystemExceptions": false,
+    "existingOutputReplacement": false,
+    "selfContainedRuntimeRequired": true
+  },
+  "nativeVerification": {
+    "manualCorrectionOpened": true,
+    "scriptGeneratedPackageOpened": true,
+    "diagnosticsKeptLocal": true,
+    "onboardingCompleted": true,
+    "recoveryPageRendered": true,
+    "projects": 0,
+    "destinations": 0,
+    "cleanQuitAndRelaunch": true,
+    "newNativeCrashObserved": false,
+    "realWindowCaptureRetainedPrivately": true,
+    "captureFile": "recovery-macos-qa-builder-en.png",
+    "captureSha256": "85766cc5bf61258bec7424b17fa5d0f10bb5629b5602012c49debb099e7acbcc",
+    "uiSha256": "cb5b1e89658300d2dfeb5f2240c595a8b740dfe0f148df88d243de070c4d0c96"
+  },
+  "localRelease": {
+    "warnings": 0,
+    "errors": 0,
+    "coreTests": 2230,
+    "pythonTests": 299,
+    "focusedQaPackageTests": 6,
+    "localizationKeys": 1959,
+    "locales": 19
+  },
+  "limits": [
+    "Private ad-hoc UI validation only; no publisher/notarization/store/release qualification.",
+    "macOS disk image verification remains unsupported; no restoration is shown or qualified.",
+    "Exact-head hosted results are separate; transport S3869 findings are owned by the recovery transport work."
+  ],
+  "guidance": "https://docs.avaloniaui.net/docs/deployment/macos/",
+  "sha256": {
+    "scripts/build_macos_qa_app.py": "3eddc79ad6e3e5c15b677cd09a3ea743e81d2540f7208232859e61fdb1238788",
+    "tests/scripts/test_build_macos_qa_app.py": "ea6c50184e2eb9489bc51bc8fd0f321de96ea41b83ced3ee344c65d52bdcc6fb"
+  }
+}

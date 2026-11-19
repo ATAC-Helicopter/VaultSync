@@ -74,7 +74,7 @@ internal static partial class ShareableCrashReport
 
     public static string BuildEmailBody() =>
             "I reviewed the attached redacted VaultSync crash report.\r\n\r\n" +
-            "Nothing was sent automatically. This draft was prepared locally by VaultSync.\r\n" +
+            "This draft was prepared locally by VaultSync.\r\n" +
             "The redacted report is already attached. Review it before sending.\r\n\r\n" +
             "Optional description of what happened:\r\n";
 
@@ -111,7 +111,7 @@ internal static partial class ShareableCrashReport
     {
         var builder = new StringBuilder();
         builder.AppendLine("VAULTSYNC / CRASH REPORT");
-        builder.AppendLine("Generated and redacted locally. Nothing was sent automatically.");
+        builder.AppendLine("Generated and redacted locally.");
         builder.AppendLine();
         builder.AppendLine("REPORT IDENTITY");
         builder.AppendLine("---------------");

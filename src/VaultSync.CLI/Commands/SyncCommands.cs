@@ -26,7 +26,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SyncCommand : AsyncCommand<SyncSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SyncSettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -72,7 +72,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class VerifyCommand : AsyncCommand<VerifySettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, VerifySettings s, CancellationToken cancellationToken)
         {
             var db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -154,7 +154,7 @@ namespace VaultSync.CLI.Commands
 
         private sealed record RestoreCopy(string RelativePath, string SourcePath, string TargetPath);
 
-        protected override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, RestoreSettings s, CancellationToken cancellationToken)
         {
             var repo = new SqliteRepository(ConfigHelper.ResolveDb(s.Db));
             repo.EnsureSchema();
@@ -490,7 +490,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SelfTestCommand : AsyncCommand<SelfTestSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SelfTestSettings s, CancellationToken cancellationToken)
         {
             string? explicitDatabasePath = string.IsNullOrWhiteSpace(s.Db)
                 ? null

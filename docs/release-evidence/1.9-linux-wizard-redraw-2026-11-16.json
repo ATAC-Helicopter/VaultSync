@@ -1,0 +1,114 @@
+{
+  "owner": "BUG-19044",
+  "issue": 827,
+  "relatedOwners": [
+    "VS-1907",
+    "VS-1906"
+  ],
+  "observedOn": "2026-11-16",
+  "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+  "scope": "Installed offline Linux X11 wizard redraw, keyboard entry, expected pre-image refusal and process cleanup; not a disk/profile/media or beta acceptance",
+  "qualification": false,
+  "environment": {
+    "guest": "Debian 13 x64",
+    "kernel": "6.12.117+deb13-amd64",
+    "virtualization": "QEMU 11.1.3 KVM",
+    "firmware": "UEFI; Secure Boot disabled",
+    "memoryMiB": 2048,
+    "vcpus": 2,
+    "network": "No virtual NIC; only loopback observed",
+    "rootFilesystem": "ext4 read-only",
+    "display": "1280x800, Xorg modesetting on virtual Bochs display",
+    "rendering": "Avalonia 12.1.6, SkiaSharp 4.156.0, software rendering; no retained framebuffer or root-clip layer override"
+  },
+  "installation": {
+    "manifestSha256": "425092809fbc44f25ab17f7eb10a349db5e5c78d28f9e6adf7e001aeab092028",
+    "fileCount": 675,
+    "runtime": "10.0.15",
+    "sourceBoundAdmissionObserved": true,
+    "controllerUid": 60999
+  },
+  "regression": {
+    "baselineSource": "5491b7c80179394b5d16b635690c6e1e99c598d7",
+    "baseline": "Unchanged window regions become black after pointer interaction",
+    "retainedFramebufferOnlyCandidate": "c5bcb43840450bcc7565c6a7445103fb182add94",
+    "retainedFramebufferOnlyResult": "Still reproduces black unchanged regions",
+    "correctedSource": "680f7c963301724c356e0bc62d760f7f58dfb508",
+    "observed": [
+      "Readable initial chooser",
+      "Expanded advanced folder panel preserves surrounding content",
+      "Physical virtual-keyboard entry of /test remains readable",
+      "Expected Refused result remains readable",
+      "Close removes the controller window"
+    ],
+    "manualExposeOrVtWorkaroundUsed": false
+  },
+  "negativeOutcome": {
+    "phase": "Refused",
+    "imageSelected": false,
+    "review": null,
+    "acknowledgedBytes": 0,
+    "execution": null,
+    "stagingRetained": true,
+    "stagingCleanupPending": false,
+    "serviceExitCode": 74,
+    "interpretation": "Expected non-success status for a refused operation; not an accepted restore or build qualification",
+    "controllerStopped": true,
+    "socketRemoved": true,
+    "controllerGroupRemoved": true,
+    "hostCleanupCompleted": true
+  },
+  "checks": {
+    "controllerReleaseBuild": "exit 0, warnings-as-errors, 0 warnings and 0 errors",
+    "nativeLaunchers": "compiled with -Werror",
+    "generalCoreOrSolutionTests": "not repeated: isolated renderer configuration change; native interaction is the relevant regression"
+  },
+  "privateEvidence": [
+    {
+      "privateArtifact": "wizard-01-folder.png",
+      "sha256": "6ab12703aa9b460f17660f81de55acc6efd54b7b57923422a9f5ae60c141e9b5",
+      "pixels": [
+        1280,
+        800
+      ]
+    },
+    {
+      "privateArtifact": "wizard-02-expanded.png",
+      "sha256": "8bf4cf4202181467825698129426d0675e920e0b14d87aed5fbf47639b6a0a13",
+      "pixels": [
+        1280,
+        800
+      ]
+    },
+    {
+      "privateArtifact": "wizard-03-typed.png",
+      "sha256": "956b2d039103643491cc8e21c25dafb050086cf3899a1d10cb5c1b67a45c0f81",
+      "pixels": [
+        1280,
+        800
+      ]
+    },
+    {
+      "privateArtifact": "wizard-04-cancel.png",
+      "sha256": "3d1063f54970dde2a8d88c193dfe9c590999b91460fda264e61a4e7ae32b03d1",
+      "pixels": [
+        1280,
+        800
+      ]
+    },
+    {
+      "privateArtifact": "wizard-05-close.png",
+      "sha256": "f7f9b789eef34ae9d8d4ffc488018f3bff2e4d841ef420a29bb39da67a9bc06c",
+      "pixels": [
+        1280,
+        800
+      ]
+    }
+  ],
+  "remaining": [
+    "Actual source image selection, target/review/progress and installed OS restore/boot loop",
+    "Independent final media, capacity/interruption/refusal and application/configuration continuity qualification",
+    "Predecessor upgrade, cross-platform packages, signing/provenance, separate Sonar gate and protected review"
+  ],
+  "followUp": "1.9-installed-linux-os-loop-2026-11-17.json records actual catalog/target/review and the restored OS boot separately; positive progress/final frame remains absent"
+}

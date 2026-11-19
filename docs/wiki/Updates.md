@@ -1,6 +1,15 @@
 # Updates
 
-VaultSync provides different update flows depending on the platform, installation method, and release channel.
+The current published stable release is **1.8.10**, released November 15, 2026.
+The **1.9** branch and its CLI commands are development work, not an available
+stable update. Follow [development status](Development-Status.md) for the PR stack
+and qualification gates. Upgrade qualification from an installed 1.8.10 to 1.9
+is still pending. The planned FG Labs owner compatibility has not authorized a
+repository transfer; official stable downloads remain in this repository.
+
+VaultSync supports two Windows update models:
+- Direct builds use GitHub patch and installer updates.
+- Microsoft Store builds use Store-managed updates.
 
 Always use the [official GitHub Releases page](https://github.com/ATAC-Helicopter/VaultSync/releases/latest) to identify the latest published stable version.
 
@@ -42,7 +51,7 @@ A development branch, planned milestone, or unpublished release is not an availa
 
 Microsoft Store builds direct users to the Store rather than offering the GitHub installer workflow.
 
-![Maintenance and update controls in Settings](../images/Settings_Maintenance.png)
+![Maintenance and update controls in Settings](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Settings_Maintenance.png)
 
 ## Patch update eligibility
 
@@ -127,31 +136,33 @@ You can clear the skipped-version setting later to allow the banner to appear ag
 
 ## Troubleshooting
 
-### Update banner is stuck
+## Safe update expectation
+- Use only assets from the official `ATAC-Helicopter/VaultSync` release page and compare their published SHA-256 digests before bypassing SmartScreen or Gatekeeper warnings.
+- VaultSync rejects direct-update payloads whose trusted GitHub digest or exact size is missing or mismatched.
+- Use patch updates only for versions explicitly supported by the release manifest.
+- Use the installer for:
+  - major version jumps
+  - very old versions
+  - blocked or incompatible patch preflight results
+- For Microsoft Store builds, use the Store listing and Store app update flow instead of the GitHub installer.
 
-1. Close the banner.
-2. Run **Check for updates now**.
-3. Review the channel and updater diagnostics.
-4. If patch preflight is blocked, use the appropriate installer fallback.
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
 
-### An update is available but no patch is offered
+## Release grouping and dependency audit — 2026-10-03
 
-This can be expected when the installed version is not an explicitly allowed patch predecessor.
+One open draft PR per release now includes its preparation and corrections;
+see [Release Plan](Release-Plan.md). Dependabot #661/#720 merged as verified
+maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
+propagated to later implemented CLI variants. Unused Inter packaging is removed.
+[Development status](Development-Status.md) and the linked daily ledger record
+full changelog ownership, dependency consumers and remaining qualification gates.
 
-Check the official release assets and full-installer path.
+## Release provenance verification
 
-### An update fails verification
-
-Do not bypass an integrity failure.
-
-Recheck the official published assets and SHA-256 information. Report reproducible problems using the [GitHub issue forms](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose).
-
-## Update safety
-
-- Download only from official VaultSync release sources.
-- Compare published SHA-256 digests before bypassing operating-system security warnings.
-- Do not use unverified mirrors or third-party repackaged installers.
-- Do not treat unpublished development artifacts as production releases.
-- Preserve independent backups and periodically test restoration.
-
-For additional details, see the [Installation Guide](Installation.md), [Updater Documentation](../UPDATER.md), and [Troubleshooting](Troubleshooting.md).
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](../RELEASE_SIGNING.md).

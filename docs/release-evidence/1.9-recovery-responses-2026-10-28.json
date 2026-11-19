@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-28",
+  "owner": "VS-1907",
+  "issue": 495,
+  "releasePr": 736,
+  "sourceBase": "6022c3a19537129c5f097680d94b7c8d827ba5c0",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoveryResponses.cs": "200905263b2c9a32d22b5b9dd7ba1f368bc07c6e78dbf2d80f18dff08d84cb5b",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryResponsesTests.cs": "43dae35722ecd9ea38416a354ecbb0323639637efea0706472847611bffb7f1d"
+  },
+  "scope": "Strict display/correlation worker-response codecs; unchanged framing and no dispatcher/write authority",
+  "schemas": {
+    "inventoryHeaderBytes": 32,
+    "deviceBytes": 168,
+    "maximumDevices": 256,
+    "reviewBytes": 304,
+    "reviewObservationOffset": 288,
+    "progressBytes": 24,
+    "outcomeBytes": 64,
+    "refusedBytes": 4
+  },
+  "verification": {
+    "focused": {
+      "date": "2026-10-26",
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0,
+      "sourceUnchanged": true
+    },
+    "releaseBuild": {
+      "date": "2026-10-26",
+      "warnings": 0,
+      "errors": 0,
+      "result": "retained successful build; no redundant rebuild"
+    },
+    "contracts": {
+      "date": "2026-10-26",
+      "pythonPassed": 299,
+      "localizationKeys": 1959,
+      "locales": 19,
+      "result": "retained successful checks; docs inspected afterward"
+    },
+    "coreResumed": {
+      "date": "2026-10-28",
+      "passed": 2282,
+      "failed": 0,
+      "skipped": 0,
+      "command": "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build --no-restore",
+      "result": "completed the interrupted mandatory Core gate using existing unchanged build"
+    }
+  },
+  "regressions": [
+    "Handwritten inventory/progress/outcome wire vectors and UUID endianness",
+    "Bounded counts, exact lengths, enums/flags/reserved fields, topology and geometry refusal",
+    "Wire observation ID prevents review reuse with identical devices from another observation",
+    "Durable-only monotonic progress; full-write read-back/cleanup failures remain failures",
+    "Explicit pre-execution refusal codes cannot replace a post-write lifecycle outcome"
+  ],
+  "limits": [
+    "Pure managed portable codec tests, not a new Linux native transport or disk test",
+    "No GUI/native macOS import, dispatcher, installed worker/offline/human/device authority or boot media qualification",
+    "No recovery support profile promoted; hosted exact-head checks and protected release review remain required"
+  ]
+}

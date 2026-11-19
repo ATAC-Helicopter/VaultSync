@@ -6,7 +6,7 @@ This is the architecture and delivery contract for VaultSync Binary Source Contr
 `ROADMAP.md` remains the canonical source for work IDs, priority, release
 assignment, and delivery state. This document explains the product boundary,
 storage model, safety invariants, sequencing, and qualification gates behind
-`VS-1970` through `VS-1982`.
+`VS-1981` through `VS-1993`.
 
 ## Product definition
 
@@ -109,7 +109,7 @@ must not invalidate many later revisions.
 
 ## Proposed domain model
 
-The exact serialization is decided by `VS-1970`, but the logical model is:
+The exact serialization is decided by `VS-1981`, but the logical model is:
 
 ### Repository
 
@@ -230,7 +230,7 @@ A possible version-1 physical namespace is:
   quarantine/
 ```
 
-This is illustrative. `VS-1970` owns the final format.
+This is illustrative. `VS-1981` owns the final format.
 
 ## Chunking and deduplication
 
@@ -514,8 +514,8 @@ The format must separate:
 - non-secret algorithm/version metadata;
 - machine-local credential reference.
 
-The exact AEAD, nonce, keyed-ID, and rotation design is a `VS-1970` /
-`VS-1978` security decision and requires dedicated fixtures.
+The exact AEAD, nonce, keyed-ID, and rotation design is a `VS-1981` /
+`VS-1989` security decision and requires dedicated fixtures.
 
 ## Verification and recovery
 
@@ -545,6 +545,29 @@ and records evidence.
 A clean machine with the repository and authorized key material must be able to
 discover repository identity, inspect refs/history, verify data, and restore a
 changeset without the original app database.
+
+### Byte reconstruction vs project/application behavior — 2026-11-11
+
+The [shared 1.9 evidence contract](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+is applied to BSC without expanding release scope. Repository format/pack
+checks, reachable-object verification, independent clean-machine materialization
+and runtime-specific application/build checks are **different claims**.
+Full content verification establishes stored bytes for the recorded object set;
+a recovery drill establishes materialized bytes at its isolated target.
+Neither proves that a restored game, CAD scene, media project, database or
+executable behaves correctly in a particular version of consuming software.
+
+A matching compiler/source revision does not prove bit-for-bit executable
+reproducibility across architectures/flags (for example `-march=native`).
+Source provenance and reproducible-build checks are independent supply-chain
+controls. Do not run arbitrary project scripts, builds or restored binaries
+automatically during BSC verification. Future named application checks need
+explicit opt-in, trusted runners, resource limits and no-network defaults.
+Record absent/unsupported/stale checks without converting them to a pass.
+
+The 1.9.6 object/materialization gate, 1.9.7 concurrency/replication gate
+and 1.9.8 format/LTS gate retain separate owners; these notes do not
+change immutable BSC IDs or block 1.9.0 disk recovery.
 
 ## Garbage collection, quarantine, and repack
 
@@ -725,7 +748,7 @@ corruption, missing key, unavailable repository, and maintenance contention.
 
 ### Architecture gate — starts before BSC implementation
 
-`VS-1970` and `VS-1971` must be approved before `VS-1972` onward are treated
+`VS-1981` and `VS-1982` must be approved before `VS-1983` onward are treated
 as stable implementation commitments.
 
 Prototypes and benchmarks are allowed to inform the decision.
@@ -875,16 +898,50 @@ and qualifying them.
 
 ## Work IDs
 
-- `VS-1970` — architecture, format, and product boundary — issue #703.
-- `VS-1971` — identity, ownership, locking, conflict, audit — issue #704.
-- `VS-1972` — immutable CDC object store — issue #705.
-- `VS-1973` — trees, changesets, refs, atomic publication — issue #706.
-- `VS-1974` — workspace engine — issue #707.
-- `VS-1975` — exclusive binary locking — issue #708.
-- `VS-1976` — history, restore, compare, evidence — issue #709.
-- `VS-1977` — branches and binary conflict resolution — issue #710.
-- `VS-1978` — encryption and portable key recovery — issue #711.
-- `VS-1979` — verification, rebuild, GC, disaster recovery — issue #712.
-- `VS-1980` — sparse/cache/transfer/offsite replication — issue #713.
-- `VS-1981` — desktop, CLI, Git coexistence — issue #714.
-- `VS-1982` — scale, cross-platform, NAS, and fault qualification — issue #715.
+- `VS-1981` — architecture, format, and product boundary — issue #703.
+- `VS-1982` — identity, ownership, locking, conflict, audit — issue #704.
+- `VS-1983` — immutable CDC object store — issue #705.
+- `VS-1984` — trees, changesets, refs, atomic publication — issue #706.
+- `VS-1985` — workspace engine — issue #707.
+- `VS-1986` — exclusive binary locking — issue #708.
+- `VS-1987` — history, restore, compare, evidence — issue #709.
+- `VS-1988` — branches and binary conflict resolution — issue #710.
+- `VS-1989` — encryption and portable key recovery — issue #711.
+- `VS-1990` — verification, rebuild, GC, disaster recovery — issue #712.
+- `VS-1991` — sparse/cache/transfer/offsite replication — issue #713.
+- `VS-1992` — desktop, CLI, Git coexistence — issue #714.
+- `VS-1993` — scale, cross-platform, NAS, and fault qualification — issue #715.
+
+## Full-roadmap reconciliation — 2026-10-03
+
+The [family crosswalk](RELEASE_FAMILY_1.9.md) retains canonical VS-1981–1993;
+the supplied VS-1970–1982 are aliases that collide with live CLI IDs.
+Architecture gates apply to BSC releases only.
+
+Publication holds a short writer lease distinct from long path leases, rereads
+head and validates expected base/ownership, verifies staged crypto objects,
+durably writes objects/indexes/trees/changeset, then performs guarded CAS and
+records audit evidence. Every interruption before CAS leaves the previous head
+valid; new unreferenced objects remain reclaimable. Offline lock ownership is
+unverified, never implicit authorization. Expiry/takeover uses repository evidence
+and renewed ownership checks; wall clock alone cannot establish expiry.
+
+Packs validate magic/version/durable length/checksums and bounded ranges; indexes
+are rebuildable acceleration only. Encryption uses authenticated chunks and
+repository-local keyed identity; key rotation must survive interruption and
+clean-machine history verification/restore. Unknown required writer features
+fail closed; a reader-only fallback must not grant write permission.
+
+Checkout stages/verifies/replaces atomically with rollback; interruption leaves
+old or new verified state while preserving dirty/untracked data. Preflight free
+space for checkout, restore, repack, quarantine, rotation and mirror. GC roots
+include refs/protected tags/maintenance and recovery states; mark/quarantine/grace
+then recheck roots before delete. Repack verifies new packs/indexes before old
+ones retire. Replication completion counts all reachable objects as durable and
+verified; weak CAS backends are read-only replicas.
+
+Qualification covers 100k/500k/1M paths, 100GB/1TB/multi-TB repositories,
+1GB/10GB files, p95 latency, throughput, CPU/allocations, reuse, IO, GC and temporary
+space, cancellation and faults at each publication stage. Security targets
+accidental failures/crashes/cooperative writers, not hostile administrators,
+enterprise ACL, signing or nonrepudiation without separate qualification.

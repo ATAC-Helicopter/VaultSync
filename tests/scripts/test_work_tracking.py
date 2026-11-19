@@ -1,0 +1,231 @@
+import importlib.util
+import argparse
+import contextlib
+import io
+import pathlib
+import sys
+import unittest
+import tempfile
+from unittest.mock import patch
+
+MODULE_PATH = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "work_tracking.py"
+spec = importlib.util.spec_from_file_location("work_tracking", MODULE_PATH)
+work_tracking = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = work_tracking
+assert spec.loader is not None
+spec.loader.exec_module(work_tracking)
+
+
+class WorkTrackingTests(unittest.TestCase):
+    def test_status_preserves_local_context_when_remote_is_unavailable(self):
+        tracking = {"fgIssue": "870", "fgWorkId": "BUG-19051",
+                    "fgWorkTitle": "Core permission guard", "fgWorkType": "bug"}
+        with patch.object(work_tracking, "repo_root", return_value=pathlib.Path("fixture")), \
+                patch.object(work_tracking, "current_branch", return_value="work/preparation"), \
+                patch.object(work_tracking, "branch_tracking", return_value=tracking) as association, \
+                patch.object(work_tracking, "run", return_value=work_tracking.CommandResult(
+                    "", "offline", 1)) as command, contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 0)
+            self.assertIn("ID: BUG-19051", output.getvalue())
+            self.assertNotIn("GitHub:", output.getvalue())
+            command.return_value = work_tracking.CommandResult("OPEN https://github.com/owner/repo/issues/870", "", 0)
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 0)
+            self.assertIn("GitHub: OPEN", output.getvalue())
+            association.return_value = {}
+            command.reset_mock()
+            self.assertEqual(work_tracking.cmd_status(argparse.Namespace()), 1)
+            command.assert_not_called()
+
+    def test_draft_pr_keeps_owner_issue_open_and_refuses_missing_tracking(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        args = argparse.Namespace(keep_open=True, draft=True, base=None)
+        tracking = {"fgIssue": "870", "fgWorkId": "BUG-19051",
+                    "fgWorkTitle": "Reject incompatible Core permissions", "fgWorkType": "bug"}
+        with patch.object(work_tracking, "repo_root", return_value=root), \
+                patch.object(work_tracking, "current_branch", return_value="work/preparation"), \
+                patch.object(work_tracking, "branch_tracking", return_value=tracking) as association, \
+                patch.object(work_tracking, "labels_available", return_value={"kind:bug"}), \
+                patch.object(work_tracking, "run", return_value=work_tracking.CommandResult(
+                    "https://github.com/owner/repo/pull/99", "", 0)) as command, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(work_tracking.cmd_pr(args), 0)
+            create = command.call_args_list[0]
+            self.assertEqual(create.args[0][:5], ["gh", "pr", "create", "--base", "Dev"])
+            self.assertIn("--draft", create.args[0])
+            self.assertIn("Refs #870", create.kwargs["input_text"])
+            self.assertNotIn("Closes #870", create.kwargs["input_text"])
+            self.assertIn("\n## Tracking\n", create.kwargs["input_text"])
+            self.assertEqual(command.call_args_list[1].args[0], ["gh", "pr", "edit",
+                "https://github.com/owner/repo/pull/99", "--add-label", "kind:bug"])
+            command.reset_mock()
+            association.return_value = {}
+            with self.assertRaisesRegex(work_tracking.TrackingError, "not tracked"):
+                work_tracking.cmd_pr(args)
+            command.assert_not_called()
+
+    def test_command_output_is_decoded_as_utf8(self):
+        result = work_tracking.run([sys.executable, "-c",
+            "import sys; sys.stdout.buffer.write(bytes([0xE2, 0x80, 0x9D]))"])
+        self.assertEqual("\u201d", result.stdout)
+
+    def test_local_reservations_cover_delayed_remote_lists(self):
+        def fake_run(args, **kwargs):
+            if args[:3] == ["git", "config", "--get-all"]:
+                return work_tracking.CommandResult("BUG-19016", "", 0)
+            return work_tracking.CommandResult('[[]]', "", 0)
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", side_effect=fake_run), patch.object(work_tracking, "fetch_remote_work_items", return_value=[]):
+            used = work_tracking.collect_used_ids(pathlib.Path(directory), {"planning_files": []}, "BUG")
+            self.assertEqual("BUG-19017", work_tracking.allocate_id(used, prefix="BUG", major=1, minor=9, family_digits=3))
+
+    def test_family_uses_active_metadata_and_explicit_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "release").mkdir()
+            (root / "release/release-metadata.json").write_text('{"activeRelease":{"version":"1.9.5"}}')
+            self.assertEqual(work_tracking.infer_release_family(root, "docs/package-guide", None), (1, 9))
+            self.assertEqual(work_tracking.infer_release_family(root, "release/1.8.9", None), (1, 8))
+            self.assertEqual(work_tracking.infer_release_family(root, "docs/package-guide", "1.10"), (1, 10))
+            (root / "release/release-metadata.json").write_text('{"activeRelease":null}')
+            with self.assertRaises(work_tracking.TrackingError):
+                work_tracking.infer_release_family(root, "work/preparation", None)
+
+    def test_linked_unreleased_and_legacy_family(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            (root / "CHANGELOG.md").write_text('## [Unreleased]\n\n**Target version:** `1.9.0`.\n## [1.8.9] - 2026-09-16\n')
+            self.assertEqual(work_tracking.infer_release_family(root, "work/preparation", None), (1, 9))
+            (root / "CHANGELOG.md").write_text('## [1.8.9] - Unreleased\n')
+            self.assertEqual(work_tracking.infer_release_family(root, "work/preparation", None), (1, 8))
+
+    def test_remote_id_audit_paginates_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(work_tracking, "github_repo", return_value="owner/repo"), patch.object(work_tracking, "run", return_value=work_tracking.CommandResult('', '', 1)), patch.object(work_tracking, "fetch_remote_work_items") as fetch:
+            root = pathlib.Path(directory)
+            fetch.return_value = [{"title":"VS-1990", "body":"VS-1993"}]
+            self.assertEqual(work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS"), {1990, 1993})
+            fetch.assert_called_once_with(root, 'owner/repo', include_prs=True, include_body=True)
+            fetch.side_effect = work_tracking.TrackingError('incomplete remote audit')
+            with self.assertRaises(work_tracking.TrackingError):
+                work_tracking.collect_used_ids(root, {"planning_files":[]}, "VS")
+
+    def test_slugify(self):
+        self.assertEqual(work_tracking.slugify("Fix: Résumé / restore path!"), "fix-resume-restore-path")
+
+    def test_release_family_parsing(self):
+        self.assertEqual(work_tracking.parse_release_family("release/1.9.5"), (1, 9))
+        self.assertEqual(work_tracking.family_code(1, 10), "110")
+
+    def test_allocate_vs_id_within_family(self):
+        work_id = work_tracking.allocate_id(
+            {1893, 1896, 1897, 1975},
+            prefix="VS",
+            major=1,
+            minor=8,
+            family_digits=2,
+        )
+        self.assertEqual(work_id, "VS-1898")
+
+    def test_allocate_bug_id_within_family(self):
+        work_id = work_tracking.allocate_id(
+            {18175, 18176, 19007},
+            prefix="BUG",
+            major=1,
+            minor=8,
+            family_digits=3,
+        )
+        self.assertEqual(work_id, "BUG-18177")
+
+    def test_pr_requires_id_and_issue_link(self):
+        payload = {
+            "pull_request": {
+                "title": "[VS-1898] Improve tracker",
+                "body": "## Tracking\n\nCloses #758",
+                "user": {"login": "ATAC-Helicopter"},
+            }
+        }
+        self.assertEqual(work_tracking.validate_pr_payload(payload), [])
+
+    def test_pr_rejects_missing_tracking(self):
+        payload = {
+            "pull_request": {
+                "title": "Improve tracker",
+                "body": "No issue here",
+                "user": {"login": "ATAC-Helicopter"},
+            }
+        }
+        errors = work_tracking.validate_pr_payload(payload)
+        self.assertEqual(len(errors), 2)
+
+    def test_bootstrap_exemption(self):
+        payload = {
+            "pull_request": {
+                "title": "Bootstrap tracker",
+                "body": "Tracking: bootstrap",
+                "user": {"login": "ATAC-Helicopter"},
+            }
+        }
+        self.assertEqual(work_tracking.validate_pr_payload(payload), [])
+
+    def test_push_audit_is_warning_only(self):
+        payload = {
+            "commits": [
+                {"id": "abc123456", "message": "fix: no tracking"},
+                {"id": "def123456", "message": "fix(BUG-18177): tracked"},
+                {"id": "ghi123456", "message": "Merge branch 'x'"},
+            ]
+        }
+        self.assertEqual(work_tracking.audit_push_payload(payload), ["Untracked commit abc12345: fix: no tracking"])
+
+
+    @staticmethod
+    def _labeled_pr(title, names):
+        return {"pull_request": {
+            "title": title,
+            "labels": [{"name": name} for name in names],
+        }}
+
+    def test_label_gate_accepts_bug_with_complete_metadata(self):
+        payload = self._labeled_pr("BUG-19047: rsync cleanup", [
+            "kind:bug", "area:core", "priority:p1", "status:in-progress", "release:1.9.0",
+        ])
+        self.assertEqual(work_tracking.validate_pr_label_payload(payload), [])
+
+    def test_label_gate_requires_every_classification(self):
+        errors = work_tracking.validate_pr_label_payload(self._labeled_pr("BUG-19047: fix", []))
+        self.assertEqual(len(errors), 6)
+
+    def test_label_gate_accepts_release_umbrella_with_family_label(self):
+        payload = self._labeled_pr("1.9.0: recovery foundation", [
+            "area:release", "priority:p0", "release:1.9.x",
+            "release:1.9.0", "status:in-progress",
+        ])
+        self.assertEqual(work_tracking.validate_pr_label_payload(payload), [])
+
+    def test_label_gate_detects_wrong_bug_kind(self):
+        payload = self._labeled_pr("BUG-19047: fix", [
+            "kind:feature", "area:core", "priority:p1",
+            "release:1.9.0", "status:in-progress",
+        ])
+        self.assertIn("BUG-xxxxx PR must have kind:bug.",
+                      work_tracking.validate_pr_label_payload(payload))
+
+    def test_label_gate_rejects_conflicting_priorities_and_exact_releases(self):
+        payload = self._labeled_pr("BUG-19047: fix", [
+            "kind:bug", "area:core", "priority:p1", "priority:p2",
+            "release:1.9.0", "release:1.9.1", "status:in-progress",
+        ])
+        self.assertEqual(len(work_tracking.validate_pr_label_payload(payload)), 2)
+
+    def test_label_gate_rejects_wrong_release_umbrella_version(self):
+        payload = self._labeled_pr("1.9.7: release preparation", [
+            "area:release", "priority:p1", "release:1.9.6", "status:in-progress",
+        ])
+        self.assertIn("Release preparation PR title and exact release label disagree.",
+                      work_tracking.validate_pr_label_payload(payload))
+
+    def test_label_gate_rejects_unavailable_metadata(self):
+        self.assertEqual(work_tracking.validate_pr_label_payload({"pull_request": {}}),
+                         ["PR label metadata is missing or invalid."])
+
+
+if __name__ == "__main__":
+    unittest.main()

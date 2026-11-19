@@ -1,0 +1,47 @@
+{
+  "owner": "VS-1904",
+  "issue": 492,
+  "release": "1.9.0",
+  "date": "2026-11-08",
+  "baseCommit": "d42dfbf3ecd566f2050638416b2e97f45aecde2f",
+  "sourceHashes": {
+    ".github/workflows/sonarqube.yml": "85e2f3839883711d79caa0c4abccc0c12f1698500374407682e15cfb729033a6",
+    "scripts/test_recovery_admission_native.sh": "95d72e763c28f608e84bacacbf4c7b9311b2dfca7bed457cad0351745f0acd0d",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryAdmissionNativeTests.cs": "1d0dd291a3f18abf5a9e613447f317171ef09bd9a7d26a800f3fb808d776a4f4",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryCaptureHostTests.cs": "12b37e17e6cac2175e8822e7595873d70ea44b55d65f1365fc5463a960f1af4e"
+  },
+  "scope": "Negative installed-closure admission and capture-session lifecycle regression coverage",
+  "checks": [
+    {
+      "name": "focused Release warnings-as-errors LinuxRecoveryCaptureHostTests",
+      "passed": 12,
+      "skipped": 0
+    },
+    {
+      "name": "final Release test-project build",
+      "warnings": 0,
+      "errors": 0
+    },
+    {
+      "name": "shell syntax and whitespace",
+      "passed": true
+    },
+    {
+      "name": "macOS wrapper refusal before results creation",
+      "passed": true
+    }
+  ],
+  "nativeFixture": {
+    "executed": false,
+    "plannedScenarios": 11,
+    "requiredEnvironment": "Ubuntu24.04 x64, real private PID/mount namespaces, readonly ext4 root, source/compiled/check-out binding and kernel/inode proof",
+    "output": "Separate TRX, native-admission-evidence.json and coverage-admission.xml",
+    "limits": "Synthetic writable fault-injection alias only; actual Core location remains refused; no admitted lease/boot facts/profile qualification manufactured"
+  },
+  "limitations": [
+    "Native Linux fixture/profiler execution and hosted coverage await CI.",
+    "No full suite or native VM/profile qualification claimed.",
+    "No new application UI strings; localization catalogs unchanged.",
+    "Sonar80% not assumed from these tests; thresholds/exclusions unchanged."
+  ]
+}

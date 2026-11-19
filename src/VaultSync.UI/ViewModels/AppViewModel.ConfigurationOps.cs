@@ -292,20 +292,24 @@ namespace VaultSync.UI.ViewModels
                     List<Backup> backups = useLightweight
                         ? [.. _repo.GetRecentBackupsByProject(limitPerProject: 5)]
                         : [.. _repo.GetBackupsInRange(DateTime.MinValue, DateTime.UtcNow)];
+                    IReadOnlyList<DestinationQuotaPlan> quotaPlans = DestinationQuotaPlanner.BuildPlans(
+                        _config.Backups.Destinations ?? [], _repo.GetBackupsForQuotaAccounting());
 
                     HashSet<int> disabledAuto = _config.Backups.AutoBackupDisabledProjects?.ToHashSet() ?? [];
 
                     _backupsCacheProjects = projects;
                     _backupsCacheBackups = backups;
+                    _backupsCacheDestinationQuotaPlans = quotaPlans;
                     _backupsCacheDisabledAuto = disabledAuto;
                     _backupsCacheUpdatedUtc = DateTime.UtcNow;
                     _backupsCachePartial = useLightweight;
 
                     Dispatcher.UIThread.Post(() =>
                     {
+                        BackupsViewModel.UpdateDestinationQuotaPlans(quotaPlans);
                         if (onBackupsPage || force)
                         {
-                            BackupsViewModel.LoadFromBackups(projects, backups, disabledAuto);
+                            BackupsViewModel.LoadFromBackups(projects, backups, disabledAuto, quotaPlans);
                             BackupsViewModel.RefreshBackupDriveHealth();
                         }
                     });

@@ -318,12 +318,21 @@ public sealed class HistoryViewModel : ViewModelBase
         get => _selectedTimelineItem;
         set
         {
+            if (_isReplacingTimelinePage)
+                return;
+            bool retainDrafts = _selectedTimelineItem is { SnapshotId: > 0 } previous &&
+                value is not null && previous.SnapshotId == value.SnapshotId &&
+                previous.ProjectId == value.ProjectId &&
+                (SelectedSnapshotLabelDraft != previous.MetadataLabel ||
+                 SelectedSnapshotNoteDraft != previous.MetadataNote ||
+                 SelectedSnapshotTagsDraft != previous.MetadataTags);
             if (!SetField(ref _selectedTimelineItem, value))
                 return;
 
             RaiseSelectedEventPropertiesChanged();
             SelectedComparisonSummary = string.Empty;
-            LoadSelectedMetadataDrafts();
+            if (!retainDrafts)
+                LoadSelectedMetadataDrafts();
             RaiseSelectedActionStateChanged();
         }
     }
@@ -763,7 +772,6 @@ public sealed class HistoryViewModel : ViewModelBase
         OnPropertyChanged(nameof(RestoreSummaryLabel));
         RaiseSelectedEventPropertiesChanged();
         SelectedComparisonSummary = string.Empty;
-        LoadSelectedMetadataDrafts();
         OnPropertyChanged(nameof(FilterStateLabel));
         RaiseSelectedActionStateChanged();
         _resetFiltersCommand.RaiseCanExecuteChanged();
@@ -1040,7 +1048,6 @@ public sealed class HistoryViewModel : ViewModelBase
         if (revision != _filterRevision)
             return;
 
-        HistoryTimelineItemViewModel? previousSelection = SelectedTimelineItem;
         _filteredEventCount = result.FilteredEventCount;
         _pageIndex = result.PageIndex;
 
@@ -1050,29 +1057,7 @@ public sealed class HistoryViewModel : ViewModelBase
             HistoryGraphPaths paths = result.GraphPaths[i];
             item.SetPageGraphPaths(paths.BackupPath, paths.MetadataPath, paths.RestorePath);
         }
-        TimelineItems.SyncWith(result.PageItems);
-
-        if (TimelineItems.Count == 0)
-        {
-            SelectedTimelineItem = null;
-        }
-        else if (previousSelection is null)
-        {
-            SelectedTimelineItem = TimelineItems[0];
-        }
-        else if (!TimelineItems.Contains(previousSelection))
-        {
-            SelectedTimelineItem =
-                TimelineItems.FirstOrDefault(item =>
-                    item.SnapshotId > 0 &&
-                    item.SnapshotId == previousSelection.SnapshotId &&
-                    item.BackupId == previousSelection.BackupId &&
-                    item.GraphLane == previousSelection.GraphLane) ??
-                TimelineItems.FirstOrDefault(item =>
-                    item.SnapshotId > 0 &&
-                    item.SnapshotId == previousSelection.SnapshotId) ??
-                TimelineItems[0];
-        }
+        ReplaceTimelinePageItems(result.PageItems);
 
         OnPropertyChanged(nameof(HasTimelineItems));
         OnPropertyChanged(nameof(ShowTimelineCards));
@@ -1095,6 +1080,32 @@ public sealed class HistoryViewModel : ViewModelBase
         _browseSelectedSnapshotCommand.RaiseCanExecuteChanged();
         _openRecoveryCommand.RaiseCanExecuteChanged();
         _compareSelectedSnapshotCommand.RaiseCanExecuteChanged();
+    }
+
+    private bool _isReplacingTimelinePage;
+
+    internal void ReplaceTimelinePageItems(IReadOnlyList<HistoryTimelineItemViewModel> items)
+    {
+        HistoryTimelineItemViewModel? previousSelection = SelectedTimelineItem;
+        _isReplacingTimelinePage = true;
+        try
+        {
+            // Ignore transient ListBox selection changes while rows are replaced.
+            TimelineItems.SyncWith(items);
+        }
+        finally
+        {
+            _isReplacingTimelinePage = false;
+        }
+        SelectedTimelineItem = previousSelection is not null && TimelineItems.Contains(previousSelection)
+            ? previousSelection
+            : TimelineItems.FirstOrDefault(item => previousSelection is { SnapshotId: > 0 } &&
+                item.ProjectId == previousSelection.ProjectId && item.SnapshotId == previousSelection.SnapshotId &&
+                item.BackupId == previousSelection.BackupId && item.GraphLane == previousSelection.GraphLane)
+              ?? TimelineItems.FirstOrDefault(item => previousSelection is { SnapshotId: > 0 } &&
+                item.ProjectId == previousSelection.ProjectId && item.SnapshotId == previousSelection.SnapshotId)
+              ?? TimelineItems.FirstOrDefault();
+        OnPropertyChanged(nameof(SelectedTimelineItem));
     }
 
     private void BrowseSelectedSnapshot()
@@ -1212,7 +1223,22 @@ public sealed class HistoryViewModel : ViewModelBase
         if (selected is null || selected.SnapshotId <= 0)
             return;
 
+        string labelDraft = SelectedSnapshotLabelDraft;
+        string noteDraft = SelectedSnapshotNoteDraft;
+        string tagsDraft = SelectedSnapshotTagsDraft;
         await PersistSelectedSnapshotMetadataAsync(clearTextMetadata).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            // Do not discard a newer draft or a different selection edited during the save.
+            if (SelectedTimelineItem?.SnapshotId != selected.SnapshotId ||
+                SelectedTimelineItem?.ProjectId != selected.ProjectId ||
+                SelectedSnapshotLabelDraft != labelDraft || SelectedSnapshotNoteDraft != noteDraft ||
+                SelectedSnapshotTagsDraft != tagsDraft)
+                return;
+            SelectedSnapshotLabelDraft = clearTextMetadata ? string.Empty : NormalizeMetadataText(labelDraft);
+            SelectedSnapshotNoteDraft = clearTextMetadata ? string.Empty : NormalizeMetadataText(noteDraft);
+            SelectedSnapshotTagsDraft = clearTextMetadata ? string.Empty : NormalizeMetadataTags(tagsDraft);
+        });
         await RefreshAsync(force: true).ConfigureAwait(false);
     }
 

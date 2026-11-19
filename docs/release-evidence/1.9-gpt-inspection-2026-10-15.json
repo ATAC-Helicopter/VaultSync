@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "owner": "VS-1917",
+  "issue": 574,
+  "releasePr": 736,
+  "sourceBaseCommit": "53991b173ce41ba1eae333db269c3ac4f46af819",
+  "sourceSha256": {
+    "src/VaultSync.Core/Models/DiskImageGptInspection.cs": "d22750aba5a85cb5966c11316764a9c78cbae86818036ada5647fa3c43a42c7d",
+    "src/VaultSync.Core/Services/DiskImageGptInspectionService.cs": "7a731fd36dfd43de1c77776637d5c3e0c885cb67478ff4d3da3c44613e0c3217",
+    "tests/VaultSync.Core.Tests/DiskImageGptInspectionServiceTests.cs": "8dd102152a0859ca1eecf08d3137d9ec2aa85b6660d18f9f2f9ebbfd519cebb3",
+    "tests/VaultSync.Core.Tests/Fixtures/disk-gpt-v1.json": "b92fd5298123539c0c63019c8b88cf07d19bd5830a1d41f579f282e6385f0fd1",
+    "scripts/generate_gpt_fixtures.py": "59d69322ec55a2076790fab6d1bdfd440a23f9d8a6ec740a10502d1c4c4631df"
+  },
+  "fixtureSummaries": [
+    {
+      "sector": 512,
+      "capacity": 65536,
+      "metadataSha256": "bf5ccd89a8c3479701babd7940e9ef301af3c9cf9a8762abf54ea18c439a658c",
+      "sourceSha256": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663"
+    },
+    {
+      "sector": 4096,
+      "capacity": 524288,
+      "metadataSha256": "cec7b0d22c28cffe98292130ca385f14f6bec9f4965bd893b86050cb9eff5b45",
+      "sourceSha256": "4aa6c0b0755f4d3e3fd5eb23d2fdf9e3d22e05f64821a5148eef3686d9d1a17c"
+    }
+  ],
+  "localChecks": {
+    "focusedTests": 31,
+    "coreTests": 1268,
+    "pythonTests": 221,
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "localeKeys": 1932,
+    "locales": 19
+  },
+  "limitations": [
+    "Synthetic stream inspection and file reconstruction only.",
+    "No filesystem, EFI executable, device identity, authenticated image origin or boot qualification.",
+    "No source/layout/provenance serialized record is added to the draft manifest."
+  ]
+}

@@ -1,0 +1,116 @@
+name: VaultSync devlog to Discord
+
+on:
+  schedule:
+    # UTC. Scheduled GitHub jobs may be delayed, so do not rely on precise delivery time.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Send pending articles (unchecked runs validation only)"
+        type: boolean
+        default: false
+      publish_latest:
+        description: "Send latest article once when already baselined, unless older posts are pending"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - ".github/workflows/discord-devlog.yml"
+      - "scripts/discord_devlog_notify.py"
+      - "tests/scripts/test_discord_devlog.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vaultsync-discord-devlogs
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.publish && !inputs.publish_latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests/scripts -p 'test_discord_devlog.py' -v
+      - name: Compile
+        run: python3 -m py_compile scripts/discord_devlog_notify.py
+      - name: Verify first-run state initialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf "$scratch"' EXIT
+          git init -q "$scratch"
+          cd "$scratch"
+          git config user.name "VaultSync CI"
+          git config user.email "ci@example.invalid"
+          echo "tracked" > tracked.txt
+          git add tracked.txt
+          git commit -qm "fixture base"
+          git switch --orphan devlog-state
+          test ! -e tracked.txt
+          echo '{"last_guid":"fixture"}' > state.json
+          git add state.json
+          git commit -qm "initial cursor"
+          test "$(git ls-tree --name-only HEAD)" = "state.json"
+          git show HEAD:state.json | grep -q '"last_guid":"fixture"'
+
+  notify:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.publish || inputs.publish_latest))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Read previous delivery cursor
+        env:
+          STATE_BRANCH: automation/vaultsync-devlog-state
+        run: |
+          if git fetch origin "refs/heads/$STATE_BRANCH:refs/remotes/origin/$STATE_BRANCH" 2>/dev/null; then
+            git show "refs/remotes/origin/$STATE_BRANCH:state.json" > "$RUNNER_TEMP/discord-devlog-state.json"
+          else
+            echo "::notice::State branch missing. First run will seed the latest article without replaying history."
+          fi
+      - name: Publish new first-party articles
+        env:
+          DISCORD_DEVLOG_WEBHOOK: ${{ secrets.DISCORD_DEVLOG_WEBHOOK }}
+          DISCORD_DEVLOG_ROLE_ID: ${{ vars.DISCORD_DEVLOG_ROLE_ID }}
+          DISCORD_DEVLOG_PUBLISH_LATEST: ${{ inputs.publish_latest }}
+        run: |
+          if [ -z "$DISCORD_DEVLOG_WEBHOOK" ]; then
+            echo "::notice::No Discord devlog webhook configured; no publication or cursor update."
+            exit 0
+          fi
+          args=()
+          if [ "${DISCORD_DEVLOG_PUBLISH_LATEST:-false}" = "true" ]; then
+            args+=(--publish-latest)
+          fi
+          cd "$RUNNER_TEMP"
+          python3 "$GITHUB_WORKSPACE/scripts/discord_devlog_notify.py" "${args[@]}"
+      - name: Store cursor on separate tracking branch
+        env:
+          STATE_BRANCH: automation/vaultsync-devlog-state
+        run: |
+          set -euo pipefail
+          [ -s "$RUNNER_TEMP/discord-devlog-new-state.json" ] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git show-ref --verify --quiet "refs/remotes/origin/$STATE_BRANCH"; then
+            git switch -C devlog-state "refs/remotes/origin/$STATE_BRANCH"
+          else
+            git switch --orphan devlog-state
+          fi
+          cp "$RUNNER_TEMP/discord-devlog-new-state.json" state.json
+          git add state.json
+          if git diff --cached --quiet; then
+            echo "No new articles."
+            exit 0
+          fi
+          git commit -m "chore: advance Discord devlog cursor [skip ci]"
+          git push origin "HEAD:refs/heads/$STATE_BRANCH"

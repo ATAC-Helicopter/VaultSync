@@ -1,0 +1,12 @@
+[
+  {"name":"recognized-header-only","hex":"5653494D4147450001000000000000000100000000000000","state":"SupportedEnvelope","reason":"image.envelope-only"},
+  {"name":"future-major","hex":"5653494D4147450002000000000000000100000000000000","state":"Unsupported","reason":"image.unsupported-envelope"},
+  {"name":"future-minor","hex":"5653494D4147450001000100000000000100000000000000","state":"Unsupported","reason":"image.unsupported-envelope"},
+  {"name":"required-feature","hex":"5653494D4147450001000000010000000100000000000000","state":"Unsupported","reason":"image.unsupported-envelope"},
+  {"name":"zero-manifest-length","hex":"5653494D4147450001000000000000000000000000000000","state":"Invalid","reason":"image.invalid-envelope"},
+  {"name":"oversized-manifest","hex":"5653494D4147450001000000000000000100000100000000","state":"Invalid","reason":"image.invalid-envelope"},
+  {"name":"nonzero-reserved","hex":"5653494D4147450001000000000000000100000001000000","state":"Invalid","reason":"image.invalid-envelope"},
+  {"name":"unknown-family","hex":"4E4F54494D41474501000000000000000100000000000000","state":"NotImage","reason":"image.unrecognized-family"},
+  {"name":"truncated-header","hex":"5653494D41474500010000000000000001000000","state":"Incomplete","reason":"image.incomplete-envelope"},
+  {"name":"truncated-magic","hex":"5653494D","state":"Incomplete","reason":"image.incomplete-envelope"}
+]

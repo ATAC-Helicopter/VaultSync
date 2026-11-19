@@ -22,6 +22,23 @@ The proof does not write restored files. It selects a bounded set, reads stored 
 
 Reachability is not verification. A folder or archive can exist and open while one of its files is missing or corrupt. VaultSync only emits `hash_match` after it has read the complete stored file and matched both its SHA-256 and size. Missing expected hashes, locked encrypted content, access failures, and safety limits remain inconclusive rather than being promoted to success.
 
+## Legacy 1.8.x file-level proof boundary — 2026-11-11
+
+The outcomes described above reflect **selected file-level stored-byte and
+read-only restore-plan checks**, with the documented 5,000-file / 2 GiB work
+limits. They are **not** evidence that a disk image boots, that an operating
+system has been independently restored, or that arbitrary applications,
+databases and remote dependencies are healthy. An integrity result is bound
+to the selected bytes and recorded run, not universally "fully recoverable".
+
+Recovery Horizon's separate [1.9 evidence semantics](RECOVERY_EVIDENCE_SCOPE_1.9.md)
+define independent disk read-back, target-only boot and named app/service
+probes. These new categories must not silently change 1.8.x serialized
+verdicts, retention protections, proof limits, historical reports or current
+stable UI behavior. Until a later supported UI/schema migration, users must
+be told which evidence was actually measured. Unknown, not-run or unsupported
+system/application checks are not file corruption and never count as passes.
+
 ## Execution flow
 
 ```text

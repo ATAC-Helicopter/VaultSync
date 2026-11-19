@@ -72,6 +72,8 @@ No mandatory cloud account. No automatic crash-report uploads. Your configured s
 
 ## See VaultSync in action
 
+Screenshots show **VaultSync 1.8.10**, using isolated demonstration data.
+
 <p align="center">
   <strong>Recovery readiness</strong>
 </p>

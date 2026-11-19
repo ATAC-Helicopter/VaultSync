@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-26",
+  "owner": "BUG-19040",
+  "issue": 819,
+  "releasePr": 736,
+  "sourceBase": "340f06e90856127c550c4bdd5c56427b8683d5a2",
+  "scope": "Fixed literal codesign invocations for private QA packages; no distribution changes",
+  "sourceSha256": {
+    "scripts/build_macos_qa_app.py": "ccc17d85f574387504df529bd6866087084f1cbc858f088b9e429d3c9073a82c",
+    "tests/scripts/test_build_macos_qa_app.py": "3e5a5f167c23f0a7d4ab0e8961cdcf2f5e1d49fe2f682af3b3b47a8a528d2938"
+  },
+  "localRelease": {
+    "command": "bash scripts/validate_development.sh release",
+    "exit": 0,
+    "warnings": 0,
+    "errors": 0,
+    "corePassed": 2230,
+    "coreFailed": 0,
+    "coreSkipped": 0,
+    "pythonPassed": 299,
+    "localizationKeys": 1959,
+    "locales": 19
+  },
+  "focusedPython": {
+    "passed": 6
+  },
+  "nativeSigning": {
+    "platform": "macOS arm64",
+    "fixture": "minimal native bundle containing system true executable; not VaultSync UI",
+    "signing": "ad-hoc",
+    "signExit": 0,
+    "strictVerifyExit": 0,
+    "identityFromInfoPlist": true,
+    "arguments": "fixed literals with bundle working directory",
+    "sourceSha256": "ccc17d85f574387504df529bd6866087084f1cbc858f088b9e429d3c9073a82c",
+    "appLaunched": false,
+    "releaseQualified": false,
+    "initialFixtureFailure": "copy2 tried to preserve protected system file flags; copyfile plus execute mode fixed only fixture; initial temporary directory removed"
+  },
+  "limits": [
+    "Native probe used a minimal system-executable bundle, not VaultSync GUI",
+    "Old private native VM and QA environments removed by maintainer; previous receipts remain historical",
+    "No provider/publisher signature, distribution package, upgrade, beta or disk qualification",
+    "Hosted Sonar S8705 requires a fresh exact-head result"
+  ],
+  "cleanup": {
+    "nativeProbeTemporaryBundleRemoved": true,
+    "retainedPrivateEvidenceReviewDate": "2026-11-02"
+  }
+}

@@ -1,0 +1,179 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+  "observedOn": "2026-11-18",
+  "qualification": false,
+  "scope": "Standalone raw Linux x64 recovery image for one isolated virtual GPT/UEFI/ext4 512-byte-sector fixture",
+  "media": {
+    "rawSha256": "53fa8f7cf30db0147a4cc4fe86f9c43dd3a4aff407576c92e8cdd393695ea9dc",
+    "compressedSha256": "184c5b29b0f60a0e63700b3ab7970fadf4a9dc7d68a9edaf70b2688b2af0c943",
+    "compressedBytes": 1894621830,
+    "decompressionSha256Verified": true,
+    "firmware": "UEFI with fresh variables",
+    "root": "ext4 read-only; medium attached read-only",
+    "network": "no virtual NIC",
+    "configuration": "Scratch and shared export selected by test-specific UUIDs; export attached through a writable overlay"
+  },
+  "restore": {
+    "reviewObserved": true,
+    "originalDetached": true,
+    "consoleChallengeEntered": true,
+    "progressObserved": true,
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+      "operation": "c55ab9a1-7c87-47b3-82d4-415e48efb63e",
+      "phase": "Completed",
+      "review": "989bbde2-37dc-484b-ad67-00131b8c0cfd",
+      "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+      "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+      "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "serviceExitCode": 74,
+    "presentation": "Final success screen and Close were not observed after the IDE interruption. The host saved the final receipt and cleanup before its ten-minute presentation timeout."
+  },
+  "comparison": {
+    "exitCode": 0,
+    "result": "Images are identical.",
+    "sourceSha256BeforeRestore": "e9783ca0022a2de73f3b8bab9d8a66f81d7abc0d084c0d9eec6c59255885a0cf"
+  },
+  "targetOnlyBoot": {
+    "freshFirmware": true,
+    "uefiObserved": true,
+    "originalMediaAndStoreDetached": true,
+    "rootFilesystem": "ext4",
+    "desktop": "Xorg/xterm",
+    "markersPreserved": true,
+    "keyboardMarkerIndependentlyObserved": true,
+    "shutdown": {
+      "observedAt": "2026-11-18T14:16:14.674659+00:00",
+      "shutdownEvent": {
+        "timestamp": {
+          "seconds": 1795011374,
+          "microseconds": 474098
+        },
+        "event": "SHUTDOWN",
+        "data": {
+          "guest": true,
+          "reason": "guest-shutdown"
+        }
+      },
+      "processAbsent": true,
+      "qemuExitCode": null
+    }
+  },
+  "negativeAttempts": [
+    {
+      "receipt": {
+        "schemaVersion": 1,
+        "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+        "operation": "28aafcad-b169-4767-b583-2666542fa66b",
+        "phase": "Faulted",
+        "review": "37d4e3df-2128-49fb-8bdc-48cb01c3249e",
+        "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+        "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+        "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+        "acknowledgedBytes": 0,
+        "execution": null,
+        "stagingRetained": true,
+        "stagingCleanupPending": false
+      },
+      "observation": "Review timed out with zero acknowledged bytes."
+    },
+    {
+      "receipt": {
+        "schemaVersion": 1,
+        "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+        "operation": "e8e84520-110d-4374-b5b3-31bcce5e9fea",
+        "phase": "Faulted",
+        "review": "41cb8437-0da8-4fc7-89b5-bf7c092b0f1e",
+        "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+        "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+        "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+        "acknowledgedBytes": 0,
+        "execution": null,
+        "stagingRetained": true,
+        "stagingCleanupPending": false
+      },
+      "observation": "Challenge transcription differed by one character; zero acknowledged bytes."
+    }
+  ],
+  "privateEvidence": [
+    {
+      "artifact": "candidate-serial.log",
+      "sha256": "f1e9267de19f8472920210db7b7421d4d8acc60cd1f16125088f02f4a1f24f1d"
+    },
+    {
+      "artifact": "candidate-second-attempt.log",
+      "sha256": "b4ac15e0b5c9dabdcbae5feb6f70b706c507691e0fad4f211a74c836beafbea1"
+    },
+    {
+      "artifact": "candidate-third-review.png",
+      "sha256": "a20191ac967780c86af56dd9f2c98030e57a2cecd96e98f4045834320053aacc"
+    },
+    {
+      "artifact": "candidate-third-console.png",
+      "sha256": "34110853a23a8251bfbd9d905c95579c0f504572c5ed5fa8eb04bc4d81ef3c77"
+    },
+    {
+      "artifact": "candidate-writing.png",
+      "sha256": "28aa54b329f2ab9bf496ad72d220712cc57b66afca37cca5a3f352c97c61e75d"
+    },
+    {
+      "artifact": "candidate-resume-final-receipt.json",
+      "sha256": "7c42e86ac76b1d8204257ba95ff69b628235d4672d978a4961c37c1226379e42"
+    },
+    {
+      "artifact": "candidate-resume-shutdown.json",
+      "sha256": "4ae0d62fb3a46dc9ec8be2a88385172733f22416024b69f211c1b0a5a10a4d82"
+    },
+    {
+      "artifact": "candidate-disk-compare.log",
+      "sha256": "45c4d472e996560294f5829abf4e511b3f3d3a7a319e0f4f0fb8c7f2dea8fc26"
+    },
+    {
+      "artifact": "candidate-target-boot-checks.log",
+      "sha256": "6e6b146878384235f59df8d4286e4c71a98c317cab05fb380b41719c4f968792"
+    },
+    {
+      "artifact": "candidate-target-desktop.png",
+      "sha256": "d1923ff052007ebbb99272527f0d24bac57c8a85d8c584b1473a060ec0951d06"
+    },
+    {
+      "artifact": "candidate-target-keyboard.log",
+      "sha256": "424b1d373a4786d5d8a89e02b299e2a0dea87e0e7f5d224350575df015ca2cb8"
+    },
+    {
+      "artifact": "candidate-target-shutdown.json",
+      "sha256": "ff574fd344e858d35c21b959b9be079959f1f0f008afa5183a3e16ae2cb34c7a"
+    }
+  ],
+  "limits": [
+    "Built from the pinned disposable Debian environment, with fixture-specific UUIDs. Independent official package assembly, reproducible provenance and asset signing remain open.",
+    "Clean successful service exit was not observed in this run. Positive restore/read-back/cleanup and target-only boot are durable.",
+    "No physical USB hardware, application continuity, other sector sizes or systems qualified."
+  ],
+  "workspace": {
+    "allCandidateGuestsStopped": true,
+    "observedFreeBytesRecovered": 22308605952,
+    "candidateKeptCompressed": true,
+    "reviewBy": "2026-11-23"
+  }
+}
