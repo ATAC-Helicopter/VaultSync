@@ -1279,6 +1279,8 @@ light-X11 boot on the disposable3GiB Linux fixture. Durable final cleanup passes
 Black partial redraws, capacity/media/fault and shared beta gates remain open;
 no support profile is promoted.
 
+- [ ] `BUG-19053` `P2` Keep recovery and language controls accessible during guided setup. Issue #872.
+- [ ] `BUG-19054` `P2` Render each Guide step once across navigation and language changes. Issue #873.
 - [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.
   - Fixed reader2495c59 now verifies the same3GiB in73.807s with24583reads,
     worker exit0, full verified bytes and digest. No timeout increase, source/

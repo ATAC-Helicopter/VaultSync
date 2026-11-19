@@ -152,18 +152,6 @@ public sealed class GuideViewModel : ViewModelBase
     public async Task RefreshAsync()
     {
         int revision = Interlocked.Increment(ref _refreshRevision);
-        RefreshHeaderText();
-        RebuildContent();
-        OnPropertiesChanged(
-            nameof(PageTitle),
-            nameof(PageDescription),
-            nameof(RestartSetupLabel),
-            nameof(DocumentationLabel),
-            nameof(RecoveryRuleTitle),
-            nameof(RecoveryRuleBody),
-            nameof(TerminologyTitle),
-            nameof(TerminologyDescription));
-
         GuideProgressSnapshot snapshot = await Task.Run(BuildProgressSnapshot).ConfigureAwait(false);
         if (revision != Volatile.Read(ref _refreshRevision))
             return;
