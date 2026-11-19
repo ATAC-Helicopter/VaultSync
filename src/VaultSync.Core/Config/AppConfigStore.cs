@@ -130,7 +130,7 @@ namespace VaultSync.Core.Config
         /// <summary>Read configuration for an inspection command without persisting defaults or emitting diagnostics to stdout.</summary>
         public static AppConfig ReadForInspection()
         {
-            if (!File.Exists(ConfigFilePath))
+            if (!File.Exists(ConfigFilePath) && !File.Exists(ConfigBackupFilePath))
                 return new AppConfig();
 
             try

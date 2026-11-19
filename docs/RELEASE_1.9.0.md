@@ -826,6 +826,9 @@ See [family ownership, gates and ID crosswalk](RELEASE_FAMILY_1.9.md),
 
 Legacy watcher safety is retained: finite read-only text dry runs, explicit `--db`,
 shutdown cancellation/drain and explicit failure. Resource/JSON commands stay in 1.9.5.
+The legacy dry run also uses the backup settings file if the primary is absent
+(BUG-19007/#734). An isolated CLI check resolved the configured SQLite catalog
+and left the catalog and backup settings byte-identical.
 
 Raw command arguments are not logged, preserving secret input safety.
 
