@@ -51,11 +51,11 @@
   </Window.Styles>
 
   <Grid x:Name="RootGrid"
-        RowDefinitions="Auto,*"
+        RowDefinitions="Auto,*,Auto"
         ColumnDefinitions="260,*"
         Background="{DynamicResource WindowBackground}">
 
-    <Canvas Grid.RowSpan="2"
+    <Canvas Grid.RowSpan="3"
             Grid.ColumnSpan="2"
             IsHitTestVisible="False"
             ClipToBounds="True">
@@ -72,7 +72,7 @@
                Opacity="0.72" />
     </Canvas>
 
-    <Border x:Name="SidebarRoot" Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
+    <Border x:Name="SidebarRoot" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
         <StackPanel x:Name="SidebarTopSection"
                     DockPanel.Dock="Top"
@@ -444,10 +444,10 @@
       </Grid>
     </Border>
 
-    <!-- Global bottom-right toast notifications covering the whole window -->
+    <!-- Keep toasts above the guided setup row. -->
     <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
 
-    <viewsControls:OnboardingTourOverlay Grid.RowSpan="2"
+    <viewsControls:OnboardingTourOverlay Grid.Row="2"
                                          Grid.ColumnSpan="2"
                                          DataContext="{CompiledBinding OnboardingTour}" />
 
