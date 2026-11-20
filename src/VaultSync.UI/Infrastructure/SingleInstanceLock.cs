@@ -124,7 +124,8 @@ internal sealed class SingleInstanceLock : IDisposable
 
     internal static string ResolveFileLockDirectory()
     {
-        string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string localData = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
         if (string.IsNullOrWhiteSpace(localData) || !Path.IsPathFullyQualified(localData))
             throw new InvalidOperationException("A private per-user application-data directory is required for the instance lock.");
 

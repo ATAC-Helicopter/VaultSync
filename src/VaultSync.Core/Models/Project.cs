@@ -8,6 +8,8 @@ public record Project
         get; init;
     }
     public string ExternalId { get; init; } = string.Empty;
+    /// <summary>Installation-local import origin; independent of restore state and never portable authorization.</summary>
+    public bool IsImported { get; init; }
     public required string Name
     {
         get; init;

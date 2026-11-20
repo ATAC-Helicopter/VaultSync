@@ -13,7 +13,7 @@
       "name": "Unity",
       "category": "Game Engines",
       "file": "unity.vaultsyncignore",
-      "description": "Recommended Unity backup preset. Excludes Library, Temp, Logs, build artefacts, and IDE junk."
+      "description": "Recommended Unity backup preset. Excludes Library, Temp, Logs, build artefacts, saved profiler captures, and IDE junk."
     },
     {
       "id": "unreal",

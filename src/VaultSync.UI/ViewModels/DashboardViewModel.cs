@@ -7,10 +7,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using LiveChartsCore;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
-using SkiaSharp;
 using Avalonia.Media; // for Brush in legend + activity
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
@@ -20,6 +16,7 @@ using VaultSync.Core.Repositories;
 using VaultSync.Core.Services;
 using VaultSync.UI.Infrastructure; // for RelayCommand
 using VaultSync.UI.Services;
+using VaultSync.UI.Controls;
 
 namespace VaultSync.UI.ViewModels
 {
@@ -79,9 +76,7 @@ namespace VaultSync.UI.ViewModels
         public IReadOnlyList<BackupUsageSegment> BackupTopConsumers { get; private set; } =
             [];
 
-        public ISeries[] BackupUsageSeries { get; private set; } = [];
-        public Axis[] BackupUsageXAxes { get; private set; } = [];
-        public Axis[] BackupUsageYAxes { get; private set; } = [];
+        public StorageChartSegment[] BackupUsageSeries { get; private set; } = [];
         public bool HasBackupUsageSegments => BackupUsageSegments.Count > 0;
         public bool HasBackupTopConsumers => BackupTopConsumers.Count > 0;
 
@@ -509,9 +504,6 @@ namespace VaultSync.UI.ViewModels
         public RelayCommand OpenRequiredActionCommand { get; }
 
         // Chart bindings
-        public ISeries[] SnapshotSeries { get; private set; } = [];
-        public Axis[] SnapshotXAxes { get; private set; } = [];
-        public Axis[] SnapshotYAxes { get; private set; } = [];
         public ObservableCollection<SnapshotActivityPoint> WeeklySnapshotActivity { get; } = [];
         public double WeeklyChartHeight { get; private set; } = 180;
         public double WeeklyAverageLineOffset { get; private set; }
@@ -520,7 +512,7 @@ namespace VaultSync.UI.ViewModels
         public string TotalSnapshotsWeekLabel => string.Format(L("Dashboard.Hint.SnapshotsThisWeek", "{0} this week"), TotalSnapshotsWeek);
 
         // Donut bindings
-        public ISeries[] StorageSeries { get; private set; } = [];
+        public StorageChartSegment[] StorageSeries { get; private set; } = [];
         public bool HasStorageSeries => StorageSeries is { Length: > 0 };
         public IEnumerable<LegendItem> StorageLegend { get; private set; } = [];
         public ObservableCollection<StorageLegendSortOption> StorageSortOptions { get; } = [];
@@ -607,42 +599,8 @@ namespace VaultSync.UI.ViewModels
                     command.Execute(null);
             });
 
-            BuildStaticAxes();
             RebuildStorageSortOptions();
             BuildDemoSeriesIfNeeded();
-        }
-
-        private void BuildStaticAxes()
-        {
-            var grid = new SKColor(255, 255, 255, 28);
-            var text = new SKColor(255, 255, 255, 170);
-
-            SnapshotXAxes = new[]
-            {
-                new Axis
-                {
-                    Labels = _days,
-                    TextSize = 12,
-                    LabelsPaint = new SolidColorPaint(text),
-                    SeparatorsPaint = new SolidColorPaint(grid) { StrokeThickness = 1 },
-                    TicksPaint = null,
-                    Padding = new LiveChartsCore.Drawing.Padding(8, 0, 8, 0)
-                }
-            };
-
-            SnapshotYAxes = new[]
-            {
-                new Axis
-                {
-                    MinLimit = 0,
-                    MinStep = 1,
-                    TextSize = 12,
-                    LabelsPaint = new SolidColorPaint(text),
-                    SeparatorsPaint = new SolidColorPaint(grid) { StrokeThickness = 1 },
-                    TicksPaint = null,
-                    Padding = new LiveChartsCore.Drawing.Padding(0, 8, 0, 8)
-                }
-            };
         }
 
         /// <summary>
@@ -895,7 +853,6 @@ namespace VaultSync.UI.ViewModels
 
                         UpdateBackupSummaryPills();
 
-                        BuildSnapshotSeries();
                         BuildWeeklyActivity();
                         BuildStorageDonut(data.StorageSlices);
                         BuildBackupUsageBar(data.Config, data.StorageSlices);
@@ -1043,25 +1000,6 @@ namespace VaultSync.UI.ViewModels
             return (tagsDisplay, tagChips);
         }
 
-        private void BuildSnapshotSeries()
-        {
-            using var timing = RuntimeTiming.Measure("Dashboard snapshot series rebuild");
-            // Simple, readable chart: one bar per day showing how many backups ran.
-            var accent = SKColor.Parse("#22CCFF");
-
-            var dailyBackups = new ColumnSeries<double>
-            {
-                Values = _snapshotCountsByDay,
-                Stroke = null,
-                Fill = new SolidColorPaint(accent),
-                MaxBarWidth = 26,
-                DataLabelsPaint = null
-            };
-
-            SnapshotSeries = new ISeries[] { dailyBackups };
-            OnPropertyChanged(nameof(SnapshotSeries));
-        }
-
         private void BuildWeeklyActivity()
         {
             using var timing = RuntimeTiming.Measure("Dashboard weekly activity rebuild");
@@ -1195,7 +1133,7 @@ namespace VaultSync.UI.ViewModels
                     .ThenBy(x => x.project.Name, StringComparer.CurrentCultureIgnoreCase)]
             };
 
-            var series = new List<ISeries>();
+            var series = new List<StorageChartSegment>();
             var legend = new List<LegendItem>();
 
             for (int i = 0; i < orderedSlices.Count; i++)
@@ -1204,24 +1142,17 @@ namespace VaultSync.UI.ViewModels
                 if (bytes <= 0) continue;
 
                 string colorHex = AvatarColorProvider.GetColor(project.Name, project.RootPath, project.ExternalId);
-                SKColor color = SKColor.TryParse(colorHex, out SKColor parsedColor)
+                Color color = Color.TryParse(colorHex, out Color parsedColor)
                     ? parsedColor
-                    : SKColors.DodgerBlue;
+                    : Colors.DodgerBlue;
                 string projectName = project.Name;
                 string displayProjectName = TrimForTooltip(projectName, 28);
-                series.Add(new PieSeries<double>
-                {
-                    Values      = new[] { (double)bytes },
-                    Name        = projectName,
-                    InnerRadius = 90,
-                    Stroke      = null,
-                    Fill        = new SolidColorPaint(color)
-                });
+                series.Add(new StorageChartSegment(bytes, new ImmutableSolidColorBrush(color)));
 
                 legend.Add(new LegendItem(
                     $"{displayProjectName} {FormatBytes(bytes)}",
                     $"{projectName} {FormatBytes(bytes)}",
-                    new ImmutableSolidColorBrush(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue))));
+                    new ImmutableSolidColorBrush(color)));
             }
 
             if (series.Count == 0)
@@ -1250,7 +1181,7 @@ namespace VaultSync.UI.ViewModels
         private void BuildDemoSeriesIfNeeded()
         {
             using var timing = RuntimeTiming.Measure("Dashboard empty series rebuild");
-            if (SnapshotSeries is { Length: > 0 } && StorageSeries is { Length: > 0 })
+            if (WeeklySnapshotActivity.Count > 0 && StorageSeries.Length > 0)
                 return;
 
             // No demo data when the DB is empty or unavailable.
@@ -1259,8 +1190,6 @@ namespace VaultSync.UI.ViewModels
             Array.Clear(_manualCountsByDay, 0, _manualCountsByDay.Length);
             Array.Clear(_importedCountsByDay, 0, _importedCountsByDay.Length);
             WeeklySnapshotActivity.Clear();
-            SnapshotSeries = [];
-            OnPropertyChanged(nameof(SnapshotSeries));
 
             ProjectCount   = 0;
             ProjectsHint   = L("Dashboard.Hint.NoProjects", "No projects yet");
@@ -1402,34 +1331,17 @@ namespace VaultSync.UI.ViewModels
             BackupUsageSeries = [.. segments
                 .Where(segment => segment.SizeBytes > 0 && segment.Brush is ISolidColorBrush)
                 .Select(BuildBackupUsageSeries)];
-            BackupUsageXAxes = [new Axis { IsVisible = false, MinLimit = 0, MaxLimit = 100 }];
-            BackupUsageYAxes = [new Axis { IsVisible = false }];
             NotifyBackupUsageChanged();
         }
 
-        private static ISeries BuildBackupUsageSeries(BackupUsageSegment segment)
-        {
-            var solid = (ISolidColorBrush)segment.Brush;
-            var color = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
-            return new StackedRowSeries<double>
-            {
-                Values = [segment.SizeBytes],
-                Stroke = null,
-                Fill = new SolidColorPaint(color),
-                MaxBarWidth = 20,
-                IsHoverable = false,
-                DataLabelsPaint = null,
-                StackGroup = 0
-            };
-        }
+        private static StorageChartSegment BuildBackupUsageSeries(BackupUsageSegment segment) =>
+            new(segment.SizeBytes, segment.Brush);
 
         private void ClearBackupUsage()
         {
             BackupUsageSegments = [];
             BackupTopConsumers = [];
             BackupUsageSeries = [];
-            BackupUsageXAxes = [];
-            BackupUsageYAxes = [];
             NotifyBackupUsageChanged();
         }
 
@@ -1440,14 +1352,8 @@ namespace VaultSync.UI.ViewModels
             using var timing = RuntimeTiming.Measure("Dashboard backup usage fallback rebuild");
             if (vaultSyncBytes <= 0 || perProject == null || perProject.Count == 0)
             {
-            BackupUsageSegments = [];
-            BackupTopConsumers = [];
-            BackupUsageSeries   = [];
-            BackupUsageXAxes    = [];
-            BackupUsageYAxes    = [];
-
-            NotifyBackupUsageChanged();
-            return;
+                ClearBackupUsage();
+                return;
             }
 
             var segments = new List<BackupUsageSegment>();
@@ -1499,79 +1405,7 @@ namespace VaultSync.UI.ViewModels
                 }
             }
 
-            BackupUsageSegments = segments;
-            BackupTopConsumers = BuildTopConsumerList(segments);
-            OnPropertyChanged(nameof(HasBackupUsageSegments));
-            OnPropertyChanged(nameof(HasBackupTopConsumers));
-
-            if (segments.Count == 0)
-            {
-                BackupUsageSeries = [];
-                BackupUsageXAxes  = new[]
-                {
-                    new Axis
-                    {
-                        IsVisible = false,
-                        MinLimit  = 0,
-                        MaxLimit  = 100
-                    }
-                };
-                BackupUsageYAxes  = new[]
-                {
-                    new Axis
-                    {
-                        IsVisible = false
-                    }
-                };
-
-                NotifyBackupUsageChanged();
-                return;
-            }
-
-            var series = new List<ISeries>();
-            foreach (BackupUsageSegment seg in segments)
-            {
-                if (seg.SizeBytes <= 0)
-                    continue;
-
-                if (seg.Brush is not ISolidColorBrush solid)
-                    continue;
-
-                var skColor = new SKColor(solid.Color.R, solid.Color.G, solid.Color.B, solid.Color.A);
-
-                series.Add(new StackedRowSeries<double>
-                {
-                    Values        = new[] { seg.SizeBytes },
-                    Stroke        = null,
-                    Fill          = new SolidColorPaint(skColor),
-                    MaxBarWidth   = 20,
-                    IsHoverable   = false,
-                    DataLabelsPaint = null,
-                    StackGroup    = 0
-                });
-            }
-
-            BackupUsageSeries = [.. series];
-
-            BackupUsageXAxes = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false,
-                    MinLimit  = 0,
-                    MaxLimit  = 100
-                }
-            };
-
-            BackupUsageYAxes = new[]
-            {
-                new Axis
-                {
-                    IsVisible = false
-                }
-            };
-
-            NotifyBackupUsageChanged();
+            ApplyBackupUsageSegments(segments);
         }
 
         private void NotifyBackupUsageChanged() =>
@@ -1580,9 +1414,7 @@ namespace VaultSync.UI.ViewModels
                 nameof(BackupTopConsumers),
                 nameof(HasBackupTopConsumers),
                 nameof(HasBackupUsageSegments),
-                nameof(BackupUsageSeries),
-                nameof(BackupUsageXAxes),
-                nameof(BackupUsageYAxes));
+                nameof(BackupUsageSeries));
 
         private static IReadOnlyList<BackupUsageSegment> BuildTopConsumerList(IReadOnlyList<BackupUsageSegment> segments)
         {

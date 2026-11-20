@@ -1,0 +1,111 @@
+{
+  "owner": "VS-1907",
+  "issue": 495,
+  "observedOn": "2026-11-18",
+  "scope": "Isolated virtual Debian GPT/UEFI/ext4 x64 fixture, 512-byte sectors, 8 GiB, Secure Boot off",
+  "qualification": false,
+  "capture": {
+    "sourceCommit": "680f7c963301724c356e0bc62d760f7f58dfb508",
+    "evidence": "1.9-installed-linux-os-loop-2026-11-17.json",
+    "sourceDiskSha256": "e9783ca0022a2de73f3b8bab9d8a66f81d7abc0d084c0d9eec6c59255885a0cf",
+    "verifiedExportManifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c"
+  },
+  "recoveryMedium": {
+    "runtimeSourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+    "installedClosureManifestSha256": "26cd6ce3cbb873ca6039de2d7eb149fd1a4398c3386df3c96ee625ca625844a2",
+    "baseImage": "docker.io/library/debian@sha256:7378260c0a098d27ac206225db5e7d92b8c7c84ea7afccc86eeb513756bbd392",
+    "debianVersion": "13.7",
+    "aptSnapshot": "20261117T000000Z",
+    "mainInReleaseSha256": "0584fba32e13e0ab8285fb16c27adea1ec03a73669c18702821094fd6ca86675",
+    "securityInReleaseSha256": "49b95cf6911396794b2d12dd5e08c6c22216c7f532d1ac32b74db03c66610d06",
+    "packagesTsvSha256": "cf38303d23f0120c16b61fa137fb002f37cb925fb6aa2db7dba7b2bac9cc0e83",
+    "kernelRelease": "6.12.117+deb13-amd64",
+    "kernelSha256": "14159c607ad9762133db41e479dafecde1d6a5fe715a8d65d292a3262e4b6bed",
+    "sgdisk": "1.0.10",
+    "efiPartitionSha256": "902ccdd49567fefc3d330c5c1e3f7c0aff595cc577506894f3393a6e9c676c26",
+    "rootPartitionSha256": "c9b671c5ee93276598ff263746e72cf11bbfd378439345eea85ad2ad4dfe768b",
+    "rawSha256": "8aa5ccc43eb19c4081785653111be5b3abb3c9e9f72fde2b50d03cc71815227b",
+    "compressedSha256": "d3b25d91ff6d03dff08b6427d6bf88343bd1d492fe8c27d2af2ac7f94b45e688",
+    "compressedBytes": 401991724,
+    "replacementAssemblerByteComparison": "identical",
+    "root": "ext4 read-only; medium attached read-only",
+    "volumeBindings": "Explicit fixture UUIDs; shared export mounted through a disposable overlay",
+    "network": "no virtual NIC"
+  },
+  "restore": {
+    "originalSourceDetached": true,
+    "exactTargetReviewAndConsoleChallenge": true,
+    "terminalScreenSha256": "36e613decb9a115eeebe267bbe0fddebc29430e78f73ed57f94184502ba90def",
+    "closeObserved": true,
+    "serviceExitCode": 0,
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "3eac35c2b3f85e73f305b16bd604cde77133ea16",
+      "operation": "67f69255-765a-462f-959a-6be63751719d",
+      "phase": "Completed",
+      "review": "db440b2c-3d60-4478-89e7-832ca18d2527",
+      "image": "1d35b508-2317-4d56-8702-34e3becd09d2",
+      "capture": "f5c9ab65-b833-46de-a9cc-f4a3c01f031b",
+      "manifestRoot": "f6c11e015cd4b3425fe98b606bf3049c53af86265c4e0c88e4c01f7eeca8b27c",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "guestShutdownAt": "2026-11-18T15:18:00+00:00"
+  },
+  "preBootComparison": {
+    "tool": "qemu-img compare 11.1.3",
+    "exitCode": 0,
+    "result": "Images are identical."
+  },
+  "targetOnlyBoot": {
+    "freshUefiVariables": true,
+    "uefiObserved": true,
+    "originalSourceRecoveryMediaAndStoreDetached": true,
+    "rootFilesystem": "ext4",
+    "desktop": "Xorg/xterm",
+    "fixtureMarkersPreserved": true,
+    "keyboardMarkerIndependentlyObserved": true,
+    "frameSha256": "d1923ff052007ebbb99272527f0d24bac57c8a85d8c584b1473a060ec0951d06",
+    "shutdown": {
+      "observedAt": "2026-11-18T15:19:06.503125+00:00",
+      "shutdownEvent": {
+        "timestamp": {
+          "seconds": 1795015146,
+          "microseconds": 302336
+        },
+        "event": "SHUTDOWN",
+        "data": {
+          "guest": true,
+          "reason": "guest-shutdown"
+        }
+      },
+      "processAbsent": true,
+      "qemuExitCode": null
+    }
+  },
+  "workspace": {
+    "guestsStopped": true,
+    "allocatedBytesRemoved": 21167910912,
+    "observedFreeBytesRecovered": 21167910912,
+    "retainedCompressedMediaAllocatedBytes": 401997824,
+    "reviewBy": "2026-11-23"
+  },
+  "limits": [
+    "Media was built locally from pinned inputs with test-specific volume bindings.",
+    "Evidence covers the stated virtual fixture and recorded runtime sources. Media and release assets require exact-source and signed packaging acceptance."
+  ]
+}

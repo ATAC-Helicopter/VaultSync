@@ -1,4 +1,5 @@
 using System;
+using VaultSync.Core.Services;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -71,6 +72,7 @@ internal static class CrashHandler
         }
 
         DiagnosticsLogger.Record($"Crash handler invoked: source={source}, terminating={isTerminating}, error={ex.GetType().Name}");
+        ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.Application, VaultSync.Core.Models.DiagnosticOutcome.Crash, ex);
         App.MarkCrashing();
         CrashArtifact? crash = WriteCrashLog(ex, source, isTerminating);
         TryShowCrashDialog(crash);
@@ -86,6 +88,7 @@ internal static class CrashHandler
         try
         {
             DiagnosticsLogger.Record($"Soft UI crash handled: {ex.GetType().Name}");
+            ProductDiagnostics.Record(VaultSync.Core.Models.DiagnosticOperation.UserInterface, VaultSync.Core.Models.DiagnosticOutcome.Failed, ex);
             CrashArtifact? crash = WriteCrashLog(ex, "UI thread", isTerminating: false);
             TryShowSoftCrashBanner(crash?.Path);
         }
@@ -238,7 +241,7 @@ internal static class CrashHandler
         content.Children.Add(new TextBlock
         {
             Text = assistanceEnabled
-                ? L("Crash.PrivacySummary", "Review the complete redacted report below. Nothing is sent until you press Send in your email app.")
+                ? L("Crash.PrivacySummary", "Review this text report before sending it with your email app.")
                 : L("Crash.AssistanceDisabled", "Crash report assistance is disabled. The redacted report remains only on this device."),
             TextWrapping = TextWrapping.Wrap,
             FontWeight = FontWeight.Medium
@@ -481,7 +484,7 @@ internal static class CrashHandler
         deleteButton.Click += (_, _) =>
         {
             if (ShareableCrashReport.DeleteSavedReport(logPath))
-                reportStatus.Text = L("Crash.ReportDeleted", "The saved report was deleted. Nothing was sent.");
+                reportStatus.Text = L("Crash.ReportDeleted", "The saved text report was deleted.");
         };
         var prepareEmailButton = new Button
         {

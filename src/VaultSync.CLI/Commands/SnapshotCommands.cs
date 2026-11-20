@@ -25,7 +25,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class SnapshotCommand : AsyncCommand<SnapshotSettings>
     {
-        protected override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, SnapshotSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -73,7 +73,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class HistoryCommand : AsyncCommand<HistorySettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, HistorySettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -126,7 +126,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class DiffCommand : AsyncCommand<DiffSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, DiffSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);
@@ -288,7 +288,7 @@ namespace VaultSync.CLI.Commands
 
     sealed class PruneCommand : AsyncCommand<PruneSettings>
     {
-        protected override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
+        public override Task<int> ExecuteAsync(CommandContext context, PruneSettings s, CancellationToken cancellationToken)
         {
             string db = ConfigHelper.ResolveDb(s.Db);
             var repo = new SqliteRepository(db);

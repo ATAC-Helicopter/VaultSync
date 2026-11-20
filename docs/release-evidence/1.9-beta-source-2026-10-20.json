@@ -1,0 +1,30 @@
+{
+  "owner": "VS-1902/#113",
+  "sourceBase": "9633dac9b42ba0d02f0dbadea929b71ca9134dec",
+  "date": "2026-10-20",
+  "sourceSha256": {
+    "scripts/release_source.py": "fe24c2d53a21dcc9705aaffd180667b28e4cc3fe21b1e4ea7cf1f62f3688be92",
+    "scripts/release_signing.py": "6a310a1f6fc887378c3c8fd3f105fe1709a413465723fd383eb34c0b3a46ff09",
+    ".github/workflows/release-assets.yml": "ca44910c234e34b73672e2ab5ee6331779fde94a6165a1a1c0540b1a2423f190",
+    "tests/scripts/test_release_source.py": "fb70734e96795201f9653766ea018c53c193c6eba353c60efe6be2024cf8e91f",
+    "tests/scripts/test_release_signing.py": "61efcee683ef8d6e834d043a2d37e3b8a187145dcf1e4586a8df7652691053fe"
+  },
+  "validation": {
+    "core": 1654,
+    "python": 242,
+    "warnings": 0,
+    "errors": 0,
+    "skipped": 0,
+    "localizationKeys": 1943,
+    "locales": 19,
+    "releaseLog": "/Users/flavio/Developer/vaultsync-validation.nosync/beta-source-20261020/release.log",
+    "trx": "/Users/flavio/Developer/vaultsync-validation.nosync/beta-source-20261020/core-tests.trx",
+    "trackingLog": "/Users/flavio/Developer/vaultsync-validation.nosync/beta-source-20261020/tracking.log"
+  },
+  "limitations": [
+    "No beta source cut, asset build or signature execution on a new run.",
+    "Beta draft staging and exact installed updater qualification remain open.",
+    "Four disk candidates; zero qualified profiles.",
+    "Protected reviews and release gates remain required."
+  ]
+}

@@ -3,16 +3,10 @@ name: SonarQube
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are analyzed by their required PR. Running again for the
     # same branch push duplicates the complete build and coverage pipeline.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -26,9 +20,12 @@ concurrency:
 jobs:
   analysis:
     name: SonarQube Cloud analysis
-    runs-on: ubuntu-latest
+    # dotnet-coverage 18.9.0 produced an empty report on the 26.04 rollout.
+    # Keep the measured runner until the profiler qualifies on a newer image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
       SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
@@ -62,7 +59,16 @@ jobs:
         timeout-minutes: 3
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+
+      - name: Verify checked-out source identity
+        if: steps.config.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SOURCE_SHA" ]]
 
       - name: Setup .NET
         if: steps.config.outputs.configured == 'true'
@@ -72,7 +78,7 @@ jobs:
 
       - name: Setup Python
         if: steps.config.outputs.configured == 'true'
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v6
         with:
           python-version: "3.x"
 
@@ -87,7 +93,8 @@ jobs:
         if: steps.config.outputs.configured == 'true'
         run: |
           dotnet tool install --global dotnet-sonarscanner --version 11.2.1
-          python -m pip install coverage==7.10.4
+          dotnet tool install --global dotnet-coverage --version 18.9.0
+          python -m pip install --only-binary :all: coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore
@@ -105,12 +112,13 @@ jobs:
             /k:"${SONAR_PROJECT_KEY}" \
             /o:"${SONAR_ORGANIZATION}" \
             /d:sonar.host.url="${host_url}" \
+            /d:sonar.scm.revision="${EXPECTED_SOURCE_SHA}" \
             /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.cs.opencover.reportsPaths="TestResults/sonar/**/coverage.opencover.xml" \
+            /d:sonar.cs.vscoveragexml.reportsPaths="${RUNNER_TEMP}/coverage-main.xml,${RUNNER_TEMP}/recovery-storage/coverage-native.xml,${RUNNER_TEMP}/recovery-admission/coverage-admission.xml" \
             /d:sonar.python.coverage.reportPaths=python-coverage.xml \
             /d:sonar.exclusions="TestResults/**,python-coverage.xml,tools/rsync/**,**/bin/**,**/obj/**,**/*.ico,**/*.icns,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.ttf,**/*.otf,**/Assets/backup/**" \
-            /d:sonar.coverage.exclusions="benchmarks/**,docs/video/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
-            /d:sonar.test.inclusions="tests/**/*" \
+            /d:sonar.coverage.exclusions="benchmarks/**,src/VaultSync.UI/**,src/VaultSync.Core/Services/BackupService.cs,src/VaultSync.Core/Services/NetworkMountService.cs,src/VaultSync.Core/Services/SnapshotService.cs" \
+            /d:sonar.test.inclusions="tests/**/*,scripts/tests/**/*" \
             /d:sonar.python.version="3"
 
       - name: Build
@@ -119,74 +127,49 @@ jobs:
 
       - name: Test with coverage
         if: steps.config.outputs.configured == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Coverlet's VSTest collector instruments the test-host assemblies.
-          # Previously dotnet-coverage returned success but reported:
-          # "No code coverage data available. Profiler was not initialized."
-          mkdir -p TestResults/sonar
-          dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj \
-            --configuration Release --no-build \
-            --results-directory "$GITHUB_WORKSPACE/TestResults/sonar" \
-            --collect:"XPlat Code Coverage;Format=opencover"
+        run: >
+          dotnet-coverage collect
+          "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"
+          -f xml
+          -o "${{ runner.temp }}/coverage-main.xml"
 
-      - name: Require a real Core coverage report
+      - name: Test owned recovery storage in isolated namespace
         if: steps.config.outputs.configured == 'true'
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import glob
-          import sys
-          import xml.etree.ElementTree as ET
+        run: bash scripts/test_recovery_storage_native.sh "${{ runner.temp }}/recovery-storage"
 
-          paths = glob.glob("TestResults/sonar/**/coverage.opencover.xml", recursive=True)
-          if len(paths) != 1:
-              sys.exit(f"Expected exactly one OpenCover report, got {len(paths)}: {paths}")
-          report = ET.parse(paths[0]).getroot()
-          summary = report.find("Summary")
-          if summary is None:
-              sys.exit("OpenCover coverage summary missing")
-          total = int(summary.attrib.get("numSequencePoints", "0"))
-          visited = int(summary.attrib.get("visitedSequencePoints", "0"))
-          core_modules = [
-              module for module in report.findall(".//Module")
-              if "VaultSync.Core" in (module.findtext("ModulePath") or "")
-              and "Tests" not in (module.findtext("ModulePath") or "")
-          ]
-          if total <= 0 or visited <= 0 or not core_modules:
-              sys.exit("Coverage is empty or VaultSync.Core was not instrumented")
-          # OpenCover reports collected by Coverlet have per-SequencePoint
-          # vc counters, not necessarily a per-Module Summary child.
-          core_visited = sum(
-              int(point.attrib.get("vc", "0")) > 0
-              for module in core_modules
-              for point in module.findall(".//SequencePoint")
-          )
-          print(f"OpenCover root summary: visited={visited} total={total}")
-          for module in report.findall(".//Module"):
-              module_path = module.findtext("ModulePath") or "(missing ModulePath)"
-              module_summary = module.find("Summary")
-              summary_values = (
-                  module_summary.attrib if module_summary is not None else {}
-              )
-              visited_points = sum(
-                  int(point.attrib.get("vc", "0")) > 0
-                  for point in module.findall(".//SequencePoint")
-              )
-              print(f"OpenCover module {module_path.rsplit('/', 1)[-1]}: "
-                    f"summary={summary_values.get('visitedSequencePoints', 'missing')} "
-                    f"sequence-points-hit={visited_points}")
-          if core_visited <= 0:
-              sys.exit("VaultSync.Core has no visited sequence points")
-          print(f"Valid OpenCover report: {visited}/{total} visited points; "
-                f"VaultSync.Core visited: {core_visited}")
-          PY
+      - name: Test recovery admission refusals in isolated namespace
+        if: steps.config.outputs.configured == 'true'
+        run: bash scripts/test_recovery_admission_native.sh "${{ runner.temp }}/recovery-admission"
+
+      - name: Verify coverage collection
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          python3 scripts/validate_native_evidence_source.py "$EXPECTED_SOURCE_SHA"
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/coverage-main.xml"
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-storage/coverage-native.xml"
+          python3 scripts/validate_sonar_coverage.py "${{ runner.temp }}/recovery-admission/coverage-admission.xml"
+
+      - name: Retain isolated storage evidence
+        if: always() && steps.config.outputs.configured == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: recovery-storage-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/coverage-main.xml
+            ${{ runner.temp }}/recovery-storage/coverage-native.xml
+            ${{ runner.temp }}/recovery-storage/native-storage-evidence.json
+            ${{ runner.temp }}/recovery-storage/**/*.trx
+            ${{ runner.temp }}/recovery-admission/coverage-admission.xml
+            ${{ runner.temp }}/recovery-admission/native-admission-evidence.json
+            ${{ runner.temp }}/recovery-admission/**/*.trx
 
       - name: Test Python with coverage
         if: steps.config.outputs.configured == 'true'
         run: |
-          python -m coverage run --source=scripts -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --source=scripts,experiments -m unittest discover -s tests/scripts -p 'test_*.py'
+          python -m coverage run --append --source=scripts,experiments -m unittest discover -s scripts/tests -p 'test_*.py'
           python -m coverage xml -o python-coverage.xml
 
       - name: End SonarQube analysis

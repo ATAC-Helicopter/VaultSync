@@ -1,39 +1,21 @@
-name: Beta / pre-release feedback
-description: Share feedback from a published beta or a clearly identified source/dev build.
+name: Beta feedback
+description: Share feedback from a beta build before the stable release.
 title: "[Beta]: "
 labels:
   - beta
+  - release:1.8.x
 assignees:
   - ATAC-Helicopter
 body:
   - type: markdown
     attributes:
       value: |
-        **Verify your build first.** A roadmap milestone or development post is not
-        a downloadable beta. Only report a published beta you actually ran, or
-        select "Source/dev build" below and provide the exact commit.
-        The desktop application stays supported on Windows, macOS and Linux;
-        **system-disk recovery is separately qualified by platform/profile**.
-        Never test destructive recovery on a production disk.
-        Please remove secrets, credentials, full private paths and sensitive data
-        from any screenshots, logs or support bundles before submitting.
+        Use this for beta validation notes, regressions, rough edges, and upgrade feedback. Use the crash template for hard crashes.
   - type: input
     id: version
     attributes:
-      label: Exact build identity
-      description: Version, beta suffix if applicable, and commit/build identifier when possible.
-      placeholder: "For example, the version from Settings or vaultsync --version --json"
-    validations:
-      required: true
-  - type: dropdown
-    id: release_family
-    attributes:
-      label: Build family
-      options:
-        - Published stable 1.8.x
-        - Published 1.9.x beta (only if a downloadable asset exists)
-        - Source/dev build (not an official beta)
-        - Other / unsure
+      label: Beta version
+      placeholder: "For example, 1.8.7-Beta.1"
     validations:
       required: true
   - type: dropdown
@@ -61,57 +43,25 @@ body:
         - Other
     validations:
       required: true
-  - type: dropdown
-    id: capability
-    attributes:
-      label: Area tested
-      description: Select what you actually exercised, not planned capabilities.
-      options:
-        - Desktop installation, onboarding, updates or UI
-        - Project snapshots, file backup or destinations
-        - NAS / network connectivity
-        - Recovery drill, verification or restore preview
-        - Real file restore into a safe test target
-        - Linux disk/system recovery (qualified test profile only)
-        - Windows disk/system recovery (qualified test profile only)
-        - macOS disk/system recovery (qualified test profile only)
-        - CLI / scripting / JSON
-        - Other
-    validations:
-      required: true
   - type: checkboxes
     id: checked
     attributes:
-      label: Checks performed
+      label: What did you test?
       options:
         - label: Fresh install
-        - label: Update from a prior published build
+        - label: Update from 1.8.0 stable
+        - label: Update from 1.8.2 beta
         - label: Existing projects loaded correctly
         - label: Backup completed
-        - label: Recovery drill completed (read-only)
-        - label: Restore preview reviewed (read-only)
-        - label: Real restore completed to a separate disposable target
-        - label: Recovery Lab v1 synthetic-data protocol followed
+        - label: Restore completed
         - label: Metadata import/reconciliation completed
-        - label: Tray/startup behavior tested
-        - label: Uninstall/reinstall tested
-  - type: dropdown
-    id: outcome
-    attributes:
-      label: Outcome
-      options:
-        - Passed
-        - Passed with warnings / limitations
-        - Failed / regression
-        - Not completed / blocked
-    validations:
-      required: true
+        - label: Tray/startup behavior
+        - label: Uninstall/reinstall
   - type: textarea
-    id: steps
+    id: feedback
     attributes:
-      label: Reproduction and observed behavior
-      description: What did you do, what did you expect, and what actually happened? Include platform/profile constraints when testing a qualified recovery path.
-      placeholder: "Steps, expected result, actual result, safe test data used"
+      label: Feedback
+      description: What felt good, broken, confusing, slower, or improved?
     validations:
       required: true
   - type: textarea

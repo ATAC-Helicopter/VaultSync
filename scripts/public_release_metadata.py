@@ -42,14 +42,17 @@ def validate_active_release(active: dict[str, object]) -> str:
         raise ValueError("activeRelease.tag must be v plus activeRelease.version.")
     if active.get("channel") not in {"stable", "beta"}:
         raise ValueError("activeRelease.channel must be stable or beta.")
+    if (active["channel"] == "beta") != ("-" in version):
+        raise ValueError("The beta channel requires a prerelease version.")
     if active.get("stage") not in {"planned", "candidate", "released"}:
         raise ValueError("activeRelease.stage is invalid.")
     if not isinstance(previous, str) or not VERSION_RE.fullmatch(previous) or previous == version:
         raise ValueError("activeRelease.previousVersion must be a different version.")
     if active.get("compatiblePredecessors") != [previous]:
         raise ValueError("compatiblePredecessors must contain the one qualified previousVersion.")
-    if active.get("releaseBranch") != f"release/{version}":
-        raise ValueError("releaseBranch must match release/<version>.")
+    base_version = version.split("-", 1)[0]
+    if active.get("releaseBranch") != f"release/{base_version}":
+        raise ValueError("releaseBranch must match the stable release line.")
     if active.get("integrationBranch") != "Dev" or active.get("stableBranch") != "Stable":
         raise ValueError("The branch contract must retain Dev integration and Stable releases.")
     return version
@@ -57,7 +60,13 @@ def validate_active_release(active: dict[str, object]) -> str:
 
 def validate_dates(active: dict[str, object], stable: dict[str, object]) -> None:
     try:
-        date.fromisoformat(str(active.get("targetDate")))
+        if "targetDate" not in active:
+            raise ValueError("targetDate must be explicit; use null for unscheduled planning.")
+        target = active["targetDate"]
+        if target is not None:
+            date.fromisoformat(str(target))
+        elif active.get("stage") != "planned":
+            raise ValueError("Only planned releases may be unscheduled.")
         date.fromisoformat(str(stable.get("releasedDate")))
     except ValueError as error:
         raise ValueError("Release dates must use YYYY-MM-DD.") from error
@@ -83,8 +92,8 @@ def load_metadata(path: Path, allowed_root: Path = REPO_ROOT) -> dict[str, objec
     validate_dates(active, stable)
     if stable.get("tag") != f"v{stable.get('version')}":
         raise ValueError("currentStable.tag must match currentStable.version.")
-    if store.get("packageVersion") != f"{version}.0":
-        raise ValueError("store.packageVersion must be the four-part active version.")
+    if store.get("packageVersion") != f"{version.split('-', 1)[0]}.0":
+        raise ValueError("store.packageVersion must be the four-part stable release version.")
     return data
 
 
@@ -109,7 +118,6 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
         "src/VaultSync.CLI/VaultSync.CLI.csproj": (r"<Version>([^<]+)</Version>", version),
         "installer/VaultSyncInstaller.iss": (r'#define MyAppVersion "([^"]+)"', version),
         "packaging/VaultSync.Store/Package.appxmanifest": (r'Version="([^"]+)"', str(store["packageVersion"])),
-        "CHANGELOG.md": (CHANGELOG_VERSION_HEADING_RE, version),
         "docs/WHATS_NEW.md": (r"^## \[([^]]+)\]", version),
     }
     for relative, (pattern, wanted) in expected.items():
@@ -117,9 +125,22 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
         if actual != wanted:
             errors.append(f"{relative}: expected {wanted!r}, found {actual!r}")
 
+    changelog = repo_file(root, "CHANGELOG.md").read_text(encoding="utf-8-sig")
+    header = re.search(r"^## \[([^]]+)\](.*)$", changelog, re.MULTILINE)
+    actual = None
+    if header and header[1] == "Unreleased":
+        body = changelog[header.end():].split("\n## ", 1)[0]
+        target = re.search(r"^\*\*Target version:\*\* `([^`]+)`", body, re.MULTILINE)
+        actual = target[1] if target else None
+    elif header and re.fullmatch(r" - \d{4}-\d{2}-\d{2}", header[2]):
+        actual = header[1]
+    if actual != version:
+        errors.append(f"CHANGELOG.md: expected {version!r}, found {actual!r}")
+
     cli_text = repo_file(root, "src/VaultSync.CLI/VaultSync.CLI.csproj").read_text(encoding="utf-8-sig")
-    for field, suffix in (("PackageVersion", ""), ("AssemblyVersion", ".0"), ("FileVersion", ".0"), ("AssemblyInformationalVersion", "")):
-        expected_value = f"{version}{suffix}"
+    binary_version = f"{version.split('-', 1)[0]}.0"
+    for field, expected_value in (("PackageVersion", version), ("AssemblyVersion", binary_version),
+                                  ("FileVersion", binary_version), ("AssemblyInformationalVersion", version)):
         if f"<{field}>{expected_value}</{field}>" not in cli_text:
             errors.append(f"CLI {field} must be {expected_value}.")
 
@@ -127,16 +148,19 @@ def validate_version_consumers(root: Path, metadata: dict[str, object], errors: 
 def validate_document_consumers(root: Path, metadata: dict[str, object], errors: list[str]) -> None:
     active = metadata["activeRelease"]
     version = str(active["version"])
+    base_version = version.split("-", 1)[0]
     roadmap = repo_file(root, "ROADMAP.md").read_text(encoding="utf-8-sig")
-    if f"## {version} —" not in roadmap:
-        errors.append(f"ROADMAP.md has no {version} release section.")
-    if f"**Stable target:** {active['targetDate']}" not in roadmap:
+    if f"## {base_version} —" not in roadmap:
+        errors.append(f"ROADMAP.md has no {base_version} release section.")
+    if active["channel"] == "stable" and f"**Stable target:** {active['targetDate'] or 'Unscheduled'}" not in roadmap:
         errors.append("ROADMAP.md stable target does not match canonical metadata.")
 
-    contract = repo_file(root, f"docs/RELEASE_{version}.md").read_text(encoding="utf-8-sig")
-    for value in (version, str(active["targetDate"]), str(active["releaseBranch"])):
+    contract = repo_file(root, f"docs/RELEASE_{base_version}.md").read_text(encoding="utf-8-sig")
+    for value in (base_version, str(active["releaseBranch"])):
         if value not in contract:
             errors.append(f"Release contract is missing canonical value {value!r}.")
+    if active["channel"] == "stable" and str(active["targetDate"] or "Unscheduled") not in contract:
+        errors.append("Release contract stable target does not match canonical metadata.")
 
     updater = repo_file(root, "docs/UPDATER.md").read_text(encoding="utf-8-sig")
     if version not in updater or str(active["previousVersion"]) not in updater:
@@ -188,7 +212,7 @@ def build_store_metadata(metadata: dict[str, object]) -> dict[str, object]:
     store = metadata["store"]
     return {
         "schemaVersion": 1,
-        "productVersion": active["version"],
+        "productVersion": str(active["version"]).split("-", 1)[0],
         "packageVersion": store["packageVersion"],
         "storeId": store["storeId"],
         "status": store["status"],
@@ -220,8 +244,8 @@ def render(metadata: dict[str, object], output_root: Path) -> None:
         f"- Channel: {active['channel']}\n"
         f"- Stage: {active['stage']}\n"
         f"- Tag: {active['tag']}\n"
-        f"- Target date: {active['targetDate']}\n"
-        f"- Qualified patch predecessor: {active['previousVersion']}\n"
+        f"- Target date: {active['targetDate'] or 'Unscheduled'}\n"
+        f"- Patch predecessor candidate: {active['previousVersion']} (qualification required)\n"
     )
     # The fixed filename is resolved and confined by output_file above.
     output_file(output_root, "release-summary.md").write_text(summary, encoding="utf-8")  # NOSONAR

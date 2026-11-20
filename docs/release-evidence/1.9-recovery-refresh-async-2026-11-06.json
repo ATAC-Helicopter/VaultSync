@@ -1,0 +1,29 @@
+{
+  "owner": "BUG-19045",
+  "issue": 828,
+  "baseCommit": "16fb3c3285739fe7d987bdaea3be59fd99e25f5a",
+  "date": "2026-11-06",
+  "fileHashes": {
+    "src/VaultSync.RecoveryController/RecoveryViewModel.cs": "caf903428eb95c7caf8ee11078e35daedc1f05435d868764dd21b69e46c6a84f",
+    "tests/VaultSync.Core.Tests/RecoveryControllerPresentationTests.cs": "42377e001e5e96616622444abbe97d1d0a4ea20f209087cb8846d694ab701a18"
+  },
+  "checks": {
+    "focusedPresentationRelease": {
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "warningsAsErrors": true,
+      "included": "referenced Controller compilation"
+    },
+    "diffWhitespace": "pass"
+  },
+  "notRun": [
+    "Full suite: unrelated to scoped presentation change",
+    "Native interaction and fresh hosted Sonar: pending",
+    "Localization audit: no strings/catalogs changed since2023-key/19-locale passing checkpoint"
+  ],
+  "boundaries": [
+    "Only presentation task ownership/cancellation changed",
+    "No Core, image format, device authorization, worker protocol, permissions or website changes"
+  ]
+}

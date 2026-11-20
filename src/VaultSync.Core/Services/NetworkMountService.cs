@@ -56,13 +56,13 @@ public sealed class NetworkMountService
         }
 
         if (dest.PreMounted)
-            return PreparePreMountedDestination(dest, alias, normalizedPath);
+            return PreparePreMountedDestination(dest, alias, normalizedPath, allowAutoMount);
 
         if (!IsNetworkPath(normalizedPath))
-            return PrepareLocalDestination(dest, alias, normalizedPath);
+            return PrepareLocalDestination(dest, alias, normalizedPath, allowAutoMount);
 
         if (!dest.AutoMount)
-            return PrepareAutoMountDisabledDestination(dest, alias, normalizedPath);
+            return PrepareAutoMountDisabledDestination(dest, alias, normalizedPath, allowAutoMount);
 
         if (allowAutoMount)
             Log($"Attempting auto-mount for '{alias}' using profile '{profile?.Name ?? "none"}'.");
@@ -72,18 +72,20 @@ public sealed class NetworkMountService
     private static DestinationResolution PreparePreMountedDestination(
         BackupDestination destination,
         string alias,
-        string normalizedPath)
+        string normalizedPath,
+        bool allowKeepAlive = true)
     {
         Log($"Using pre-mounted path for '{alias}'.");
         return Directory.Exists(normalizedPath)
-            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'")
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using pre-mounted path '{normalizedPath}'", allowKeepAlive)
             : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is marked pre-mounted but is not accessible.");
     }
 
     private static DestinationResolution PrepareAutoMountDisabledDestination(
         BackupDestination destination,
         string alias,
-        string normalizedPath)
+        string normalizedPath,
+        bool allowKeepAlive = true)
     {
         Log($"Auto-mount disabled for '{alias}'.");
         if (OperatingSystem.IsMacOS() && normalizedPath.StartsWith("nfs://", StringComparison.OrdinalIgnoreCase))
@@ -93,7 +95,7 @@ public sealed class NetworkMountService
                 "NFS destinations on macOS must use a pre-mounted local path. Mount the share first and set the destination to that mount point.");
         }
         return Directory.Exists(normalizedPath)
-            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'")
+            ? CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using reachable network path '{normalizedPath}'", allowKeepAlive)
             : DestinationResolution.CreateFailure(destination, $"Destination '{alias}' is unreachable and auto-mount is disabled.");
     }
 
@@ -150,16 +152,17 @@ public sealed class NetworkMountService
     private static DestinationResolution PrepareLocalDestination(
         BackupDestination destination,
         string alias,
-        string normalizedPath)
+        string normalizedPath,
+        bool allowKeepAlive = true)
     {
         if (IsMacVolumesPath(normalizedPath))
-            return PrepareMacVolumeDestination(destination, alias, normalizedPath);
+            return PrepareMacVolumeDestination(destination, alias, normalizedPath, allowKeepAlive);
 
         try
         {
             Directory.CreateDirectory(normalizedPath);
             Log($"Using local path '{normalizedPath}'.");
-            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using local path '{normalizedPath}'", allowKeepAlive);
         }
         catch (Exception ex)
         {
@@ -171,12 +174,13 @@ public sealed class NetworkMountService
     private static DestinationResolution PrepareMacVolumeDestination(
         BackupDestination destination,
         string alias,
-        string normalizedPath)
+        string normalizedPath,
+        bool allowKeepAlive = true)
     {
         if (IsAccessibleDirectory(normalizedPath, out string? accessError))
         {
             Log($"Using macOS mounted volume path '{normalizedPath}'.");
-            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'");
+            return CreateSuccessWithKeepAlive(destination, normalizedPath, mounted: false, $"Using mounted volume path '{normalizedPath}'", allowKeepAlive);
         }
 
         string detail = string.IsNullOrWhiteSpace(accessError)
@@ -363,6 +367,13 @@ public sealed class NetworkMountService
             return DestinationResolution.CreateFailure(dest, "Destination must be an smb:// or UNC path for auto-mount.");
         }
 
+        if (!allowAutoMount)
+        {
+            return TryGetMountedSharePath(shareHost, shareName, string.Empty, out string passiveMount)
+                ? CreateMacMountResolution(dest, passiveMount, shareSubPath, mountedByUs: false, allowKeepAlive: false)
+                : DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
+        }
+
         if (!TryPrepareMacMountPoint(dest, shareName, out string mountPoint, out string? mountError))
             return DestinationResolution.CreateFailure(dest, mountError ?? "Unable to prepare the SMB mount point.");
 
@@ -370,9 +381,6 @@ public sealed class NetworkMountService
         {
             return CreateMacMountResolution(dest, existingMount, shareSubPath, mountedByUs: false);
         }
-
-        if (!allowAutoMount)
-            return DestinationResolution.CreateFailure(dest, PassiveMountDeferredMessage);
 
         // Only unlock the native credential when a new mount is actually needed.
         // Existing SMB mounts remain usable after login without a Keychain prompt.
@@ -494,7 +502,8 @@ public sealed class NetworkMountService
         BackupDestination destination,
         string mountPoint,
         string shareSubPath,
-        bool mountedByUs)
+        bool mountedByUs,
+        bool allowKeepAlive = true)
     {
         Log($"Share mounted for '{DisplayName(destination)}' at '{mountPoint}'.");
         if (!IsSmbfsMountPoint(mountPoint, out string? mountLine))
@@ -508,7 +517,8 @@ public sealed class NetworkMountService
             destination,
             effectivePath,
             mountedByUs,
-            $"Mounted {DisplayName(destination)}");
+            $"Mounted {DisplayName(destination)}",
+            allowKeepAlive);
     }
 
     internal static string SanitizeMountError(string stderr, string? password, string share, string shareDisplay)
@@ -664,10 +674,9 @@ public sealed class NetworkMountService
         {
             if (!TryResolveSmbMountRoot(res.EffectivePath, out string mountRoot))
             {
-                Log("Auto-unmount skipped: no verified SMB mount root matches this destination.");
+                Log("Auto-unmount skipped: the destination has no matching SMB mount root.");
                 return;
             }
-
             var psi = new ProcessStartInfo
             {
                 FileName               = "/sbin/umount",
@@ -932,9 +941,11 @@ public sealed class NetworkMountService
         BackupDestination dest,
         string path,
         bool mounted,
-        string message)
+        string message,
+        bool allowKeepAlive = true)
     {
-        StartMacSmbKeepAlive(path);
+        if (allowKeepAlive)
+            StartMacSmbKeepAlive(path);
         return DestinationResolution.CreateSuccess(dest, path, mounted, message);
     }
 
@@ -974,7 +985,6 @@ public sealed class NetworkMountService
         }
     }
 
-    // Match directory boundaries, not merely lexical prefixes such as /Volumes/BackupElsewhere.
     internal static string? ResolveMacSmbMountRoot(string path, IEnumerable<string> mountPoints) =>
         string.IsNullOrWhiteSpace(path) ? null : mountPoints
             .Where(mount => BackupSafetyService.IsPathUnderRoot(mount, path))

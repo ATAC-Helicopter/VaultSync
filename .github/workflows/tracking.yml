@@ -4,10 +4,18 @@ on:
   pull_request:
     branches: ["**"]
     types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  push:
+    branches: ["**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  issues: read
   pull-requests: read
+
+concurrency:
+  group: work-tracking-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tracking:
@@ -15,55 +23,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Validate PR classification and linked issue
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import re
-          import sys
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as source:
-              event = json.load(source)
-          pr = event.get("pull_request") or {}
-          names = [entry.get("name", "") for entry in pr.get("labels", [])
-                   if isinstance(entry, dict)]
-          title = pr.get("title") or ""
-          body = pr.get("body") or ""
-          errors = []
-          allowed_kinds = {"kind:bug", "kind:feature", "kind:change",
-                           "kind:maintenance", "kind:security"}
-          version = re.match(r"^\s*(\d+\.\d+\.\d+)\s*:", title)
-          kinds = [name for name in names if name.startswith("kind:")]
-          release_umbrella = bool(version and "area:release" in names)
+        with:
+          # External PRs execute tracking checks from the trusted base SHA.
+          # Owner-authored same-repo release PRs test their own reviewed head.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner && github.event.pull_request.head.sha || github.event.pull_request.base.sha || github.sha }}
 
-          if (len(kinds) != 1 and not (release_umbrella and not kinds)) or any(
-              name not in allowed_kinds for name in kinds
-          ):
-              errors.append("One recognized kind:* is required (except release umbrellas)")
-          if re.search(r"\bBUG-\d+\b", title, re.IGNORECASE) and kinds != ["kind:bug"]:
-              errors.append("BUG titles must have kind:bug")
-          if sum(name.startswith("area:") and len(name) > 5 for name in names) < 1:
-              errors.append("At least one area:* is required")
-          if len([name for name in names if name in
-                  {"priority:p0", "priority:p1", "priority:p2", "priority:p3"}]) != 1:
-              errors.append("Exactly one priority:p0..p3 is required")
-          statuses = [name for name in names if name.startswith("status:")]
-          if len(statuses) != 1 or statuses[0] not in {
-              "status:todo", "status:in-progress", "status:done"
-          }:
-              errors.append("Exactly one recognized status:* is required")
-          exact = [name for name in names if re.fullmatch(r"release:\d+\.\d+\.\d+", name)]
-          if len(exact) != 1:
-              errors.append("Exactly one release:X.Y.Z is required")
-          elif release_umbrella and exact[0] != "release:" + version.group(1):
-              errors.append("Title and release:X.Y.Z must agree")
-          if not re.search(r"\b(?:Refs|Closes|Fixes|Resolves)\s+#\d+\b", body, re.IGNORECASE):
-              errors.append("Owning issue reference (Refs #N etc.) required")
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.x"
 
-          if errors:
-              sys.stderr.write("\n".join("ERROR: " + item for item in errors) + "\n")
-              sys.exit(1)
-          print("PR classification and issue reference validated")
-          PY
+      - name: Validate tracking regression tests
+        run: python3 -m unittest discover -s tests/scripts -p 'test_work_tracking.py'
+
+      - name: Validate tracking
+        run: python3 scripts/work_tracking.py check-event

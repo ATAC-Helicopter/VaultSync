@@ -1,0 +1,167 @@
+{
+  "basis": "Real X11-rendered MainWindow; toolbar command bindings and X11-injected keyboard events",
+  "records": [
+    {
+      "command": "ready",
+      "current": "Projects",
+      "back": false,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "dismiss",
+      "current": "Projects",
+      "back": false,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "history",
+      "current": "History",
+      "back": true,
+      "forward": false,
+      "historyRetained": true,
+      "labelDraft": "",
+      "error": null
+    },
+    {
+      "command": "draft",
+      "current": "History",
+      "back": true,
+      "forward": false,
+      "historyRetained": true,
+      "labelDraft": "Unfinished release note",
+      "error": null
+    },
+    {
+      "command": "refresh",
+      "current": "History",
+      "back": true,
+      "forward": false,
+      "historyRetained": true,
+      "labelDraft": "Unfinished release note",
+      "error": null
+    },
+    {
+      "command": "observe-refresh",
+      "current": "History",
+      "back": true,
+      "forward": false,
+      "historyRetained": true,
+      "labelDraft": "Unfinished release note",
+      "error": null
+    },
+    {
+      "command": "settings",
+      "current": "Settings",
+      "back": true,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "back",
+      "current": "History",
+      "back": true,
+      "forward": true,
+      "historyRetained": true,
+      "labelDraft": "Unfinished release note",
+      "error": null
+    },
+    {
+      "command": "forward",
+      "current": "Settings",
+      "back": true,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "observe-native-back",
+      "current": "History",
+      "back": true,
+      "forward": true,
+      "historyRetained": true,
+      "labelDraft": "Unfinished release note",
+      "error": null
+    },
+    {
+      "command": "observe-native-forward",
+      "current": "Settings",
+      "back": true,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "projects",
+      "current": "Projects",
+      "back": true,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    },
+    {
+      "command": "narrow",
+      "current": "Projects",
+      "back": true,
+      "forward": false,
+      "historyRetained": false,
+      "labelDraft": null,
+      "error": null
+    }
+  ],
+  "limitations": [
+    "Coordinate mouse click attempt not qualified",
+    "Windows/macOS not tested",
+    "Isolated synthetic fixture data"
+  ],
+  "sourceBaseCommit": "ca35695ad48fc371f03ce8fbafda4bdd01adbe0b",
+  "candidateWorkingTreeChanges": true,
+  "platform": "Linux x64 / native X11 / English / dark theme",
+  "captureLimits": [
+    "No complete accessibility, locale, scaling or platform qualification",
+    "Isolated XDG font/data context does not qualify installed stable startup"
+  ],
+  "sourceFiles": {
+    "src/VaultSync.UI/Infrastructure/DesktopRouteCoordinator.cs": "e5b6ae012dcef5632d810d7b021b88d063a1d4034367b71cf29cbd44a554478b",
+    "src/VaultSync.UI/Infrastructure/PageLocationWriter.cs": "69dbd8f0e8c1b52335edd27e9792ca583af57c0b6f5ac7a763f78f4bc8d33cf2",
+    "src/VaultSync.UI/MainWindow.axaml": "f643baa09adb66809be7ca774970b43f220ab08a9282faa4429b46c701dbb1cf",
+    "src/VaultSync.UI/ViewModels/AppViewModel.NavigationOps.cs": "a4e9c8210e688df2243558dae378c8251b6e31ca1cd13fa11717c8e5a4632d9b",
+    "src/VaultSync.UI/ViewModels/AppViewModel.StartupOps.cs": "bf8af6780de13b33ac60befd8bf3d30430b262880016f5f88c476c4a5066902e",
+    "src/VaultSync.UI/ViewModels/HistoryViewModel.cs": "3e6df7ba7a03549cc94aebf3630c8b124cbeaf0357b9e86fb4a5acb3cf73de2c",
+    "src/VaultSync.UI/ViewModels/ProjectsViewModel.cs": "f9fc2d73b8316e47d1891bf5caaff167296f52fbc18e635fd3e22c0bc698eee6",
+    "src/VaultSync.UI/Views/ProjectsView.axaml": "152418aa9b92337af565ee8ce15d6d98c7d2e1bfedde541f126478ef21376010"
+  },
+  "captures": [
+    {
+      "path": "docs/dev-diaries/images/devlog-190-history-navigation.png",
+      "sha256": "71d6330aa4b07f5a079ccfa6ecb3cfd89eefcc32590916f698cc635890cd3385",
+      "pixels": [
+        1920,
+        1044
+      ],
+      "kind": "native-window-capture",
+      "data": "synthetic fixture projects; metadata-only snapshot"
+    },
+    {
+      "path": "docs/dev-diaries/images/devlog-190-project-navigation-narrow.png",
+      "sha256": "cb3fbccdb176dcdeaae91a7f05f8210ea8f7882877407a884e3d2912496397fd",
+      "pixels": [
+        920,
+        720
+      ],
+      "kind": "native-window-capture",
+      "data": "synthetic fixture projects; metadata-only snapshot"
+    }
+  ],
+  "uiAssemblySha256": "11f8bf96642509e0131be050db1c40451f9e17f943d183171d9fcc09a5542d6b"
+}

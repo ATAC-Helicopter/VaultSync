@@ -5,6 +5,9 @@ Obj/
 Logs/
 UserSettings/
 MemoryCaptures/
+# Saved Unity Profile Analyzer captures, not game source or assets.
+*.pdata
+**/*.pdata
 Build/
 Builds/
 

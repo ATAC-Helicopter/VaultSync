@@ -1,0 +1,106 @@
+{
+  "owner": "VS-1918",
+  "issues": [
+    574,
+    575
+  ],
+  "runId": "2026-11-20-windows-ntfs-512-b01217c3",
+  "environment": "Windows 10 Enterprise LTSC 2021 x64 19044.1288 in QEMU 10.0.13/KVM, OVMF UEFI, 36 GiB GPT/unencrypted NTFS, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+  "runtimeSourceCommit": "b01217c34e5bc5dd5bfb8fc65938b24bbab37564",
+  "sourceIsoSha256": "e4ab2e3535be5748252a8d5d57539a6e59be8d6726345ee10e7afd2cb89fefb5",
+  "captureMediaSha256": "fc16c9e13f669465e95c10eef7f0af35ed541651f18c0ccf500f75ccc32143d5",
+  "restoreMediaSha256": "57cbbe30f01d6f364284d7d4669376e1bb58c6025a6048a28a43f35c1a167856",
+  "sourceDiskSha256": "0d1e1ba48422ba9c9301c9317a873fe0e438f5396a4a1dc1ce488169d01e7e1c",
+  "verifiedImagePayloadSha256": "0d1e1ba48422ba9c9301c9317a873fe0e438f5396a4a1dc1ce488169d01e7e1c",
+  "imageMetadataSha256": "16446e8d8603f8e953f6d63ddde693beb5e4ba40a93a083db42d115d9a9b289c",
+  "initialCaptureRefusal": {
+    "sourceCommit": "5aca899d7fc21b25d021ccbbef74b47e25a663b6",
+    "observedProtectiveMbrSizeInLba": "0xffffffff",
+    "copiedBytes": 0,
+    "sourceContainerSha256Unchanged": true,
+    "bothGptHeaderAndPartitionArrayChecksumsValid": true
+  },
+  "capture": {
+    "bytes": 38654705664,
+    "sourceKernelReadOnly": true,
+    "windowsFastStartupDisabled": true,
+    "windowsSourceVolumeCleanAndUnencrypted": true,
+    "privateImageAndRecoveryCopyVerified": true
+  },
+  "restore": {
+    "sourceDetached": true,
+    "physicalConsoleConfirmationMatchedTarget": true,
+    "cleanupObserved": true,
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "b01217c34e5bc5dd5bfb8fc65938b24bbab37564",
+      "operation": "9dcc4847-bb55-4f4e-bd8c-c2a6dfc0afab",
+      "phase": "Completed",
+      "review": "d070b54b-47e0-46fd-80a1-333195e24ae4",
+      "image": "27484998-ab0d-4f10-acd7-ffd9b2353cb2",
+      "capture": "e739e73c-6ef9-44fe-996f-581550fa62f5",
+      "manifestRoot": "5192745126714964b92c439127ca3f8551d1a967f536c53b46fbfbb06ada986a",
+      "acknowledgedBytes": 38654705664,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 38654705664,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    }
+  },
+  "targetOnly": {
+    "prebootComparison": "Images are identical.",
+    "freshUefiVariables": true,
+    "originalAndRecoveryMediaDetached": true,
+    "desktopKeyboardInputObserved": true,
+    "fixtureSha256BeforeCapture": "1d64757511f91f36488f652ccca97d4decb58cfaec90c5d2ef0e848f6eb9073d",
+    "fixtureSha256AfterRestore": "1d64757511f91f36488f652ccca97d4decb58cfaec90c5d2ef0e848f6eb9073d"
+  },
+  "readOnlyDestinationRefusal": {
+    "result": "The separate read-only 36 GiB virtual disk did not appear as a destination. Recovery ended without an overwrite review or a write.",
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "b01217c34e5bc5dd5bfb8fc65938b24bbab37564",
+      "operation": "f58d736c-6697-4bf1-bdb0-f3a5e16092ad",
+      "phase": "Refused",
+      "review": null,
+      "image": null,
+      "capture": null,
+      "manifestRoot": null,
+      "acknowledgedBytes": 0,
+      "execution": null,
+      "stagingRetained": true,
+      "stagingCleanupPending": false
+    },
+    "unchangedFixture": true,
+    "targetContainerSha256": "a57eadab6ab876e629ec6936fbdcbadf3664e8f40ab38077b10f2f722456c6a2"
+  },
+  "captureCancellation": {
+    "result": "The exact capture build showed Capture cancelled after blank physical-console confirmation.",
+    "copiedBytes": 0,
+    "sourceContainerSha256Unchanged": true
+  },
+  "privateFrameHashes": {
+    "windows-source-geometry.png": "87b5f4a925fde6ff73b66083323726a88e37b198b262637e6fe694d6463852a9",
+    "windows-source-fixture.png": "f3f3159bb2318d09dab72939a1ee24b542c659d82f0f7e704526bb0015612e7c",
+    "capture-patched-result.png": "ba3ccc754c7a31e70d37a81d4af66826998e261690cce9a4db3a5e14ad2e8d06",
+    "restore-destination.png": "19daab52cb8d9739d592786d9cede01711e82b75894dc187b99bcc4f5191b207",
+    "restore-review.png": "2512b1d25e97d92c125c6b4b5df3fb0a39639b77fb86b92704693ddec83a7c30",
+    "restore-terminal.png": "d57f9e0134ce492be1fb0859cc68504667c56d68d7d6c0e3c6fd49fdd97d2edb",
+    "windows-target-fixture.png": "ec50a72b4115e71bd4f9a5bdf69e47875cea95e5788727df60c1309a1fe4e6fa",
+    "refusal-no-eligible-target.png": "d23aa8f74987ccc916ce8ba0ad8cd394c064523a03d6b7d5a804a1eb403d7ebb",
+    "refusal-cancelled.png": "3207b669043a8ef830725ec3035436dab49cdd5e007f85d3758ee2adbbfc713f",
+    "capture-patched-cancelled.png": "b11f00a1f4e52fce12460d57cb336befcef5e61b10a0ef881b7c1ca052f7bd02"
+  },
+  "limits": "This run covers the specified offline disposable VM profile. It does not qualify physical hardware, Secure Boot, BitLocker, or signed desktop release assets."
+}

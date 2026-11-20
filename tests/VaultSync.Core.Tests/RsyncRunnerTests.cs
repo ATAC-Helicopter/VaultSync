@@ -69,6 +69,7 @@ public sealed class RsyncRunnerTests
 
         string marker = $"vaultsync-rsync-cleanup-{Guid.NewGuid():N}.tmp";
         File.WriteAllText(Path.Combine(source, ".vaultsyncignore"), marker + "\n");
+
         var project = new Project
         {
             Id = 44,
@@ -77,7 +78,8 @@ public sealed class RsyncRunnerTests
             Preset = string.Empty
         };
 
-        // The test never reads unrelated global temporary files.
+        // The test-owned path is isolated: no shared-temp directory enumeration,
+        // unrelated file reads, or permission-sensitive cleanup is required.
         string excludePath = Path.Combine(temp.Path, "vaultsync_exclude_owned.txt");
         var runner = new RsyncRunner(
             useWholeFile: true,

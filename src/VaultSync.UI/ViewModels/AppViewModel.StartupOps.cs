@@ -144,6 +144,7 @@ namespace VaultSync.UI.ViewModels
             {
                 ApplyLastSessionView();
             }
+            _desktopNavigation.ClearHistory();
             RecordStartupPhase("initial-route-ready");
 
             ConfigureAutoBackupTimer();
@@ -158,8 +159,11 @@ namespace VaultSync.UI.ViewModels
             NavigateSchedule = new RelayCommand(_ => SetCurrentView("Schedule"));
             NavigateHistory = new RelayCommand(_ => SetCurrentView("History"));
             NavigateRecovery = new RelayCommand(_ => SetCurrentView("Recovery"));
+            NavigateDiskCloning = new RelayCommand(_ => SetCurrentView("DiskCloning"));
             NavigateGuide = new RelayCommand(_ => SetCurrentView("Guide"));
             NavigateSettings = new RelayCommand(_ => SetCurrentView("Settings"));
+            NavigateBack = new RelayCommand(_ => NavigatePageHistory(forward: false), _ => CanNavigateBack);
+            NavigateForward = new RelayCommand(_ => NavigatePageHistory(forward: true), _ => CanNavigateForward);
 
             OnboardingTour = new OnboardingTourViewModel(this);
             _openReleaseCommand = new RelayCommand(_ => _ = OpenUpdateReleaseAsync(), _ => IsReleaseActionEnabled);

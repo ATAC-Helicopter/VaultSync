@@ -17,23 +17,26 @@ Please include:
 - impact summary
 - any suggested mitigation
 
-## Private remediation and coordinated disclosure
+## Coordinated private remediation
 
-Maintain draft vulnerability reports and reproduction evidence in a **private
-GitHub Security Advisory** and restricted temporary private fork. Invite
-external researchers as **advisory collaborators**, not as general repository
-writers or administrators. Do not expose exploit detail in public Issues,
-PRs, CI logs, release notes or open Discord channels before the qualified
-fix is available.
+Maintainers triage sensitive findings using a **draft private GitHub Security
+Advisory**. Reproduction material, exploit-sensitive tests and patch history
+stay in the advisory or its **temporary private fork**, never in a public PR,
+Issue, Actions log, changelog, or open community channel. A restricted Discord
+channel may be used for coordination, not as the canonical evidence store.
 
-Confirm impacted *published* versions, attack prerequisites and actual
-boundary violations; test both negative/refusal cases and normal backup
-paths on disposable fixtures. Review symbolic links, filesystem races and
-Windows/macOS/Linux differences when relevant; disclose any unqualified
-scenario rather than treating a passing isolated suite as universal proof.
-Coordinate confidential review, patch release qualification, reporter credit
-and only then publication of the advisory. See the
-[engineering workflow](docs/ENGINEERING_WORKFLOW.md).
+Reporters can be invited as advisory collaborators to review independently,
+without receiving general repository write/admin privileges. Confirm affected
+shipped versions and trust boundaries before assigning exploitability or
+severity; distinguish filesystem-local prerequisites from remotely reachable
+attacks. Validate rejection cases and positive backup behavior on disposable
+data, assess symlinks and race conditions, and qualify relevant OS platforms.
+Unverified conditions must remain explicit. After private review, coordinate
+integration, qualified release availability, public disclosure and attribution;
+only then propagate applicable fixes to other supported branches. A private
+test pass does not mean the fix has shipped.
+
+See [engineering workflow](docs/ENGINEERING_WORKFLOW.md).
 
 ## Response Policy
 - We acknowledge valid reports as soon as possible.
@@ -72,3 +75,13 @@ Compensating controls are mandatory for supported releases:
 Release-asset digests protect against corruption and substitution outside the
 official release account. They do not replace independent signing if the GitHub
 account or release process itself is compromised.
+
+## Release provenance verification
+
+Candidate, beta and stable release preparation verifies GitHub/Sigstore provenance
+signatures for the canonical manifest and every declared asset, including patch
+JSON and ZIP. Proof is retained outside the release asset inventory. Updater
+schema, asset names and byte-integrity checks remain compatible; desktop clients
+do not verify Sigstore at runtime. Native publisher signing and notarization
+remain separate from provenance, and unsigned distribution metadata stays
+truthful. See [release signing policy](docs/RELEASE_SIGNING.md).

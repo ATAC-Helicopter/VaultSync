@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -11,6 +12,48 @@ namespace VaultSync.Core.Tests;
 public sealed class RefreshContinuityTests
 {
     private static readonly string[] ReorderedItems = ["c", "a"];
+
+    [Theory]
+    [InlineData("project", true)]
+    [InlineData("NAS", true)]
+    [InlineData("backups/subfolder", true)]
+    [InlineData("archive.zip", true)]
+    [InlineData("Laptop", true)]
+    [InlineData("missing", false)]
+    public void BackupInventorySearchMatchesNamesAndPaths(string search, bool expected)
+    {
+        var snapshot = new BackupSnapshotItem
+        {
+            DestinationDisplay = "nas",
+            DestinationRootPath = "/data/backups/subfolder",
+            BackupRelativePath = "archive.zip",
+            OriginMachineName = "laptop"
+        };
+
+        Assert.Equal(expected, BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project Alpha", search, null, false));
+    }
+
+    [Fact]
+    public void BackupInventoryRecencyIncludesCutoffAndKeepsOlderBackupsAvailable()
+    {
+        var cutoff = new DateTime(2026, 11, 1);
+        var snapshot = new BackupSnapshotItem { Timestamp = cutoff, BackupRelativePath = "archive.zip" };
+
+        Assert.True(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "archive", cutoff, false));
+        snapshot.Timestamp = cutoff.AddTicks(-1);
+        Assert.False(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "archive", cutoff, false));
+        Assert.True(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "archive", null, false));
+    }
+
+    [Fact]
+    public void BackupInventoryLocalFilterHidesOnlyImportedRecords()
+    {
+        var snapshot = new BackupSnapshotItem();
+        Assert.True(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "", null, true));
+        snapshot.IsImported = true;
+        Assert.False(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "", null, true));
+        Assert.True(BackupsViewModel.MatchesSnapshotInventory(snapshot, "Project", "", null, false));
+    }
 
     [Fact]
     public void InsertionDoesNotReplaceSurvivingItems()
@@ -59,18 +102,18 @@ public sealed class RefreshContinuityTests
             ProjectId = "project", IsExpanded = !expanded, ProjectName = "Renamed", Summary = "64 backups"
         };
         incoming.SetSnapshots(points.Skip(1));
-        original.Snapshots.CollectionChanged += (_, args) =>
+        original.InventoryRows.CollectionChanged += (_, args) =>
             Assert.NotEqual(NotifyCollectionChangedAction.Reset, args.Action);
 
         vm.ReplaceSnapshotGroups(new[] { incoming });
 
         Assert.Same(original, Assert.Single(vm.SnapshotGroups));
         Assert.Equal(expanded, original.IsExpanded);
-        Assert.Equal(40, original.VisibleSnapshotCount);
+        Assert.Equal(40, original.VisibleRowCount);
         Assert.Equal(64, original.TotalSnapshotCount);
         Assert.Equal("Renamed", original.ProjectName);
         Assert.Equal("64 backups", original.Summary);
-        Assert.Same(points[1], original.Snapshots[0]);
+        Assert.Same(points[1], original.InventoryRows[0].SelectedSnapshot);
     }
 
     [Fact]

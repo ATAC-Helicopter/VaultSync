@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "refreshedOn": "2026-11-16",
+  "locale": "en",
+  "captureMethod": "Unmodified Avalonia views rendered offscreen through Skia on Linux at 96 DPI",
+  "qualification": "Interface illustrations only; no native OS, disk, boot-media or release qualification",
+  "syntheticData": true,
+  "publicSource": {
+    "version": "1.8.10",
+    "tag": "v1.8.10",
+    "commit": "3582268768bb35477203a6c2ef30e3e5a7df5267"
+  },
+  "developmentSource": {
+    "version": "1.9.0",
+    "commit": "c7f76c862b3f580955406763087a61eb0dd34679",
+    "released": false
+  },
+  "files": [
+    {
+      "path": "History_Timeline.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "d1cd7a0b7ed2130a49d4095137286f5531dbc87a9ec6c78ffd533babf754666f"
+    },
+    {
+      "path": "Compare_View.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "322520c73bf8dbeab44dd124bc56a9e406ba8caf7543c42dc23fca0b71295040"
+    },
+    {
+      "path": "Theme_Gallery_Light.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        613,
+        1250
+      ],
+      "sha256": "4f1532b6b10ff00466cfcb4d920cb76209071cb45e8a07f83e0e4e3ca8fa434c"
+    },
+    {
+      "path": "Settings_Maintenance.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "c99d77b201a39e6634c67caeb9d2a0d00119232a5a31eb74e5727cb3366e0a03"
+    },
+    {
+      "path": "Projects_Page.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "8ad4e5ba379abc5b074100b9673e0cda56fa73d03547e00ac60a046ead4fea4e"
+    },
+    {
+      "path": "Recovery_Readiness.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "6d1b833198e7f475a5dbcc5218bef3fbf1453f8a3f23ed203d62c9140b951ff6"
+    },
+    {
+      "path": "Theme_Gallery_Dark.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        613,
+        1250
+      ],
+      "sha256": "9746009a1ef18d4f18b695db47a5fca5f6f80bfb9d9bf68382fd8d31f34ed4c7"
+    },
+    {
+      "path": "Settings_Encryption_Performance.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "442f043178e91fa8d2a6ef0991c48480fa1167d9eea38eb3519994d17c213383"
+    },
+    {
+      "path": "Recovery_Drill.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        830,
+        881
+      ],
+      "sha256": "74be479f833fe5de2b6d7b503a521da57ee1f95ac87cbed4cf211212d7a29136"
+    },
+    {
+      "path": "Guide_Page.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "476c88cd045d3f581cdbb4dd57ae374ffda8f9324b471a0f86a99d3affedc34a"
+    },
+    {
+      "path": "Schedule_Page.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "1bb2c9431b1a64810a2ad4b19a2ec6494f9c3f8e6ed70090c5aaa1121097a8be"
+    },
+    {
+      "path": "Settings_Destinations.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "6b6fe5ca284e8382e3622e52dfa0a4dcf350eb049f4f216034fc78c864f9cfb1"
+    },
+    {
+      "path": "Dashboard.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "014edc871a1657b3f859fc5debc86ec38bb34c8934274b49f65d5dfbafdd08bc"
+    },
+    {
+      "path": "Backup_Page.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "bf9ed72a0e335361253119af6e9439abb24f7d5bc044d37788517d8812ceeef4"
+    },
+    {
+      "path": "Settings_General.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "1fe5c79b10ffdccde82ebef0c270901576b0851491f9646ba804fc45ea00e458"
+    },
+    {
+      "path": "tour/history.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "d1cd7a0b7ed2130a49d4095137286f5531dbc87a9ec6c78ffd533babf754666f"
+    },
+    {
+      "path": "tour/settings.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "1fe5c79b10ffdccde82ebef0c270901576b0851491f9646ba804fc45ea00e458"
+    },
+    {
+      "path": "tour/recovery.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "6d1b833198e7f475a5dbcc5218bef3fbf1453f8a3f23ed203d62c9140b951ff6"
+    },
+    {
+      "path": "tour/onboarding-click-through.png",
+      "scope": "public",
+      "version": "1.8.10",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "a905e7bf407b9e21a5bd6b0349541c6af767a3abdd61f6c18efdc6c0620f1c69"
+    },
+    {
+      "path": "development/Dashboard.png",
+      "scope": "development",
+      "version": "1.9.0",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "f716035647268a45cd971e807d4d5367f2be832c2fcdcc2b4baca7a1f52daa80"
+    },
+    {
+      "path": "development/Disk_Cloning.png",
+      "scope": "development",
+      "version": "1.9.0",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "6fc0a94d60b7d59609d5d6fe4733b97178ce72c8a49a9d772f2a2767b5bea92d"
+    },
+    {
+      "path": "development/Recovery.png",
+      "scope": "development",
+      "version": "1.9.0",
+      "pixels": [
+        1600,
+        1050
+      ],
+      "sha256": "2971f1655f400f58e097506c14848b2fdce713b2c28e3bc984df823fd281a1bc"
+    }
+  ]
+}
