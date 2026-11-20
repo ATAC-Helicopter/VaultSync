@@ -21,6 +21,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Changed
 
+- [VS-1917] Recognize the protective MBR written by Windows Setup when inspecting GPT disks for offline recovery.
 - [VS-1994] Use native Avalonia charts for dashboard storage and backup usage.
 - [VS-1996] Compress Unity scenes, prefabs and metadata more densely using compatible ZIP archives.
 - [VS-1980] Extend updater compatibility to official transferred repository URLs.

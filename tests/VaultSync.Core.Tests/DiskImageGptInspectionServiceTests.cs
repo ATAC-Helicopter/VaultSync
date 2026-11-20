@@ -59,8 +59,24 @@ public sealed class DiskImageGptInspectionServiceTests
         Assert.True(source.CanRead);
     }
 
+    [Fact]
+    public async Task WindowsProtectiveMbrSizeAcceptsAnOtherwiseValidGpt()
+    {
+        Fixture fixture = await FixtureAsync(512);
+        byte[] raw = Raw(fixture);
+        BinaryPrimitives.WriteUInt32LittleEndian(raw.AsSpan(458), uint.MaxValue);
+        using var source = new MemoryStream(raw, writable: false);
+
+        var result = await DiskImageGptInspectionService.InspectAsync(source, fixture.Capacity, fixture.Sector);
+
+        Assert.Equal(DiskImageGptInspectionState.LayoutInspected, result.State);
+        Assert.Equal(fixture.Capacity, result.Layout!.Capacity);
+        Assert.NotEqual(fixture.MetadataSha256, result.Layout.MetadataSha256);
+    }
+
     [Theory]
     [InlineData("primary-crc", DiskImageGptInspectionReason.HeaderChecksumMismatch)]
+    [InlineData("saturated-size-bad-backup", DiskImageGptInspectionReason.HeaderChecksumMismatch)]
     [InlineData("backup-crc", DiskImageGptInspectionReason.HeaderChecksumMismatch)]
     [InlineData("entry-crc", DiskImageGptInspectionReason.EntryChecksumMismatch)]
     [InlineData("backup-entry-crc", DiskImageGptInspectionReason.EntryChecksumMismatch)]
@@ -88,6 +104,10 @@ public sealed class DiskImageGptInspectionServiceTests
         {
             case "primary-crc": raw[primary + 24] ^= 1; break;
             case "backup-crc": raw[backup + 24] ^= 1; break;
+            case "saturated-size-bad-backup":
+                BinaryPrimitives.WriteUInt32LittleEndian(raw.AsSpan(458), uint.MaxValue);
+                raw[backup + 24] ^= 1;
+                break;
             case "entry-crc": raw[table + 80] ^= 1; break;
             case "backup-entry-crc": raw[backup - 16384 + 80] ^= 1; break;
             case "entry-crc-collision":
