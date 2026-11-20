@@ -1842,12 +1842,17 @@ public sealed class BackupService(
         string finalArchivePath = ResolveBackupWritePath(
             backupRoot, Path.GetRelativePath(backupRoot, Path.Combine(workingDestDir, artifactFileName)));
 
-        string localTempRoot = Path.Combine(Path.GetTempPath(), "vaultsync_archive_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(localTempRoot);
-        string localArchive = Path.Combine(localTempRoot, BackupArchiveCryptoService.PlainArchiveFileName);
-
+        string? localTempRoot = null;
         try
         {
+            string appDataRoot = Path.GetDirectoryName(Path.GetFullPath(configStore.GetDefaultDbPath()))!;
+            string stagingPath = Path.Combine(".vaultsync", "archive-staging", Guid.NewGuid().ToString("N"));
+            if (!BackupSafetyService.TryResolvePathForWriteUnderRoot(appDataRoot, stagingPath, out var stagingRoot))
+                throw new IOException("A safe local archive staging directory is unavailable.");
+            localTempRoot = stagingRoot;
+            PrivateDataPermissions.EnsureDirectory(localTempRoot);
+            string localArchive = Path.Combine(localTempRoot, BackupArchiveCryptoService.PlainArchiveFileName);
+
             // 4. If nothing to back up, create a valid empty ZIP and copy it.
             if (allFiles.Length == 0)
             {

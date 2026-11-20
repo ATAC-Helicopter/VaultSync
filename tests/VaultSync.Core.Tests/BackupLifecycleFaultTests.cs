@@ -39,7 +39,17 @@ public sealed class BackupLifecycleFaultTests : IDisposable
         var service = new BackupService(repo, CreateSecretService(),
             new FixedConfigStore(CreateConfig(encrypted: false), dbPath));
 
-        var result = await service.RunBackupAsync(project, backupRoot, isAuto: false, useArchiveMode: true);
+        string stagingRoot = Path.Combine(_tempDir.Path, ".vaultsync", "archive-staging");
+        bool sawStagedArchive = false;
+        var result = await service.RunBackupAsync(project, backupRoot, isAuto: false, useArchiveMode: true,
+            progressCallback: (_, _, _) =>
+            {
+                if (Directory.Exists(stagingRoot))
+                    sawStagedArchive |= Directory.EnumerateFiles(
+                        stagingRoot, BackupArchiveCryptoService.PlainArchiveFileName, SearchOption.AllDirectories).Any();
+            });
+        Assert.True(sawStagedArchive);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
         Assert.False(result.Cancelled);
         Backup backup = repo.GetBackupById(result.BackupId)!;
         string folder = Path.Combine(backupRoot, backup.Path);

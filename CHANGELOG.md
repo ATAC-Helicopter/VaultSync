@@ -27,6 +27,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ### Fixed
 
+- [BUG-19056] Stage ZIP backups in private application storage to avoid system temporary directory quotas.
 - [BUG-19055] Verify ZIP backup contents against the snapshot stored with the backup and surface real integrity failures.
 - [BUG-19054] Show each Guide step once, including after navigation and language changes.
 - [BUG-19053] Keep Recovery and Settings controls accessible during guided setup.
