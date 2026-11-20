@@ -79,6 +79,16 @@ Restore → Validate measurements and destructive-refusal/cancellation evidence.
 At least one real Linux profile must be qualified for beta 1. Candidate profiles
 remain candidates; unsupported combinations refuse before destructive work.
 The existing executable qualification gate remains mandatory and unchanged.
+The Beta 2 asset workflow requires retained qualification for both Linux ext4
+and Windows NTFS. Start the Windows qualification with `uefi-gpt-ntfs-512`
+using a disposable Windows x64 VM installed in UEFI mode with a GPT disk and
+unencrypted NTFS. Disable guest Fast Startup, shut down cleanly, and retain a
+test file and its SHA-256 before booting the offline Linux recovery medium.
+Use a separate blank virtual target with matching sector geometry. Validate
+the restored bytes before the first Windows boot, detach the original disk,
+then verify Windows starts, accepts desktop input, and still has the test
+file. Bind the five measured records to the exact media and build, and record
+the required refusal and cancellation evidence separately.
 Later betas add qualified profiles without dropping previously supported ones.
 Physical hardware breadth remains a stable gate, separate from the explicitly
 measured disposable-VM beta scope.

@@ -116,7 +116,7 @@ def timestamp(value: object, now: datetime) -> datetime:
 
 
 def validate(root: Path, data: object, require_qualified: bool = False,
-             now: datetime | None = None) -> list[str]:
+             now: datetime | None = None, *, require_source_os: tuple[str, ...] = ()) -> list[str]:
     errors: list[str] = []
     now = now or datetime.now(timezone.utc)
     if not isinstance(data, dict) or type(data.get('schemaVersion')) is not int or data['schemaVersion'] != 1 or data.get('release') != '1.9.0':
@@ -141,7 +141,7 @@ def validate(root: Path, data: object, require_qualified: bool = False,
     if not isinstance(profiles, list) or not 1 <= len(profiles) <= 100:
         return errors + ['Expected 1–100 explicit profiles.']
     seen: set[str] = set()
-    qualified = 0
+    qualified_sources: set[str] = set()
     for profile in profiles:
         try:
             if not isinstance(profile, dict):
@@ -201,7 +201,7 @@ def validate(root: Path, data: object, require_qualified: bool = False,
                 if previous_time is not None and observed < previous_time:
                     raise ValueError('evidence timestamps contradict the required stage order')
                 previous_time = observed
-            qualified += 1
+            qualified_sources.add(profile['sourceOS'])
         except (ValueError, OSError, TypeError, UnicodeError) as exc:
             errors.append(f'Profile {profile.get("id", "?") if isinstance(profile, dict) else "?"}: {exc}')
     exclusions = data.get('exclusions')
@@ -216,8 +216,10 @@ def validate(root: Path, data: object, require_qualified: bool = False,
                 errors.append('Duplicate/conflicting exclusion identity.')
             else:
                 excluded_ids.add(exclusion['id'])
-    if require_qualified and not qualified:
+    if require_qualified and not qualified_sources:
         errors.append('No qualified disk profile; disk support remains gated.')
+    for source_os in sorted(set(require_source_os) - qualified_sources):
+        errors.append(f'No qualified disk profile for {source_os}.')
     return errors
 
 
@@ -225,10 +227,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('check',))
     parser.add_argument('--require-qualified', action='store_true')
+    parser.add_argument('--require-source-os', choices=('linux', 'windows'), action='append', default=[])
     args = parser.parse_args()
     try:
         data = load_json(read_bounded(ROOT / 'release/disk-support-1.9.0.json'))
-        errors = validate(ROOT, data, args.require_qualified)
+        errors = validate(ROOT, data, args.require_qualified, require_source_os=tuple(args.require_source_os))
     except (ValueError, OSError) as exc:
         errors = [str(exc)]
     if errors:

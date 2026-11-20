@@ -191,7 +191,9 @@ jobs:
               echo "Beta target_version must include a prerelease suffix (example: 1.7.x-beta.N)."
               exit 1
             fi
-            if [[ "$target" == 1.9.0-* ]]; then
+            if [[ "$target" == 1.9.0-beta.2 ]]; then
+              python3 scripts/disk_support.py check --require-source-os linux --require-source-os windows
+            elif [[ "$target" == 1.9.0-* ]]; then
               python3 scripts/disk_support.py check --require-qualified
             fi
           fi
