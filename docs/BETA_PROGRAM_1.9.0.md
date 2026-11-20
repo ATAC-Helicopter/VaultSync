@@ -57,7 +57,7 @@ Qualify the Beta 1 → Beta 2 update against the published `v1.9.0-beta.1`
 packages. Record which architecture and package type actually applied the
 patch and which used the full package.
 
-The Linux and Windows candidates currently use the **offline Linux x64 recovery
+The Linux and Windows disk profiles use the **offline Linux x64 recovery
 environment**. A Windows source OS is distinct from running an elevated disk
 worker inside Windows. Native live capture, snapshots, encryption and Secure
 Boot are not added implicitly. macOS/APFS remains excluded until its own engine,
@@ -89,6 +89,13 @@ the restored bytes before the first Windows boot, detach the original disk,
 then verify Windows starts, accepts desktop input, and still has the test
 file. Bind the five measured records to the exact media and build, and record
 the required refusal and cancellation evidence separately.
+
+The Windows 10 Enterprise LTSC 2021 VM qualified `uefi-gpt-ntfs-512` on
+2026-11-20. The restored disk matched the offline source before Windows boot,
+and the target-only boot retained the fixture and its SHA-256. The same media
+refused a read-only destination with zero writes, and a separate capture was
+cancelled before copying. See the [Windows recovery receipt](release-evidence/1.9-beta2-windows-ntfs-512-loop-2026-11-20.json).
+
 Later betas add qualified profiles without dropping previously supported ones.
 Physical hardware breadth remains a stable gate, separate from the explicitly
 measured disposable-VM beta scope.
