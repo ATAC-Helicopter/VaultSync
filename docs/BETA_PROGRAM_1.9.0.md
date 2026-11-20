@@ -42,9 +42,20 @@ with `target_commitish=Dev` after verifying the tag binding. See
 [release signing](RELEASE_SIGNING.md) for the asset and publication checks.
 For the initial asset run use `release_channel=beta`,
 `target_version=1.9.0-beta.1` and `previous_version=1.8.10` on `Dev`.
-Keep Store upload off and enable patch assets only for qualified bases.
+Keep Store upload off.
 The earlier preparation-branch path remains available as historical tooling.
 This workflow starts only after the maintainer agrees to the cut.
+
+### Patch assets across betas
+
+Ship the first beta of a release with full packages. Starting with Beta 2,
+keep the full packages available and include patch assets for the immediately
+preceding beta on each platform and architecture where the installed update
+preserves user data and passes verification of the installed files and startup.
+Use the full package when that upgrade path is unqualified.
+Qualify the Beta 1 → Beta 2 update against the published `v1.9.0-beta.1`
+packages. Record which architecture and package type actually applied the
+patch and which used the full package.
 
 The Linux and Windows candidates currently use the **offline Linux x64 recovery
 environment**. A Windows source OS is distinct from running an elevated disk
