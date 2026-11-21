@@ -1,4 +1,6 @@
 import unittest
+import itertools
+import json
 import re
 import os
 import subprocess
@@ -6,6 +8,31 @@ from pathlib import Path
 
 
 class ReleaseWorkflowTests(unittest.TestCase):
+    def test_updater_matrix_qualifies_every_enabled_platform(self):
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/release-assets.yml").read_text()
+        match = re.search(r'updater_matrix="\$\(jq .*?\n\s+\]\}.*?\n', workflow, re.S)
+        self.assertIsNotNone(match)
+        runners = {
+            "windows": ["windows-latest"],
+            "macos": ["macos-latest", "macos-15-intel"],
+            "linux": ["ubuntu-latest", "ubuntu-24.04-arm"],
+        }
+        for flags in itertools.product((False, True), repeat=len(runners)):
+            with self.subTest(flags=flags):
+                result = subprocess.run(
+                    ["bash", "-e", "-c", match.group(0) + '\nprintf "%s" "$updater_matrix"'],
+                    env={**os.environ, **{f"INCLUDE_{name.upper()}_PATCHES": json.dumps(enabled)
+                                         for name, enabled in zip(runners, flags)}},
+                    capture_output=True, text=True, check=True,
+                )
+                expected = [{"os": runner, "artifact": f"{name}-release-assets"}
+                            for (name, options), enabled in zip(runners.items(), flags) if enabled
+                            for runner in options]
+                self.assertEqual({"include": expected}, json.loads(result.stdout))
+        job = workflow.split("  updater-qualification:\n", 1)[1].split("  release-manifest:\n", 1)[0]
+        self.assertIn("inputs.include_windows_patches || inputs.include_macos_patches || inputs.include_linux_patches", job)
+        self.assertIn("name: ${{ matrix.artifact }}", job)
+
     def test_final_drafts_require_authorized_source_and_preserve_stable_provenance(self):
         workflow = (Path(__file__).resolve().parents[2] /
                     ".github/workflows/release-assets.yml").read_text()

@@ -156,9 +156,9 @@ branch before the final merge into `Stable`.
 
 ### Executable candidate qualification and draft staging
 
-When all three platform patch options are enabled, the asset workflow exercises
-the released predecessor helper on native Windows x64, Linux x64/ARM64, and
-macOS Apple Silicon/Intel hosts.
+For each enabled platform patch option, the asset workflow exercises the
+released predecessor helper on the corresponding native runners. Coverage
+includes Windows x64, Linux x64/ARM64, and macOS Apple Silicon/Intel.
 It verifies rejection of corrupt archives and unlisted bases without mutation,
 waiting for parent-process exit, every installed file hash, preservation of an
 external user-data sentinel, and startup of the updated app. Windows and Debian
