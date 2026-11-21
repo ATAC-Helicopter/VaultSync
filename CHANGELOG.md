@@ -7,7 +7,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 ## [Unreleased]
 
-**Target version:** `1.9.0-beta.1`. Development work remains subject to its release gates.
+**Target version:** `1.9.0-beta.2`. Development work remains subject to its release gates.
 
 ### Added
 
