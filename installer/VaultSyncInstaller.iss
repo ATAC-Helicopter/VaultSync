@@ -10,14 +10,14 @@ AppId={{A95C0681-2A65-4C8B-BFA9-VAULTSYNC123456}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={commonpf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputBaseFilename=VaultSync-Setup-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 DisableDirPage=no
 DisableProgramGroupPage=yes
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64os
 ; Use your app icon for the installer EXE and wizard
 SetupIconFile="{#AppIconPath}"
 
