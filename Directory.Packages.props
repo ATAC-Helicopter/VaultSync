@@ -40,7 +40,7 @@
     <!-- Overrides the toolkit's vulnerable legacy transitive version. -->
     <PackageVersion Include="System.Drawing.Common" Version="10.0.15" />
     <!-- Tests -->
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.analyzers" Version="2.2.0" />
