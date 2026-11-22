@@ -385,6 +385,7 @@
                                 AutomationProperties.HelpText="{infra:LocalizedString Key=Recovery.Drill.ReadOnlyHelp}"
                                 Command="{CompiledBinding RunDrillCommand}" />
                         <Button Grid.Column="5"
+                                x:Name="RecoveryTestRestoreButton"
                                 Classes="action-primary"
                                 Content="{infra:LocalizedString Key=Recovery.Drill.IsolatedRestore}"
                                 ToolTip.Tip="{infra:LocalizedString Key=Recovery.Drill.IsolatedRestoreHelp}"

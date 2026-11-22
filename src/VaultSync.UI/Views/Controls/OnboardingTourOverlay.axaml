@@ -5,62 +5,65 @@
     x:Class="VaultSync.UI.Views.Controls.OnboardingTourOverlay"
     x:DataType="vm:OnboardingTourViewModel"
     IsVisible="{CompiledBinding IsActive}"
-    HorizontalAlignment="Right"
-    VerticalAlignment="Bottom"
-    Margin="16,0,16,12"
-    Width="430"
-    MaxWidth="430"
-    MinWidth="280"
     AutomationProperties.Name="{CompiledBinding Title}">
 
-  <Border Background="{DynamicResource Surface1}"
-            BorderBrush="{DynamicResource BorderSoft}"
+  <Canvas x:Name="OverlayCanvas">
+    <Border x:Name="TargetHighlight"
+            IsHitTestVisible="False"
+            IsVisible="False"
+            CornerRadius="10"
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="2"
+            Background="#144C8DFF" />
+
+    <Border x:Name="TourCard"
+            Width="300"
+            BoxShadow="0 12 32 0 #80000000"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource AccentBrush}"
             BorderThickness="1"
-            CornerRadius="8"
-            Padding="18">
-    <Grid RowDefinitions="*,Auto">
-      <ScrollViewer MaxHeight="150"
-                    VerticalScrollBarVisibility="Auto"
-                    HorizontalScrollBarVisibility="Disabled">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-              RowSpacing="14">
+            CornerRadius="10"
+            Padding="14">
+
+      <Grid RowDefinitions="*,Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+              RowSpacing="8">
 
           <Grid ColumnDefinitions="*,Auto"
                 ColumnSpacing="12">
-            <StackPanel Spacing="4">
               <TextBlock Text="{CompiledBinding StepCounter}"
                          FontSize="12"
+                         HorizontalAlignment="Left"
+                         Grid.Column="0"
+                         VerticalAlignment="Center"
                          Foreground="{DynamicResource AccentBrush}"
                          FontWeight="SemiBold" />
-              <TextBlock Text="{CompiledBinding ProgressText}"
-                         FontSize="12"
-                         Foreground="{DynamicResource TextSecondary}" />
-            </StackPanel>
-            <TextBlock Grid.Column="1"
-                       Text="{CompiledBinding StatusText}"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextSecondary}"
-                       VerticalAlignment="Top" />
+            <Button Content="{CompiledBinding SkipLabel}"
+                    Command="{CompiledBinding SkipCommand}"
+                    Classes="action-ghost"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Padding="8,4" />
           </Grid>
 
           <ProgressBar Grid.Row="1"
                        Minimum="0"
                        Maximum="1"
-                       Height="6"
+                       Height="3"
                        Value="{CompiledBinding ProgressValue}" />
 
           <StackPanel Grid.Row="2"
                       Spacing="7">
             <TextBlock Text="{CompiledBinding Title}"
-                       FontSize="20"
+                       FontSize="15"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap" />
             <TextBlock Text="{CompiledBinding Body}"
-                       FontSize="13"
+                       FontSize="12"
                        Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap"
-                       LineHeight="21" />
+                       LineHeight="17" />
           </StackPanel>
 
           <Border Grid.Row="3"
@@ -68,7 +71,7 @@
                   BorderBrush="{DynamicResource BorderSoft}"
                   BorderThickness="1"
                   CornerRadius="8"
-                  Padding="12"
+                  Padding="8"
                   IsVisible="{CompiledBinding HasActionText}">
             <StackPanel Spacing="5">
               <TextBlock Text="{CompiledBinding ActionHeadingText}"
@@ -82,66 +85,23 @@
                          LineHeight="19" />
             </StackPanel>
           </Border>
-
-          <ItemsControl Grid.Row="4" ItemsSource="{CompiledBinding ChecklistItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:OnboardingChecklistItem">
-                <Grid ColumnDefinitions="28,*,Auto"
-                      ColumnSpacing="10"
-                      Margin="0,0,0,8">
-                  <Border Width="22"
-                          Height="22"
-                          CornerRadius="6"
-                          BorderBrush="{Binding NumberBrush}"
-                          BorderThickness="1"
-                          Background="{DynamicResource Surface1}"
-                          VerticalAlignment="Top">
-                    <TextBlock Text="{Binding NumberText}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{Binding NumberBrush}" />
-                  </Border>
-                  <TextBlock Grid.Column="1"
-                             Text="{Binding Title}"
-                             FontSize="12"
-                             FontWeight="SemiBold"
-                             TextWrapping="Wrap"
-                             Foreground="{DynamicResource TextPrimary}" />
-                  <TextBlock Grid.Column="2"
-                             Text="{Binding StatusText}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{Binding StatusBrush}"
-                             VerticalAlignment="Top" />
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
         </Grid>
-      </ScrollViewer>
       <Grid Grid.Row="1"
-            Margin="0,10,0,0"
+            Margin="0,8,0,0"
             ColumnDefinitions="Auto,*,Auto,Auto"
             ColumnSpacing="8">
         <Button Content="{CompiledBinding BackLabel}"
                 Command="{CompiledBinding PreviousCommand}"
                 IsVisible="{CompiledBinding CanGoBack}"
                 Classes="action-ghost"
-                Padding="12,7" />
-        <Button Content="{CompiledBinding SkipLabel}"
-                Grid.Column="2"
-                Command="{CompiledBinding SkipCommand}"
-                Classes="action-ghost"
-                Padding="12,7" />
+                Padding="8,4" />
         <Button Content="{CompiledBinding PrimaryLabel}"
                 Grid.Column="3"
                 Command="{CompiledBinding PrimaryCommand}"
                 Classes="action-primary"
-                Padding="14,7" />
+                Padding="10,6" />
       </Grid>
     </Grid>
   </Border>
+  </Canvas>
 </UserControl>

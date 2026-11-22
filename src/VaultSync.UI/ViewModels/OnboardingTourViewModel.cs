@@ -16,6 +16,7 @@ namespace VaultSync.UI.ViewModels;
 
 public sealed class OnboardingTourStep
 {
+    public string? TargetName { get; }
     public string Title { get; }
     public string Body { get; }
     public string ActionText { get; }
@@ -31,7 +32,8 @@ public sealed class OnboardingTourStep
         string completeText,
         string requiredView,
         bool tracksProgress,
-        Func<OnboardingSetupState, bool> isComplete)
+        Func<OnboardingSetupState, bool> isComplete,
+        string? targetName = null)
     {
         Title = title;
         Body = body;
@@ -39,6 +41,7 @@ public sealed class OnboardingTourStep
         CompleteText = completeText;
         RequiredView = requiredView;
         TracksProgress = tracksProgress;
+        TargetName = targetName;
         IsComplete = isComplete;
     }
 }
@@ -281,6 +284,28 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             Interval = TimeSpan.FromSeconds(1)
         };
         _pollTimer.Tick += (_, _) => Poll();
+        _app.PropertyChanged += (_, e) =>
+        {
+            if (IsActive && e.PropertyName == nameof(AppViewModel.CurrentViewKey))
+            {
+                _lastObservedViewKey = _app.CurrentViewKey;
+                UpdateState();
+            }
+        };
+        _app.ProjectsViewModel.PropertyChanged += (_, e) =>
+        {
+            if (IsActive && e.PropertyName is nameof(ProjectsViewModel.SelectedProject)
+                    or nameof(ProjectsViewModel.SnapshotActionLabel)
+                    or nameof(ProjectsViewModel.HasUngroupedProjects))
+            {
+                OnPropertiesChanged(nameof(TargetControlName));
+            }
+        };
+        _app.SettingsViewModel.PropertyChanged += (_, e) =>
+        {
+            if (IsActive && e.PropertyName == nameof(SettingsViewModel.UseAdvancedDestinations))
+                OnPropertiesChanged(nameof(TargetControlName));
+        };
 
         BuildSteps();
         RebuildChecklist();
@@ -301,6 +326,48 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         IsActive = false;
         _pollTimer.Stop();
         TourCompleted?.Invoke();
+    }
+    public void RefreshLocalization()
+    {
+        BuildSteps();
+        RebuildChecklist();
+        UpdateState();
+        OnPropertiesChanged(nameof(SkipLabel), nameof(BackLabel));
+    }
+    public string? TargetControlName
+    {
+        get
+        {
+            if (!IsOnRequiredView)
+            {
+                return CurrentStep?.RequiredView switch
+                {
+                    SettingsViewName => Targets.NavSettings,
+                    ProjectsViewName => Targets.NavProjects,
+                    BackupsViewName => Targets.NavBackups,
+                    ScheduleViewName => Targets.NavSchedule,
+                    RecoveryViewName => Targets.NavRecovery,
+                    _ => null
+                };
+            }
+
+            if (CurrentStep?.TargetName == Targets.BackupLocation &&
+                _app.SettingsViewModel.UseAdvancedDestinations)
+            {
+                return "DestinationsSection";
+            }
+
+            if (CurrentStep?.TargetName == Targets.ProjectList)
+            {
+                if (IsStepComplete)
+                    return null;
+
+                if (_app.ProjectsViewModel.SelectedProject is { IsRegistered: false })
+                    return "ProjectSnapshotButton";
+            }
+
+            return CurrentStep?.TargetName;
+        }
     }
 
     private void HandlePrimary()
@@ -354,9 +421,36 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         UpdateState();
     }
 
+    private static class Targets
+    {
+        public const string LanguageSelect = "LanguageSelectCombo";
+        public const string ProjectsRoot = "ProjectsRootRow";
+        public const string BackupLocation = "BackupLocationRow";
+        public const string ProjectList =  "ProjectList";
+        public const string SchedulePolicy = "SchedulePolicyGrid";
+        public const string BackupButton = "PerProjectBackupButton";
+        public const string BackupsHistory = "BackupsHistorySection";
+        public const string RecoveryTestButton = "RecoveryTestRestoreButton";
+        public const string NavSettings = "NavSettingsButton";
+        public const string NavProjects = "NavProjectsButton";
+        public const string NavBackups = "NavBackupsButton";
+        public const string NavSchedule = "NavScheduleButton";
+        public const string NavRecovery = "NavRecoveryButton";
+    }
+
     private void BuildSteps()
     {
         _steps.Clear();
+
+        _steps.Add(new OnboardingTourStep(
+            L("Onboarding.Setup.Language.Title", "Let’s set the application language"),
+            L("Onboarding.Setup.Language.Body", "VaultSync is available in many languages choose the one that suits you!"),
+            L("Onboarding.Setup.Language.Action", "Select the application language."),
+            L("Onboarding.Setup.Language.Done", "Do you like the current language? Just click “Next”. "),
+            SettingsViewName,
+            tracksProgress: false,
+            _ => true,
+            targetName: Targets.LanguageSelect));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Intro.Title", "Set up your first backup"),
@@ -374,7 +468,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.ProjectsRoot.Done", "Projects root selected."),
             SettingsViewName,
             tracksProgress: true,
-            state => state.HasProjectsRoot));
+            state => state.HasProjectsRoot, targetName: Targets.ProjectsRoot));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Destination.Title", "Choose where backups should be stored"),
@@ -383,7 +477,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Destination.Done", "Backup destination ready."),
             SettingsViewName,
             tracksProgress: true,
-            state => state.HasBackupDestination));
+            state => state.HasBackupDestination, targetName: Targets.BackupLocation));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Project.Title", "Add your first project"),
@@ -392,7 +486,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Project.Done", "First project registered."),
             ProjectsViewName,
             tracksProgress: true,
-            state => state.RegisteredProjectCount > 0));
+            state => state.RegisteredProjectCount > 0, targetName: Targets.ProjectList));
 
         _steps.Add(new OnboardingTourStep(
             L("Schedule.Overview.Title", "Your protection schedule"),
@@ -401,7 +495,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Status.Done", "Done"),
             ScheduleViewName,
             tracksProgress: true,
-            state => state.HasValidSchedule));
+            state => state.HasValidSchedule, targetName: Targets.SchedulePolicy));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Backup.Title", "Run the first backup"),
@@ -410,7 +504,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Backup.Done", "First backup completed."),
             BackupsViewName,
             tracksProgress: true,
-            state => state.BackupCount > 0));
+            state => state.BackupCount > 0, targetName: Targets.BackupButton));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Done.Title", "You have a restore point"),
@@ -419,7 +513,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Done.Done", "Onboarding complete."),
             BackupsViewName,
             tracksProgress: false,
-            state => state.BackupCount > 0));
+            state => state.BackupCount > 0, targetName: Targets.BackupsHistory));
 
         _steps.Add(new OnboardingTourStep(
             L("Onboarding.Setup.Proof.Title", "Prove that recovery works"),
@@ -428,7 +522,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             L("Onboarding.Setup.Proof.Passed", "Recovery has been proved with a passed drill."),
             RecoveryViewName,
             tracksProgress: true,
-            state => state.PassedRecoveryDrillCount > 0));
+            state => state.PassedRecoveryDrillCount > 0, targetName: Targets.RecoveryTestButton));
     }
 
     private void RebuildChecklist()
@@ -563,7 +657,8 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             nameof(CanGoBack),
             nameof(ProgressValue),
             nameof(StatusText),
-            nameof(PrimaryLabel));
+            nameof(PrimaryLabel),
+            nameof(TargetControlName));
     }
 
     private int CompletedStepCount() =>

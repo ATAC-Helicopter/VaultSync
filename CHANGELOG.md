@@ -32,6 +32,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [BUG-19055] Verify ZIP backup contents against the snapshot stored with the backup and surface real integrity failures.
 - [BUG-19054] Show each Guide step once, including after navigation and language changes.
 - [BUG-19053] Keep Recovery and Settings controls accessible during guided setup.
+- [BUG-19053] Changed the guide tour to a floating one with hints and the choice of language. (@JustH8Me)
 - [BUG-19048] Refresh exclusion files and presets even when timestamps are preserved, including custom presets. (@ameenalqershi)
 - [BUG-19047] Remove temporary rsync exclusion files when external tool startup fails. (@ameenalqershi)
 - [BUG-19046] Verify disk images without rereading the entire payload unnecessarily.
