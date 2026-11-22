@@ -1280,6 +1280,7 @@ Black partial redraws, capacity/media/fault and shared beta gates remain open;
 no support profile is promoted.
 
 - [ ] `BUG-19053` `P2` Keep recovery and language controls accessible during guided setup. Issue #872.
+    - Follow-up: replace the bottom setup bar with a floating guide card that highlights controls and starts with a language choice.
 - [ ] `BUG-19056` `P1` Keep ZIP staging outside the system temporary filesystem. Issue #877.
 - [ ] `BUG-19057` `P2` Investigate the Beta 1 UI watchdog reports on macOS ARM64. Issue #878.
 - [ ] `BUG-19055` `P1` Verify stored ZIP payloads against their own snapshot after backup. Issue #876.
