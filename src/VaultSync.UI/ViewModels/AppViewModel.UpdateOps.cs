@@ -148,6 +148,7 @@ namespace VaultSync.UI.ViewModels
                 _dashboardViewModel.ReapplyLocalization();
                  _ =_dashboardViewModel.RefreshAsync(force: true);
             }
+            OnboardingTour?.RefreshLocalization();
             if (_backupsViewModel != null)
             {
                 _backupsViewModel.ReapplyLocalization();
