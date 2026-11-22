@@ -148,6 +148,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
     private const string ProjectsViewName = "Projects";
     private const string SettingsViewName = "Settings";
     private const string RecoveryViewName = "Recovery";
+    private const string DiskCloningViewName = "DiskCloning";
     private const string ScheduleViewName = "Schedule";
 
     private readonly AppViewModel _app;
@@ -186,17 +187,17 @@ public sealed class OnboardingTourViewModel : ViewModelBase
 
     public string Title => CurrentStep?.Title ?? string.Empty;
     public string Body => CurrentStep?.Body ?? string.Empty;
-    public string ActionText => IsStepComplete
+    public string ActionText => IsOnRequiredView && IsStepComplete
         ? CurrentStep?.CompleteText ?? string.Empty
         : CurrentStep?.ActionText ?? string.Empty;
 
-    public string ActionHeadingText => IsStepComplete
+    public string ActionHeadingText => IsOnRequiredView && IsStepComplete
         ? L("Onboarding.CompleteHeading", "Done")
         : L("Onboarding.ActionHeading", "What to do");
 
     public bool HasActionText => !string.IsNullOrWhiteSpace(ActionText);
     public bool CanGoBack => _index > 0;
-    public double ProgressValue => _steps.Count == 0 ? 0d : Math.Clamp(CompletedStepCount() / (double)_steps.Count, 0d, 1d);
+    public double ProgressValue => CompletedStepCount() / (double)Math.Max(1, TrackedStepCount());
 
     public string StatusText
     {
@@ -241,6 +242,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     BackupsViewName => L("Onboarding.GoBackups", "Open Backups"),
                     ScheduleViewName => L("Nav.Schedule", "Schedule"),
                     RecoveryViewName => L("Onboarding.GoRecovery", "Open Recovery"),
+                    DiskCloningViewName => L("Nav.DiskCloning", "Disk cloning"),
                     _ => L("Onboarding.Go", "Go")
                 };
             }
@@ -347,6 +349,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     BackupsViewName => Targets.NavBackups,
                     ScheduleViewName => Targets.NavSchedule,
                     RecoveryViewName => Targets.NavRecovery,
+                    DiskCloningViewName => Targets.NavDiskCloning,
                     _ => null
                 };
             }
@@ -406,6 +409,9 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             case RecoveryViewName:
                 _app.NavigateRecovery.Execute(null);
                 break;
+            case DiskCloningViewName:
+                _app.NavigateDiskCloning.Execute(null);
+                break;
         }
 
         _lastObservedViewKey = _app.CurrentViewKey;
@@ -431,11 +437,13 @@ public sealed class OnboardingTourViewModel : ViewModelBase
         public const string BackupButton = "PerProjectBackupButton";
         public const string BackupsHistory = "BackupsHistorySection";
         public const string RecoveryTestButton = "RecoveryTestRestoreButton";
+        public const string DiskRecoveryWorkflow = "DiskRecoveryWorkflow";
         public const string NavSettings = "NavSettingsButton";
         public const string NavProjects = "NavProjectsButton";
         public const string NavBackups = "NavBackupsButton";
         public const string NavSchedule = "NavScheduleButton";
         public const string NavRecovery = "NavRecoveryButton";
+        public const string NavDiskCloning = "NavDiskCloningButton";
     }
 
     private void BuildSteps()
@@ -523,6 +531,15 @@ public sealed class OnboardingTourViewModel : ViewModelBase
             RecoveryViewName,
             tracksProgress: true,
             state => state.PassedRecoveryDrillCount > 0, targetName: Targets.RecoveryTestButton));
+
+        _steps.Add(new OnboardingTourStep(
+            L("DiskRecovery.Title", "Disk recovery"),
+            L("DiskRecovery.Overview", "A disk image includes the system and partitions. Capture and restore require a separate recovery environment."),
+            string.Empty,
+            string.Empty,
+            DiskCloningViewName,
+            tracksProgress: false,
+            _ => true, targetName: Targets.DiskRecoveryWorkflow));
     }
 
     private void RebuildChecklist()

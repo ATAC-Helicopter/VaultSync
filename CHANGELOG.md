@@ -13,7 +13,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 
 - [VS-1904] Capture Linux system disks offline and create verified recovery copies while preserving private originals.
 - [VS-1907] Browse recovery images and restore them through a graphical wizard with separate overwrite confirmation and disk read-back.
-- [VS-1910] Open disk image tools from a dedicated, localized cloning page.
+- [VS-1910] Open disk image tools from Recovery and follow the preparation, verification and offline restore steps.
 - [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
 - [VS-1813] Search and filter backups, and browse versions at the same location from one row.
 - [VS-1995] Identify imported projects and see whether their source folders are available locally.
@@ -31,8 +31,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [BUG-19056] Stage ZIP backups in private application storage to avoid system temporary directory quotas.
 - [BUG-19055] Verify ZIP backup contents against the snapshot stored with the backup and surface real integrity failures.
 - [BUG-19054] Show each Guide step once, including after navigation and language changes.
-- [BUG-19053] Keep Recovery and Settings controls accessible during guided setup.
-- [BUG-19053] Changed the guide tour to a floating one with hints and the choice of language. (@JustH8Me)
+- [BUG-19053] Choose a language at the start of guided setup and follow floating hints near the relevant controls. (@JustH8Me)
 - [BUG-19048] Refresh exclusion files and presets even when timestamps are preserved, including custom presets. (@ameenalqershi)
 - [BUG-19047] Remove temporary rsync exclusion files when external tool startup fails. (@ameenalqershi)
 - [BUG-19046] Verify disk images without rereading the entire payload unnecessarily.

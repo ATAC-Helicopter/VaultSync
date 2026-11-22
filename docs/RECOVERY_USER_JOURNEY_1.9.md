@@ -12,11 +12,15 @@ components from the intended product journey; it does not qualify disk support.
 Desktop preview from development source `c7f76c86`, November 16, 2026. This
 illustration does not qualify disk support or the installed recovery environment.
 
-The desktop Disk Cloning page can select a folder and request read-only image
-verification on Linux x64. Windows and macOS retain the page but require the
-Linux recovery environment for this verifier. The desktop cannot launch the
-privileged recovery host, create qualified boot media, capture its running system
-disk, or authorize restoration.
+Open **Recovery → Disk Cloning** for the disk workflow. The guided setup ends
+with an informational visit to Disk Cloning after the project recovery drill.
+The page explains offline image capture to a different physical drive, UEFI
+recovery media, destination identity and overwrite review, and post-restore
+read-back and boot checks. On Linux x64 it can select a folder and request
+read-only verification of the image contents and layout. Windows and macOS
+retain the page and direct users to the Linux x64 environment for verification.
+Capture, media preparation and destination writes require the separate recovery
+environment.
 
 The installed recovery controller and capture console currently run in a
 separately assembled Linux recovery installation. Capture uses the physical

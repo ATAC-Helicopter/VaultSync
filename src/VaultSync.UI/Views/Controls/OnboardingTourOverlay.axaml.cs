@@ -42,7 +42,7 @@ public partial class OnboardingTourOverlay : UserControl
             FindTarget();
             _target?.BringIntoView();
             UpdatePosition();
-        }, DispatcherPriority.Loaded);
+        }, DispatcherPriority.Background);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -97,9 +97,7 @@ public partial class OnboardingTourOverlay : UserControl
         }
 
         _watchedLists.Clear();
-
     }
-
 
     private void FindTarget()
     {

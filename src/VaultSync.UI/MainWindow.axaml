@@ -444,7 +444,7 @@
       </Grid>
     </Border>
 
-    <!-- Keep toasts above the guided setup row. -->
+    <!-- The guided setup card floats over the shell. -->
     <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
 
     <viewsControls:OnboardingTourOverlay Grid.RowSpan="2"

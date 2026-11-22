@@ -139,6 +139,28 @@
                        Text="{infra:LocalizedString Key=Settings.General.Title}" />
             <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
                        Foreground="{DynamicResource TextSecondary}" />
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Margin="0,8,0,0">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           FontSize="11" />
+              </StackPanel>
+              <ComboBox x:Name="LanguageSelectCombo"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Width="160"
+                        ItemsSource="{Binding LanguageOptions}"
+                        SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
           </StackPanel>
         </Border>
 
@@ -2497,28 +2519,6 @@
                            Margin="0,6,0,0"
                            TextWrapping="Wrap"
                            IsVisible="{Binding CanUseSelfUpdate}" />
-
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
-                               Foreground="{DynamicResource TextSecondary}"
-                               FontSize="11" />
-                  </StackPanel>
-                  <ComboBox x:Name="LanguageSelectCombo"
-                            Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Width="160"
-                            ItemsSource="{Binding LanguageOptions}"
-                            SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding DisplayName}" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
-                </Grid>
 
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
