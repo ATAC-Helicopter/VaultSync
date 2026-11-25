@@ -1283,6 +1283,7 @@ no support profile is promoted.
     - Integrated PR #885 into the release preparation branch. The floating guide starts with language selection and introduces disk recovery after the project recovery drill.
 - [ ] `BUG-19056` `P1` Keep ZIP staging outside the system temporary filesystem. Issue #877.
 - [ ] `BUG-19057` `P2` Investigate the Beta 1 UI watchdog reports on macOS ARM64. Issue #878.
+- [ ] `BUG-19058` `P2` Restore tray icon registration on Windows and Linux. Issue #886.
 - [ ] `BUG-19055` `P1` Verify stored ZIP payloads against their own snapshot after backup. Issue #876.
 - [ ] `BUG-19054` `P2` Render each Guide step once across navigation and language changes. Issue #873.
 - [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.

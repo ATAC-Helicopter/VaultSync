@@ -7,18 +7,15 @@ components from the intended product journey; it does not qualify disk support.
 
 ## What an ordinary user can do today
 
-![1.9.0 development Disk cloning page: image verification only, with disk writing disconnected](images/development/Disk_Cloning.png)
-
-Desktop preview from development source `c7f76c86`, November 16, 2026. This
-illustration does not qualify disk support or the installed recovery environment.
-
-Open **Recovery → Disk Cloning** for the disk workflow. The guided setup ends
-with an informational visit to Disk Cloning after the project recovery drill.
-The page explains offline image capture to a different physical drive, UEFI
-recovery media, destination identity and overwrite review, and post-restore
-read-back and boot checks. On Linux x64 it can select a folder and request
-read-only verification of the image contents and layout. Windows and macOS
-retain the page and direct users to the Linux x64 environment for verification.
+Open **Recovery → Disk Recovery** for the disk workflow. Guided setup ends
+with an informational visit to this page after the project recovery drill.
+On Linux x64, open the individual exported image folder that contains both
+`image.metadata` and `payload.raw`. The page reports missing files before
+enabling read-only verification of the image contents and layout. Windows and
+macOS users can view the offline steps and use Linux x64 for verification.
+Expand **Show offline steps** for UEFI recovery media, image capture to a
+different physical drive, destination checks and post-restore read-back and
+boot checks.
 Capture, media preparation and destination writes require the separate recovery
 environment.
 

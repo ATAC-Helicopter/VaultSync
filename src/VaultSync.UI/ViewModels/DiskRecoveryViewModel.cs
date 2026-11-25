@@ -16,10 +16,12 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     private string? _folder;
     private string _statusKey = "DiskRecovery.Empty";
     private DiskImageInspectionResult? _receipt;
+    private bool _checkingFolder;
+    private bool _hasImageFiles;
 
     public DiskRecoveryViewModel()
     {
-        VerifyCommand = new AsyncRelayCommand(_ => VerifyAsync(), _ => _folder is not null && !IsBusy && Supported,
+        VerifyCommand = new AsyncRelayCommand(_ => VerifyAsync(), _ => CanVerify,
             "inspect-recovery-image");
         CancelCommand = new RelayCommand(_ => _inspection?.Cancel(), _ => IsBusy);
     }
@@ -29,7 +31,10 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     public bool Supported => OperatingSystem.IsLinux() &&
         System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
     public bool IsBusy => _inspection is not null;
-    public bool CanChoose => !IsBusy;
+    public bool CanChoose => !IsBusy && !_checkingFolder;
+    public bool CanVerify => Supported && _hasImageFiles && CanChoose;
+    public bool HasFolder => _folder is not null;
+    public bool HasImageFiles => _hasImageFiles;
     public string Folder => _folder ?? string.Empty;
     public string Status
     {
@@ -43,13 +48,42 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         }
     }
 
-    public void SelectFolder(string folder)
+    public async Task SelectFolderAsync(string folder)
     {
-        if (IsBusy) return;
+        if (!CanChoose) return;
+        _checkingFolder = true;
+        _hasImageFiles = false;
         _folder = folder;
         _receipt = null;
-        _statusKey = "DiskRecovery.Ready";
+        _statusKey = "DiskRecovery.Choose";
         Refresh();
+        try
+        {
+            _statusKey = await Task.Run(() => CheckImageFolder(folder));
+            _hasImageFiles = _statusKey == "DiskRecovery.Ready";
+        }
+        finally
+        {
+            _checkingFolder = false;
+            Refresh();
+        }
+    }
+
+    private static string CheckImageFolder(string folder)
+    {
+        try
+        {
+            foreach (string name in new[] { "image.metadata", "payload.raw" })
+            {
+                if ((File.GetAttributes(Path.Combine(folder, name)) & FileAttributes.Directory) != 0)
+                    return "DiskRecovery.MissingFiles";
+            }
+            return "DiskRecovery.Ready";
+        }
+        catch (FileNotFoundException) { return "DiskRecovery.MissingFiles"; }
+        catch (DirectoryNotFoundException) { return "DiskRecovery.MissingFiles"; }
+        catch (UnauthorizedAccessException) { return "DiskRecovery.FolderUnreadable"; }
+        catch (IOException) { return "DiskRecovery.FolderUnreadable"; }
     }
 
     public void Cancel() => _inspection?.Cancel();
@@ -57,7 +91,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
 
     private async Task VerifyAsync()
     {
-        if (_folder is not { } folder || IsBusy || !Supported) return;
+        if (_folder is not { } folder || !CanVerify) return;
         using var cancellation = new CancellationTokenSource();
         _inspection = cancellation;
         _receipt = null;
@@ -83,7 +117,10 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
             });
         }
         catch (OperationCanceledException) { await SetStatusAsync("DiskRecovery.Cancelled"); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        catch (FileNotFoundException) { await SetMissingFilesAsync(); }
+        catch (DirectoryNotFoundException) { await SetMissingFilesAsync(); }
+        catch (UnauthorizedAccessException) { await SetStatusAsync("DiskRecovery.FolderUnreadable"); }
+        catch (IOException)
         {
             // Do not expose raw exception text, paths or parser output as UI errors.
             await SetStatusAsync("DiskRecovery.Failed");
@@ -98,6 +135,12 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         FileShare.Read, 128 * 1024, FileOptions.Asynchronous | FileOptions.RandomAccess);
     private async Task SetStatusAsync(string key) =>
         await Dispatcher.UIThread.InvokeAsync(() => { _receipt = null; _statusKey = key; });
+    private async Task SetMissingFilesAsync() =>
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _hasImageFiles = false;
+            _statusKey = "DiskRecovery.MissingFiles";
+        });
     private static string Text(string key) => LocalizationProvider.Service?.GetString(key) ?? key;
     private void Refresh()
     {

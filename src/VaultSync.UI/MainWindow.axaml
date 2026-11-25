@@ -268,7 +268,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=Nav.DiskCloning}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.DiskCloning}">
+          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=DiskRecovery.Title}" AutomationProperties.Name="{infra:LocalizedString Key=DiskRecovery.Title}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavDiskCloningIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -277,7 +277,7 @@
                                StrokeLineCap="Round" Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=Nav.DiskCloning}" VerticalAlignment="Center" />
+              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=DiskRecovery.Title}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
 

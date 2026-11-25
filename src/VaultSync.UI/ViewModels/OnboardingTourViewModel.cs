@@ -242,7 +242,7 @@ public sealed class OnboardingTourViewModel : ViewModelBase
                     BackupsViewName => L("Onboarding.GoBackups", "Open Backups"),
                     ScheduleViewName => L("Nav.Schedule", "Schedule"),
                     RecoveryViewName => L("Onboarding.GoRecovery", "Open Recovery"),
-                    DiskCloningViewName => L("Nav.DiskCloning", "Disk cloning"),
+                    DiskCloningViewName => L("DiskRecovery.Title", "Disk recovery"),
                     _ => L("Onboarding.Go", "Go")
                 };
             }

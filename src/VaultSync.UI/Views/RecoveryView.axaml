@@ -94,7 +94,7 @@
           <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Overview}"
                      Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
           <Button Classes="action-primary" HorizontalAlignment="Left"
-                  Content="{infra:LocalizedString Key=Nav.DiskCloning}"
+                  Content="{infra:LocalizedString Key=DiskRecovery.Title}"
                   Command="{CompiledBinding $parent[Window].((vm:AppViewModel)DataContext).NavigateDiskCloning}" />
         </StackPanel>
       </Border>

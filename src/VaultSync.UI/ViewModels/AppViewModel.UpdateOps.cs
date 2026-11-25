@@ -122,7 +122,7 @@ namespace VaultSync.UI.ViewModels
             }
             else if (CurrentView == _diskCloningViewModel)
             {
-                HeaderTitle = L("Nav.DiskCloning", "Disk cloning");
+                HeaderTitle = L("DiskRecovery.Title", "Disk recovery");
                 HeaderKicker = L("DiskCloning.Intro", "Disk image tools. Currently, only image verification is available.");
             }
             else if (CurrentView == _settingsViewModel)

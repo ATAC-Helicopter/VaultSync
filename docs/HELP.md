@@ -142,18 +142,24 @@ Metadata sync does not carry:
 
 Full recovery guidance: `docs/wiki/Recovery.md`.
 
-## Disk Cloning (1.9.0 development)
+## Disk recovery (1.9.0 development)
 
-Open **Disk Cloning** from the sidebar for the separate disk-image workflow.
-The page is available in the Windows, macOS and Linux desktop shell. Select an
-image folder containing `image.metadata` and `payload.raw`; the current read-only
-verification requires the Linux x64 isolated reader. Verification does not
-authorize overwriting a disk or establish bootability.
+Open **Disk Recovery** from the sidebar or the **Recovery** page. To restore
+individual project files, open the restore point in **Backups** instead.
 
-Capture and restore are still under development. No disk profile is qualified,
-and macOS/APFS recovery is outside the current engine profile. An available page
-is not a declaration of operational support. Project readiness remains under
-**Recovery**.
+**Have a VaultSync disk image?** On Linux x64, select **Choose image folder**
+and open the individual export folder that contains both `image.metadata` and
+`payload.raw`. If you chose the shared storage folder, open the subfolder for
+the image you want to verify. A raw clone file on its own is insufficient.
+Select **Verify image** to check the contents and partition layout in read-only
+mode. To check bootability, boot the system from a restored disk separately.
+
+**Need to create or restore an image?** Expand **Show offline steps** for the
+UEFI recovery environment, destination checks and post-restore checks.
+The desktop can verify images; capture and restore run in the separate
+environment. Beta evidence applies to specific Linux ext4 and Windows NTFS VM
+profiles. See the [recovery user journey](RECOVERY_USER_JOURNEY_1.9.md) for
+availability and the steps still required to deliver recovery media.
 
 ## Explore and Compare
 

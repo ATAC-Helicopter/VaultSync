@@ -267,7 +267,7 @@ namespace VaultSync.UI.ViewModels
                     BackupsViewModel.IsActiveView = false;
                     CurrentViewName = "DiskCloning";
                     CurrentView = DiskCloningViewModel;
-                    HeaderTitle = AppViewModel.L("Nav.DiskCloning", "Disk cloning");
+                    HeaderTitle = AppViewModel.L("DiskRecovery.Title", "Disk recovery");
                     HeaderKicker = AppViewModel.L("DiskCloning.Intro", "Disk image tools. Currently, only image verification is available.");
                     break;
                 case "Guide":
