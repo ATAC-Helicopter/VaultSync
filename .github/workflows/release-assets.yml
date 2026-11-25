@@ -231,10 +231,14 @@ jobs:
           updater_matrix="$(jq -cn \
             --argjson windows "$INCLUDE_WINDOWS_PATCHES" \
             --argjson macos "$INCLUDE_MACOS_PATCHES" \
-            --argjson linux "$INCLUDE_LINUX_PATCHES" '
+            --argjson linux "$INCLUDE_LINUX_PATCHES" \
+            --arg target "$target" '
               {include: [
                 (if $windows then {os: "windows-latest", artifact: "windows-release-assets"} else empty end),
-                (if $macos then ("macos-latest", "macos-15-intel") | {os: ., artifact: "macos-release-assets"} else empty end),
+                (if $macos or $target == "1.9.0-beta.2" then
+                   ("macos-latest", "macos-15-intel") | {os: ., artifact: "macos-release-assets"}
+                     + (if $macos then {} else {dmg: true} end)
+                 else empty end),
                 (if $linux then ("ubuntu-latest", "ubuntu-24.04-arm") | {os: ., artifact: "linux-release-assets"} else empty end)
               ]}')"
           echo "updater_matrix=$updater_matrix" >> "$GITHUB_OUTPUT"
@@ -924,7 +928,7 @@ jobs:
   updater-qualification:
     name: Executable updater qualification (${{ matrix.os }})
     needs: [validate, windows, macos, linux]
-    if: ${{ !inputs.prepare_draft_from_run && (inputs.include_windows_patches || inputs.include_macos_patches || inputs.include_linux_patches) }}
+    if: ${{ !inputs.prepare_draft_from_run && (inputs.include_windows_patches || inputs.include_macos_patches || inputs.include_linux_patches || inputs.target_version == '1.9.0-beta.2') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.validate.outputs.updater_matrix) }}
@@ -955,10 +959,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PREVIOUS_VERSION: ${{ inputs.previous_version }}
           TARGET_VERSION: ${{ inputs.target_version }}
-        run: >
-          python scripts/qualify_updater.py --assets updater-assets
-          --previous "$PREVIOUS_VERSION" --target "$TARGET_VERSION"
-          --evidence updater-evidence
+          MACOS_DMG_ONLY: ${{ matrix.dmg }}
+        run: |
+          options=()
+          if [[ "$MACOS_DMG_ONLY" == "true" ]]; then options+=(--macos-dmg-only); fi
+          python scripts/qualify_updater.py --assets updater-assets \
+            --previous "$PREVIOUS_VERSION" --target "$TARGET_VERSION" \
+            --evidence updater-evidence "${options[@]}"
       - name: Preserve updater qualification evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

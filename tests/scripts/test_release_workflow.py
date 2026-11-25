@@ -17,16 +17,20 @@ class ReleaseWorkflowTests(unittest.TestCase):
             "macos": ["macos-latest", "macos-15-intel"],
             "linux": ["ubuntu-latest", "ubuntu-24.04-arm"],
         }
-        for flags in itertools.product((False, True), repeat=len(runners)):
-            with self.subTest(flags=flags):
+        for target, flags in itertools.product(("1.9.0-beta.1", "1.9.0-beta.2"),
+                                                itertools.product((False, True), repeat=len(runners))):
+            with self.subTest(target=target, flags=flags):
+                macos_dmg = target == "1.9.0-beta.2" and not flags[1]
                 result = subprocess.run(
                     ["bash", "-e", "-c", match.group(0) + '\nprintf "%s" "$updater_matrix"'],
-                    env={**os.environ, **{f"INCLUDE_{name.upper()}_PATCHES": json.dumps(enabled)
+                    env={**os.environ, "target": target, **{f"INCLUDE_{name.upper()}_PATCHES": json.dumps(enabled)
                                          for name, enabled in zip(runners, flags)}},
                     capture_output=True, text=True, check=True,
                 )
-                expected = [{"os": runner, "artifact": f"{name}-release-assets"}
-                            for (name, options), enabled in zip(runners.items(), flags) if enabled
+                expected = [{"os": runner, "artifact": f"{name}-release-assets",
+                             **({"dmg": True} if name == "macos" and macos_dmg else {})}
+                            for (name, options), enabled in zip(runners.items(), flags)
+                            if enabled or (name == "macos" and macos_dmg)
                             for runner in options]
                 self.assertEqual({"include": expected}, json.loads(result.stdout))
         job = workflow.split("  updater-qualification:\n", 1)[1].split("  release-manifest:\n", 1)[0]

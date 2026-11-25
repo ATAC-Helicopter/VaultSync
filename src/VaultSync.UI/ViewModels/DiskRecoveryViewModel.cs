@@ -59,7 +59,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         Refresh();
         try
         {
-            _statusKey = await Task.Run(() => CheckImageFolder(folder));
+            _statusKey = await Task.Run(() => CheckImageFolder(folder), CancellationToken.None);
             _hasImageFiles = _statusKey == "DiskRecovery.Ready";
         }
         finally

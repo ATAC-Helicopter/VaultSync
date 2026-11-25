@@ -53,6 +53,12 @@ keep the full packages available and include patch assets for the immediately
 preceding beta on each platform and architecture where the installed update
 preserves user data and passes verification of the installed files and startup.
 Use the full package when that upgrade path is unqualified.
+For Beta 2 on macOS, use the DMG on both architectures. The published Beta 1
+helper expects the prerelease string in both numeric Apple bundle version
+fields and rolls back when it reads the valid Beta 2 metadata. The Beta 2
+helper accepts the numeric versions bound to the full VaultSync release
+identity for later updates. The asset workflow exercises the DMG replacement
+on both Mac runners while qualifying the selected Windows and Linux patches.
 Qualify the Beta 1 → Beta 2 update against the published `v1.9.0-beta.1`
 packages. Record which architecture and package type actually applied the
 patch and which used the full package.
