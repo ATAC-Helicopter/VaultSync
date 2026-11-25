@@ -74,6 +74,23 @@ class AssembleRecoveryDiskTests(unittest.TestCase):
             disk.main(self.args)
         self.assertIn("output already exists", stderr.getvalue())
 
+    def test_combined_media_verifies_and_places_the_restore_partition(self):
+        restore = Path("restore.ext4")
+        payload = b"test restore".ljust(disk.SECTOR, b"\0")
+        restore.write_bytes(payload)
+        args = self.args + ["--restore-guid", "10000000-0000-0000-0000-000000000004"]
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            disk.main(args + ["--restore-sha256", "0" * 64])
+        self.assertFalse(self.output.exists())
+        with patch.object(disk.subprocess, "run") as sgdisk:
+            disk.main(args + ["--restore-sha256", self.digest(restore)])
+        command = sgdisk.call_args.args[0]
+        start = disk.ROOT_START + 1
+        self.assertIn(f"--new=3:{start}:{start}", command)
+        with self.output.open("rb") as image:
+            image.seek((disk.ROOT_START + 1) * disk.SECTOR)
+            self.assertEqual(image.read(disk.SECTOR), payload)
+
 
 if __name__ == "__main__":
     unittest.main()

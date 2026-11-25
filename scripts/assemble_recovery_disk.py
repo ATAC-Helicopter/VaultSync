@@ -7,7 +7,7 @@ Run it with the pinned sgdisk build used by the packaging environment.
 """
 
 import argparse
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 import hashlib
 import os
 from pathlib import Path
@@ -59,32 +59,42 @@ def copy_verified(source, target, offset: int, size: int, expected_hash: str) ->
 def assemble(args) -> None:
     if sys.platform != "linux":
         raise ValueError("the disk assembler requires Linux")
-    disk_guid, esp_guid, root_guid = (filesystem_uuid(guid) for guid in
-                                     (args.disk_guid, args.esp_guid, args.root_guid))
-    if len({disk_guid, esp_guid, root_guid}) != 3:
+    partitions = [
+        (Path("esp.fat"), "ef00", args.esp_guid, args.esp_sha256),
+        (Path("root.ext4"), "8300", args.root_guid, args.root_sha256),
+    ]
+    if args.restore_guid is not None or args.restore_sha256 is not None:
+        if args.restore_guid is None or args.restore_sha256 is None:
+            raise ValueError("the restore partition needs both a GUID and a SHA-256")
+        partitions.append((Path("restore.ext4"), "8300", args.restore_guid, args.restore_sha256))
+    identifiers = [filesystem_uuid(args.disk_guid), *(filesystem_uuid(part[2]) for part in partitions)]
+    if len(set(identifiers)) != len(identifiers):
         raise ValueError("GPT identifiers must be distinct")
-    if any(not re.fullmatch(r"[0-9a-f]{64}", value) for value in (args.esp_sha256, args.root_sha256)):
-        raise ValueError("expected two lowercase SHA-256 digests")
+    if any(not re.fullmatch(r"[0-9a-f]{64}", part[3]) for part in partitions):
+        raise ValueError("expected lowercase SHA-256 digests")
     output_path = Path.cwd() / "recovery.raw"
     if os.path.lexists(output_path):
         raise FileExistsError("output already exists")
-    with open_image(Path("esp.fat")) as (esp, esp_size), open_image(Path("root.ext4")) as (root, root_size):
-        if esp_size != ESP_BYTES or not 0 < root_size <= MAX_ROOT_BYTES or root_size % SECTOR:
-            raise ValueError("expected a 256 MiB EFI image and bounded, sector-aligned ext4 image")
-        end = ROOT_START + root_size // SECTOR - 1
+    with ExitStack() as stack:
+        start = ESP_START
+        inputs = []
+        command = ["sgdisk", "--clear", "--set-alignment=1", f"--disk-guid={args.disk_guid}"]
+        for index, (path, kind, guid, digest) in enumerate(partitions, start=1):
+            source, size = stack.enter_context(open_image(path))
+            if (index == 1 and size != ESP_BYTES) or not 0 < size <= MAX_ROOT_BYTES or size % SECTOR:
+                raise ValueError("expected a 256 MiB EFI image and bounded, sector-aligned ext4 images")
+            end = start + size // SECTOR - 1
+            command.extend([f"--new={index}:{start}:{end}", f"--typecode={index}:{kind}",
+                            f"--partition-guid={index}:{guid}", f"--change-name={index}:"])
+            inputs.append((source, start * SECTOR, size, digest))
+            start = end + 1
         with TemporaryDirectory(prefix=".recovery-disk-", dir=Path.cwd()) as directory:
             image = Path(directory) / "media.raw"
             with image.open("xb") as output:
-                output.truncate((end + 1 + BACKUP_GPT_SECTORS) * SECTOR)
-                copy_verified(esp, output, ESP_START * SECTOR, esp_size, args.esp_sha256)
-                copy_verified(root, output, ROOT_START * SECTOR, root_size, args.root_sha256)
-            subprocess.run([
-                "sgdisk", "--clear", "--set-alignment=1", f"--disk-guid={disk_guid}",
-                f"--new=1:{ESP_START}:{ROOT_START - 1}", "--typecode=1:ef00",
-                f"--partition-guid=1:{esp_guid}", "--change-name=1:",
-                f"--new=2:{ROOT_START}:{end}", "--typecode=2:8300",
-                f"--partition-guid=2:{root_guid}", "--change-name=2:", "media.raw",
-            ], cwd=directory, check=True)
+                output.truncate((start + BACKUP_GPT_SECTORS) * SECTOR)
+                for source, offset, size, digest in inputs:
+                    copy_verified(source, output, offset, size, digest)
+            subprocess.run([*command, "media.raw"], cwd=directory, check=True)
             image.chmod(0o444)
             os.link(image, output_path)
 
@@ -93,6 +103,8 @@ def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("disk-guid", "esp-guid", "root-guid", "esp-sha256", "root-sha256"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--restore-guid")
+    parser.add_argument("--restore-sha256")
     try:
         assemble(parser.parse_args(argv))
     except (OSError, ValueError, subprocess.CalledProcessError) as error:

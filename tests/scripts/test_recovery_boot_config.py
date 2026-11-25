@@ -15,6 +15,7 @@ SPEC.loader.exec_module(config)
 ROOT = "10000000-0000-0000-0000-000000000001"
 SCRATCH = "10000000-0000-0000-0000-000000000002"
 EXPORT = "10000000-0000-0000-0000-000000000003"
+RESTORE = "10000000-0000-0000-0000-000000000004"
 KERNEL = "6.12.117+deb13-amd64"
 
 
@@ -40,6 +41,18 @@ class RecoveryBootConfigTests(unittest.TestCase):
             with self.subTest(root=root, scratch=scratch, export=export, kernel=kernel):
                 with self.assertRaises(ValueError):
                     config.boot_config(root, scratch, export, kernel)
+
+    def test_combined_menu_requires_a_choice_and_binds_each_immutable_root(self):
+        fstab, grub = config.boot_config(ROOT, SCRATCH, EXPORT, KERNEL, RESTORE)
+        self.assertIn("set timeout=-1", grub)
+        capture, restore = grub.split("menuentry")[1:]
+        self.assertIn("Create disk image", capture)
+        self.assertIn(f"root=UUID={ROOT} ro", capture)
+        self.assertIn("Restore disk image", restore)
+        self.assertIn(f"root=UUID={RESTORE} ro", restore)
+        self.assertNotIn(RESTORE, fstab)
+        with self.assertRaises(ValueError):
+            config.boot_config(ROOT, SCRATCH, EXPORT, KERNEL, EXPORT)
 
     def test_cli_never_replaces_existing_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
