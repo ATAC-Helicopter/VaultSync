@@ -382,6 +382,7 @@ Discord is never required to use VaultSync. Confirmed bugs belong on GitHub, and
 - [Open issues](https://github.com/ATAC-Helicopter/VaultSync/issues)
 - [Download history](docs/DOWNLOAD_STATS.md)
 - [Product Hunt](https://www.producthunt.com/products/vaultsync)
+- [PeerPush](https://peerpush.com/p/vaultsync)
 
 Third-party counters and graphics may be cached or temporarily unavailable.
 
