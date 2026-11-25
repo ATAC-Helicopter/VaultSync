@@ -153,7 +153,7 @@ namespace VaultSync.UI.ViewModels
                     if (ProductDiagnostics.IsBeta && !latest.IsEncrypted)
                         ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Started,
                             phase: DiagnosticPhase.Verify);
-                    VerifyResult? result = await verifyService.VerifyStoredBackupAsync(latest, backupRoot);
+                    VerifyResult? result = await verifyService.VerifyStoredBackupAsync(latest, backupRoot, CancellationToken.None);
                     if (result is null)
                     {
                         Console.WriteLine($"[Backup] Byte verification skipped for encrypted backup {latest.Id}.");
