@@ -60,14 +60,16 @@ def assemble(args) -> None:
     if sys.platform != "linux":
         raise ValueError("the disk assembler requires Linux")
     partitions = [
-        (Path("esp.fat"), "ef00", args.esp_guid, args.esp_sha256),
-        (Path("root.ext4"), "8300", args.root_guid, args.root_sha256),
+        (Path("esp.fat"), "ef00", filesystem_uuid(args.esp_guid), args.esp_sha256),
+        (Path("root.ext4"), "8300", filesystem_uuid(args.root_guid), args.root_sha256),
     ]
     if args.restore_guid is not None or args.restore_sha256 is not None:
         if args.restore_guid is None or args.restore_sha256 is None:
             raise ValueError("the restore partition needs both a GUID and a SHA-256")
-        partitions.append((Path("restore.ext4"), "8300", args.restore_guid, args.restore_sha256))
-    identifiers = [filesystem_uuid(args.disk_guid), *(filesystem_uuid(part[2]) for part in partitions)]
+        partitions.append((Path("restore.ext4"), "8300",
+                           filesystem_uuid(args.restore_guid), args.restore_sha256))
+    disk_guid = filesystem_uuid(args.disk_guid)
+    identifiers = [disk_guid, *(part[2] for part in partitions)]
     if len(set(identifiers)) != len(identifiers):
         raise ValueError("GPT identifiers must be distinct")
     if any(not re.fullmatch(r"[0-9a-f]{64}", part[3]) for part in partitions):
@@ -78,7 +80,7 @@ def assemble(args) -> None:
     with ExitStack() as stack:
         start = ESP_START
         inputs = []
-        command = ["sgdisk", "--clear", "--set-alignment=1", f"--disk-guid={args.disk_guid}"]
+        command = ["sgdisk", "--clear", "--set-alignment=1", f"--disk-guid={disk_guid}"]
         for index, (path, kind, guid, digest) in enumerate(partitions, start=1):
             source, size = stack.enter_context(open_image(path))
             if (index == 1 and size != ESP_BYTES) or not 0 < size <= MAX_ROOT_BYTES or size % SECTOR:

@@ -119,9 +119,10 @@ partition SHA-256 digests from the build record and three distinct GPT GUIDs
 for the disk and its partitions. These GUIDs are separate from the filesystem
 UUIDs in the boot configuration. Record the input hashes, GUIDs and version of
 the pinned `sgdisk` binary used by the builder. The assembler refuses mismatched
-inputs and only exposes the new image after both payloads and the partition
-table have been written. The EFI partition must already contain the removable
-x64 UEFI loader configured for the chosen root filesystem.
+inputs and passes only parsed, canonical GPT UUIDs to `sgdisk`. It exposes the
+new image after the payloads and partition table have been written. The EFI
+partition must already contain the removable x64 UEFI loader configured for
+the chosen root filesystem.
 
 The x64 Debian recipe is in `packaging/recovery/Debian.Containerfile`. Build
 it rootless with Podman, with pulling disabled after resolving its pinned base
