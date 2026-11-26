@@ -23,13 +23,15 @@ catalog.
 Expand **Show offline steps** for UEFI recovery media, image capture to a
 different physical drive, destination checks and post-restore read-back and
 boot checks.
-On Linux x64, **Prepare recovery USB** writes a preassembled VaultSync UEFI
-image from a trusted source to a dedicated USB drive. It requires UDisks2 with
-an authorization agent, `sgdisk` from GPT fdisk, and the expected SHA-256 from
-the image's trusted build record. Select an unmounted USB drive, check its
-model, serial number and capacity, and type its displayed device path. A larger
-drive gets a relocated backup GPT. The desktop flushes the write and reads back
-the full drive before reporting success.
+On Linux and Windows x64, **Prepare recovery USB** writes a preassembled
+VaultSync UEFI image to a dedicated USB drive with 512-byte logical sectors.
+Supply the expected SHA-256 from the image’s trusted build record. Review the
+drive model, serial number and capacity, then type the displayed device path.
+Linux requires UDisks2 with an authorization agent, GPT fdisk and an unmounted
+drive. On Windows, accept the administrator prompt and close programs using the
+drive. The writer requires identifiable USB hardware and exclusive access to its
+volumes. A larger drive gets a relocated backup GPT. The desktop flushes the
+write and reads back the full drive before reporting success.
 System disk capture and restore run in the independent recovery environment.
 
 The installed recovery controller and capture console currently run in a

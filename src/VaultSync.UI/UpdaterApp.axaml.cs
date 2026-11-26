@@ -12,6 +12,8 @@ public sealed partial class UpdaterApp : Application
 {
     private static readonly IAppConfigStore ConfigStore = StaticAppConfigStore.Instance;
 
+    internal static string? RecoveryUsbLanguage { get; set; }
+
     public static PatchApplyRequest? PendingRequest { get; private set; }
 
     public static void SetPendingRequest(PatchApplyRequest request)
@@ -28,6 +30,17 @@ public sealed partial class UpdaterApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            if (RecoveryUsbLanguage is { } language)
+            {
+                var localization = new LocalizationService();
+                if (language.Length == 2 && char.IsAsciiLetterLower(language[0]) && char.IsAsciiLetterLower(language[1]))
+                    localization.SetLanguage(language);
+                LocalizationProvider.Initialize(localization);
+                desktop.MainWindow = new RecoveryUsbWindow();
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             PatchApplyRequest? request = PendingRequest;
             if (request is null)
             {

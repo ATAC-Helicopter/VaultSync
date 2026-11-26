@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "復旧メディアの準備、書き込み、検証中…",
   "DiskRecovery.Usb.Done": "復旧メディアへの書き込みと検証が完了しました。",
   "DiskRecovery.Usb.Failed": "USB の準備に失敗しました。イメージ、SHA-256、権限を確認してください。書き込みが始まっていた場合はドライブが変更された可能性があります。",
+  "DiskRecovery.Usb.NoWindowsDevices": "使用できる USB ドライブがありません。ドライブ上のファイルを閉じ、一覧を更新してください。",
   "DiskRecovery.Usb.NoDevices": "適合するドライブがありません。UDisks2 と sgdisk を確認し、USB をアンマウントしてください。",
   "DiskRecovery.Boundary": "復旧環境でイメージを検証し、復元先の確認を求めます。",
   "Recovery.Console.Title": "ディスク全体の上書きを確認",

@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Herstelmedium voorbereiden, schrijven en controleren…",
   "DiskRecovery.Usb.Done": "Herstelmedium geschreven en gecontroleerd.",
   "DiskRecovery.Usb.Failed": "USB voorbereiden mislukt. Controleer de image, SHA-256 en rechten. Een begonnen schrijfactie kan de schijf hebben gewijzigd.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Geen geschikte USB-schijf. Sluit geopende bestanden op de schijf en vernieuw de lijst.",
   "DiskRecovery.Usb.NoDevices": "Geen geschikte schijf. Controleer UDisks2, sgdisk en of de USB-schijf is ontkoppeld.",
   "DiskRecovery.Boundary": "De herstelomgeving verifieert de schijfkopie en vraagt om bevestiging van het doel.",
   "Recovery.Console.Title": "Volledig overschrijven van schijf bevestigen",

@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Przygotowywanie, zapisywanie i weryfikowanie nośnika…",
   "DiskRecovery.Usb.Done": "Zapisano i zweryfikowano nośnik odzyskiwania.",
   "DiskRecovery.Usb.Failed": "Nie udało się przygotować USB. Sprawdź obraz, SHA-256 i uprawnienia. Rozpoczęty zapis mógł zmienić nośnik.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Brak odpowiedniego dysku USB. Zamknij otwarte pliki na dysku i odśwież listę.",
   "DiskRecovery.Usb.NoDevices": "Brak odpowiedniego nośnika. Sprawdź UDisks2, sgdisk i czy napęd USB jest odmontowany.",
   "DiskRecovery.Boundary": "Środowisko odzyskiwania weryfikuje obraz i prosi o potwierdzenie dysku docelowego.",
   "Recovery.Console.Title": "Potwierdź całkowite nadpisanie dysku",

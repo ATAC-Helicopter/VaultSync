@@ -1,4 +1,7 @@
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -19,9 +22,27 @@ public partial class DiskRecoveryView : UserControl
     private void PrepareUsb(object? sender, RoutedEventArgs args) =>
         _ = DetachedTask.RunAsync(async () =>
         {
-            if (DataContext is DiskRecoveryViewModel { CanPrepareUsb: true } &&
-                TopLevel.GetTopLevel(this) is Window owner)
+            if (DataContext is not DiskRecoveryViewModel { CanPrepareUsb: true }) return;
+            if (OperatingSystem.IsWindows())
+            {
+                var executable = Environment.ProcessPath;
+                if (executable is null || !Path.GetFileName(executable).Equals("VaultSync.UI.exe", StringComparison.OrdinalIgnoreCase))
+                    return;
+                var launch = new ProcessStartInfo(executable)
+                {
+                    UseShellExecute = true,
+                    Verb = "runas",
+                    WorkingDirectory = AppContext.BaseDirectory
+                };
+                launch.ArgumentList.Add(Program.PrepareRecoveryUsbArgument);
+                launch.ArgumentList.Add(LocalizationProvider.Service?.CurrentLanguage ?? "en");
+                try { using var child = Process.Start(launch); }
+                catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { }
+            }
+            else if (TopLevel.GetTopLevel(this) is Window owner)
+            {
                 await new RecoveryUsbWindow().ShowDialog(owner);
+            }
         }, "prepare-recovery-usb");
 
     private void ChooseImage(object? sender, RoutedEventArgs args) =>

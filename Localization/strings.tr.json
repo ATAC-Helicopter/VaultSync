@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Kurtarma ortamı hazırlanıyor, yazılıyor ve doğrulanıyor…",
   "DiskRecovery.Usb.Done": "Kurtarma ortamı yazıldı ve doğrulandı.",
   "DiskRecovery.Usb.Failed": "USB hazırlanamadı. Kalıbı, SHA-256 değerini ve izinleri kontrol edin. Yazma başladıysa sürücü değişmiş olabilir.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Uygun USB sürücüsü bulunamadı. Sürücüde açık dosyaları kapatıp listeyi yenileyin.",
   "DiskRecovery.Usb.NoDevices": "Uygun sürücü yok. UDisks2 ve sgdisk’i kontrol edin, USB sürücüsünü ayırın.",
   "DiskRecovery.Boundary": "Kurtarma ortamı kalıbı doğrular ve hedefi onaylamanızı ister.",
   "Recovery.Console.Title": "Diskin tamamen üzerine yazılmasını onayla",

@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Menyiapkan, menulis, dan memverifikasi media…",
   "DiskRecovery.Usb.Done": "Media pemulihan telah ditulis dan diverifikasi.",
   "DiskRecovery.Usb.Failed": "USB gagal disiapkan. Periksa citra, SHA-256, dan izin. Drive mungkin berubah jika penulisan sudah dimulai.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Tidak ada drive USB yang memenuhi syarat. Tutup file yang terbuka di drive lalu perbarui daftar.",
   "DiskRecovery.Usb.NoDevices": "Tidak ada drive yang memenuhi syarat. Periksa UDisks2, sgdisk, dan pastikan drive USB sudah dilepas kaitannya.",
   "DiskRecovery.Boundary": "Lingkungan pemulihan memverifikasi citra dan meminta konfirmasi disk tujuan.",
   "Recovery.Console.Title": "Konfirmasi penimpaan seluruh disk",

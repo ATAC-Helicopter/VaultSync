@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "正在准备、写入并验证恢复介质…",
   "DiskRecovery.Usb.Done": "恢复介质已写入并通过验证。",
   "DiskRecovery.Usb.Failed": "准备 USB 失败。请检查映像、SHA-256 和权限。如果写入已经开始，设备可能已被更改。",
+  "DiskRecovery.Usb.NoWindowsDevices": "没有符合条件的 USB 驱动器。请关闭该驱动器上已打开的文件并刷新列表。",
   "DiskRecovery.Usb.NoDevices": "没有符合条件的设备。请检查 UDisks2、sgdisk，并确认 USB 设备已卸载。",
   "DiskRecovery.Boundary": "恢复环境会验证映像并要求确认目标磁盘。",
   "Recovery.Console.Title": "确认覆盖整个磁盘",

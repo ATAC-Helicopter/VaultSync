@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "복구 미디어를 준비하고 쓰기 및 검증 중…",
   "DiskRecovery.Usb.Done": "복구 미디어 쓰기 및 검증을 완료했습니다.",
   "DiskRecovery.Usb.Failed": "USB를 준비하지 못했습니다. 이미지, SHA-256 및 권한을 확인하세요. 쓰기가 시작됐다면 드라이브가 변경됐을 수 있습니다.",
+  "DiskRecovery.Usb.NoWindowsDevices": "사용할 수 있는 USB 드라이브가 없습니다. 드라이브에서 열린 파일을 닫고 목록을 새로 고치세요.",
   "DiskRecovery.Usb.NoDevices": "사용 가능한 드라이브가 없습니다. UDisks2, sgdisk와 USB 마운트 해제 상태를 확인하세요.",
   "DiskRecovery.Boundary": "복구 환경에서 이미지를 검증하고 대상 디스크 확인을 요청합니다.",
   "Recovery.Console.Title": "디스크 전체 덮어쓰기 확인",

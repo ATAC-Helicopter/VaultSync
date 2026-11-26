@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Đang chuẩn bị, ghi và xác minh phương tiện phục hồi…",
   "DiskRecovery.Usb.Done": "Đã ghi và xác minh phương tiện phục hồi.",
   "DiskRecovery.Usb.Failed": "Không thể chuẩn bị USB. Kiểm tra ảnh, SHA-256 và quyền. Nếu đã bắt đầu ghi, ổ có thể đã thay đổi.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Không tìm thấy ổ USB phù hợp. Đóng các tệp đang mở trên ổ rồi làm mới danh sách.",
   "DiskRecovery.Usb.NoDevices": "Không có ổ phù hợp. Kiểm tra UDisks2, sgdisk và bảo đảm USB đã được tháo gắn kết.",
   "DiskRecovery.Boundary": "Môi trường phục hồi xác minh ảnh và yêu cầu xác nhận ổ đĩa đích.",
   "Recovery.Console.Title": "Xác nhận ghi đè toàn bộ ổ đĩa",

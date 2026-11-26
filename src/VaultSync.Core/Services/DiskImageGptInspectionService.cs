@@ -162,4 +162,55 @@ public static class DiskImageGptInspectionService
         }
         return ~value;
     }
+
+    /// <summary>Relocates the backup GPT in a private staging file for a larger 512-byte-sector USB disk.</summary>
+    public static async Task ResizeRecoveryUsbImageAsync(FileStream staging, long capacity, CancellationToken token)
+    {
+        const int sector = 512;
+        const int tableBytes = 128 * EntryBytes;
+        var efi = new Guid("c12a7328-f81f-11d2-ba4b-00a0c93ec93b");
+        var linux = new Guid("0fc63daf-8483-4772-8e79-3d69d8477de4");
+        long original = staging.Length;
+        if (capacity < original || capacity % sector != 0)
+            throw new InvalidDataException("recovery-usb.geometry");
+        var result = await InspectAsync(staging, (ulong)original, sector, token).ConfigureAwait(false);
+        if (result.Layout is not { } layout || !layout.Partitions.Any(p => p.TypeId == efi) ||
+            !layout.Partitions.Any(p => p.TypeId == linux))
+            throw new InvalidDataException("recovery-usb.gpt");
+        if (capacity == original) return;
+
+        var primary = await ReadAtAsync(staging, sector, sector, token).ConfigureAwait(false);
+        var backup = await ReadAtAsync(staging, (ulong)(original - sector), sector, token).ConfigureAwait(false);
+        var mbr = await ReadAtAsync(staging, 0, sector, token).ConfigureAwait(false);
+        ulong previousLast = (ulong)(original / sector - 1), newLast = (ulong)(capacity / sector - 1);
+        if (U32(primary, 80) != 128 || U64(backup, 72) != previousLast - tableBytes / sector ||
+            layout.LastUsableLba >= previousLast - tableBytes / sector)
+            throw new InvalidDataException("recovery-usb.gpt-layout");
+        ulong backupTable = newLast - tableBytes / sector;
+        var entries = await ReadAtAsync(staging, U64(backup, 72) * sector, tableBytes, token).ConfigureAwait(false);
+        BinaryPrimitives.WriteUInt32LittleEndian(mbr.AsSpan(458), (uint)Math.Min(newLast, uint.MaxValue));
+        PatchHeader(primary, 1, newLast, backupTable - 1, U64(primary, 72));
+        PatchHeader(backup, newLast, 1, backupTable - 1, backupTable);
+        staging.SetLength(capacity);
+        staging.Position = original - tableBytes - sector;
+        await staging.WriteAsync(new byte[tableBytes + sector], token).ConfigureAwait(false);
+        staging.Position = 0;
+        await staging.WriteAsync(mbr, token).ConfigureAwait(false);
+        await staging.WriteAsync(primary, token).ConfigureAwait(false);
+        staging.Position = (long)(backupTable * sector);
+        await staging.WriteAsync(entries, token).ConfigureAwait(false);
+        await staging.WriteAsync(backup, token).ConfigureAwait(false);
+        if ((await InspectAsync(staging, (ulong)capacity, sector, token).ConfigureAwait(false)).Layout is null)
+            throw new InvalidDataException("recovery-usb.relocated-gpt");
+    }
+
+    private static void PatchHeader(byte[] header, ulong current, ulong alternate, ulong lastUsable, ulong table)
+    {
+        BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(24), current);
+        BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(32), alternate);
+        BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(48), lastUsable);
+        BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(72), table);
+        header.AsSpan(16, 4).Clear();
+        BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(16), Crc32(header.AsSpan(0, HeaderBytes)));
+    }
 }

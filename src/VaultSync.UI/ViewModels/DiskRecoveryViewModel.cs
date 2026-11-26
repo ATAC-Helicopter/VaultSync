@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -34,8 +35,9 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     public RelayCommand CancelCommand { get; }
     public AsyncRelayCommand PrepareRestoreCommand { get; }
     public bool Supported => OperatingSystem.IsLinux() &&
-        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
-    public bool CanPrepareUsb => Supported;
+        RuntimeInformation.ProcessArchitecture == Architecture.X64;
+    public bool CanPrepareUsb => LinuxRecoveryUsbMedia.Supported ||
+        (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64);
     public bool IsBusy => _inspection is not null;
     public bool CanChoose => !IsBusy && !_checkingFolder && !_savingRestore;
     public bool CanVerify => Supported && _hasImageFiles && CanChoose;

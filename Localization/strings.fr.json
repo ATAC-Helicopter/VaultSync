@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Préparation, écriture et vérification du support…",
   "DiskRecovery.Usb.Done": "Support de récupération écrit et vérifié.",
   "DiskRecovery.Usb.Failed": "Échec de la préparation. Vérifiez l’image, le SHA-256 et les droits. Une écriture commencée a pu modifier le lecteur.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Aucun lecteur USB compatible. Fermez les fichiers ouverts sur le lecteur et actualisez la liste.",
   "DiskRecovery.Usb.NoDevices": "Aucun lecteur éligible. Vérifiez UDisks2, sgdisk et que la clé est démontée.",
   "DiskRecovery.Boundary": "L’environnement de récupération vérifie l’image et vous demande de confirmer la destination.",
   "Recovery.Console.Title": "Confirmer l’écrasement complet du disque",

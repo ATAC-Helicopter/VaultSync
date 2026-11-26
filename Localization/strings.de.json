@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Rettungsmedium wird vorbereitet, beschrieben und geprüft…",
   "DiskRecovery.Usb.Done": "Rettungsmedium geschrieben und geprüft.",
   "DiskRecovery.Usb.Failed": "USB-Vorbereitung fehlgeschlagen. Prüfe Abbild, SHA-256 und Berechtigungen. Ein begonnener Schreibvorgang kann das Laufwerk verändert haben.",
+  "DiskRecovery.Usb.NoWindowsDevices": "Kein geeignetes USB-Laufwerk. Schließe geöffnete Dateien auf dem Laufwerk und aktualisiere die Liste.",
   "DiskRecovery.Usb.NoDevices": "Kein geeignetes Laufwerk. Prüfe UDisks2, sgdisk und ob das USB-Laufwerk ausgehängt ist.",
   "DiskRecovery.Boundary": "Die Rettungsumgebung prüft das Abbild und fordert eine Bestätigung des Ziels an.",
   "Recovery.Console.Title": "Vollständiges Überschreiben des Datenträgers bestätigen",

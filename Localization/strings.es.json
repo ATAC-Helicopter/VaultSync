@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Preparando, escribiendo y verificando el medio…",
   "DiskRecovery.Usb.Done": "Medio de recuperación escrito y verificado.",
   "DiskRecovery.Usb.Failed": "No se pudo preparar el USB. Comprueba la imagen, el SHA-256 y los permisos. Si empezó la escritura, la unidad puede haber cambiado.",
+  "DiskRecovery.Usb.NoWindowsDevices": "No hay unidades USB aptas. Cierra los archivos abiertos en la unidad y actualiza la lista.",
   "DiskRecovery.Usb.NoDevices": "No hay unidades aptas. Comprueba UDisks2, sgdisk y que la unidad USB esté desmontada.",
   "DiskRecovery.Boundary": "El entorno de recuperación verifica la imagen y solicita confirmar el destino.",
   "Recovery.Console.Title": "Confirmar la sobrescritura completa del disco",

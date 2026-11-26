@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "Preparing, writing and verifying the recovery media…",
   "DiskRecovery.Usb.Done": "Recovery media written and verified.",
   "DiskRecovery.Usb.Failed": "USB preparation failed. Check the image, SHA-256 and permissions. A write that started may have changed the drive.",
+  "DiskRecovery.Usb.NoWindowsDevices": "No eligible USB drive. Close any files open on the drive and refresh the list.",
   "DiskRecovery.Usb.NoDevices": "No eligible drive available. Check UDisks2, sgdisk and that the USB drive is unmounted.",
   "DiskRecovery.Boundary": "The recovery environment verifies the image and asks you to confirm the destination.",
   "Recovery.Console.Title": "Confirm full disk overwrite",

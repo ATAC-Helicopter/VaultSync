@@ -33,7 +33,8 @@ internal sealed class RecoveryUsbWindow : Window
         Title = Text("Title");
         Width = 620;
         SizeToContent = SizeToContent.Height;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        WindowStartupLocation = OperatingSystem.IsWindows()
+            ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner;
         _imageButton.Content = Text("Choose");
         _refresh.Content = Text("Refresh");
         _write.Content = Text("Write");
@@ -113,20 +114,17 @@ internal sealed class RecoveryUsbWindow : Window
     {
         _disks.SelectedItem = null;
         _disks.ItemsSource = null;
-        if (!LinuxRecoveryUsbMedia.Supported)
-        {
-            _status.Text = Text("NoDevices");
-            return;
-        }
-        var disks = await LinuxRecoveryUsbDevices.ListAsync(token);
+        System.Collections.Generic.IReadOnlyList<object> disks = OperatingSystem.IsWindows()
+            ? await WindowsRecoveryUsbDevices.ListAsync(token)
+            : await LinuxRecoveryUsbDevices.ListAsync(token);
         _disks.ItemsSource = disks;
-        _status.Text = disks.Count == 0 ? Text("NoDevices") : "";
+        _status.Text = disks.Count == 0 ? NoDevices : "";
     }, false);
 
     private Task WriteAsync()
     {
         if (!Ready || _image is not { } image || _digest.Text is not { } digest ||
-            _disks.SelectedItem is not LinuxRecoveryUsbDevices.Target target) return Task.CompletedTask;
+            _disks.SelectedItem is not { } target) return Task.CompletedTask;
 
         return OperateAsync(async token =>
         {
@@ -134,8 +132,13 @@ internal sealed class RecoveryUsbWindow : Window
             _progress.Value = 0;
             _progress.IsVisible = true;
             var progress = new Progress<double>(value => _progress.Value = value);
-            await LinuxRecoveryUsbMedia.WriteAsync(image, digest, target.Disk,
-                (_, cancellation) => LinuxRecoveryUsbDevices.OpenAsync(target, cancellation), progress, token);
+            if (OperatingSystem.IsWindows() && target is WindowsRecoveryUsbDevices.Target windows)
+                await WindowsRecoveryUsbDevices.WriteAsync(windows, image, digest, progress, token);
+            else if (target is LinuxRecoveryUsbDevices.Target linux)
+                await LinuxRecoveryUsbMedia.WriteAsync(image, digest, linux.Disk,
+                    (_, cancellation) => LinuxRecoveryUsbDevices.OpenAsync(linux, cancellation), progress, token);
+            else
+                throw new System.IO.IOException("recovery-usb.invalid-target");
             _status.Text = Text("Done");
         }, true);
     }
@@ -157,7 +160,7 @@ internal sealed class RecoveryUsbWindow : Window
             System.IO.InvalidDataException or TimeoutException or Tmds.DBus.Protocol.DBusExceptionBase or
             InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            _status.Text = Text(write ? "Failed" : "NoDevices");
+            _status.Text = write ? Text("Failed") : NoDevices;
         }
         finally
         {
@@ -173,9 +176,17 @@ internal sealed class RecoveryUsbWindow : Window
         }
     }
 
+    private string? SelectedPath => _disks.SelectedItem switch
+    {
+        WindowsRecoveryUsbDevices.Target target when OperatingSystem.IsWindows() => target.KernelPath,
+        LinuxRecoveryUsbDevices.Target target => target.KernelPath,
+        _ => null
+    };
+
+    private string NoDevices => Text(OperatingSystem.IsWindows() ? "NoWindowsDevices" : "NoDevices");
+
     private bool Ready => _image is not null && _digest.Text is { Length: 64 } hash &&
-        hash.All(char.IsAsciiHexDigit) && _disks.SelectedItem is LinuxRecoveryUsbDevices.Target target &&
-        _confirmation.Text == target.KernelPath;
+        hash.All(char.IsAsciiHexDigit) && SelectedPath is { } path && _confirmation.Text == path;
 
     private void UpdateButtons()
     {

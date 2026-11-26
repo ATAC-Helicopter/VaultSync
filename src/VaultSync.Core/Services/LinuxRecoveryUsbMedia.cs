@@ -60,32 +60,8 @@ public static class LinuxRecoveryUsbMedia
             await RecheckAsync(reviewed, token).ConfigureAwait(false);
             CheckTarget(target, native, reviewed);
 
-            var buffer = new byte[BufferBytes];
-            for (long written = 0; written < source.Length;)
-            {
-                token.ThrowIfCancellationRequested();
-                int count = (int)Math.Min(buffer.Length, source.Length - written);
-                await source.ReadExactlyAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
-                await RandomAccess.WriteAsync(target, buffer.AsMemory(0, count), written, token).ConfigureAwait(false);
-                written += count;
-                progress.Report(0.5 * written / source.Length);
-            }
-            RandomAccess.FlushToDisk(target);
-            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            for (long read = 0; read < source.Length;)
-            {
-                token.ThrowIfCancellationRequested();
-                int count = (int)Math.Min(buffer.Length, source.Length - read);
-                int received = await RandomAccess.ReadAsync(target, buffer.AsMemory(0, count), read, token)
-                    .ConfigureAwait(false);
-                if (received == 0) throw new IOException("recovery-usb.short-read");
-                hash.AppendData(buffer, 0, received);
-                read += received;
-                progress.Report(0.5 + 0.5 * read / source.Length);
-            }
+            await RecoveryUsbImageWriter.WriteAndVerifyAsync(source, target, digest, progress, token).ConfigureAwait(false);
             CheckTarget(target, native, reviewed);
-            if (!CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), digest))
-                throw new IOException("recovery-usb.readback");
         }
         finally { workspace.Delete(recursive: true); }
     }

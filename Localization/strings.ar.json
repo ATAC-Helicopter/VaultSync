@@ -2021,6 +2021,7 @@
   "DiskRecovery.Usb.Working": "جارٍ تحضير وسيط الاسترداد والكتابة عليه والتحقّق منه…",
   "DiskRecovery.Usb.Done": "تمت كتابة وسيط الاسترداد والتحقّق منه.",
   "DiskRecovery.Usb.Failed": "تعذّر تحضير USB. تحقّق من الصورة وSHA-256 والأذونات. ربما تغيّرت الوحدة إذا بدأت الكتابة.",
+  "DiskRecovery.Usb.NoWindowsDevices": "لا يوجد محرك USB مؤهل. أغلق الملفات المفتوحة على المحرك وحدّث القائمة.",
   "DiskRecovery.Usb.NoDevices": "لا توجد وحدة مؤهلة. تحقّق من UDisks2 وsgdisk ومن إلغاء تحميل وحدة USB.",
   "DiskRecovery.Boundary": "تتحقّق بيئة الاسترداد من الصورة وتطلب منك تأكيد القرص الهدف.",
   "Recovery.Console.Title": "تأكيد الكتابة فوق القرص بالكامل",
