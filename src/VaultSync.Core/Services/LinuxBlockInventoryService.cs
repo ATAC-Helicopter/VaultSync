@@ -277,7 +277,10 @@ public static class LinuxBlockInventoryService
         var result = new List<string>();
         foreach (var entry in new[] { ("/wwid", "wwid:"), ("/device/wwid", "wwid:"), ("/serial", "serial:"), ("/device/serial", "serial:") })
         {
-            string? text = await reader.Optional(path + entry.Item1, 256).ConfigureAwait(false);
+            string? text;
+            try { text = await reader.Optional(path + entry.Item1, 256).ConfigureAwait(false); }
+            // Some USB/SCSI drivers expose a WWID attribute without providing an identifier.
+            catch (IOException error) when (error.HResult is 6 or unchecked((int)0x80070006)) { continue; }
             if (text is null)
                 continue;
             text = text.Trim(' ');

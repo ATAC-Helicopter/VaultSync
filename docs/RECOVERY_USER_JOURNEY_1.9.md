@@ -13,11 +13,26 @@ On Linux x64, open the individual exported image folder that contains both
 `image.metadata` and `payload.raw`. The page reports missing files before
 enabling read-only verification of the image contents and layout. Windows and
 macOS users can view the offline steps and use Linux x64 for verification.
+After verifying a VaultSync export, select **Prepare offline restore** while
+the export volume is writable. Boot the VaultSync recovery medium with that
+same export volume attached and choose **Restore disk image**. The wizard
+highlights the matching catalog entry so you can review it and continue.
+If the volume is read-only or the desktop user cannot save the selection,
+match the first eight characters of the displayed image ID in the offline
+catalog.
 Expand **Show offline steps** for UEFI recovery media, image capture to a
 different physical drive, destination checks and post-restore read-back and
 boot checks.
-Capture, media preparation and destination writes require the separate recovery
-environment.
+On Linux and Windows x64, **Prepare recovery USB** writes a preassembled
+VaultSync UEFI image to a dedicated USB drive with 512-byte logical sectors.
+Supply the expected SHA-256 from the image’s trusted build record. Review the
+drive model, serial number and capacity, then type the displayed device path.
+Linux requires UDisks2 with an authorization agent, GPT fdisk and an unmounted
+drive. On Windows, accept the administrator prompt and close programs using the
+drive. The writer requires identifiable USB hardware and exclusive access to its
+volumes. A larger drive gets a relocated backup GPT. The desktop flushes the
+write and reads back the full drive before reporting success.
+System disk capture and restore run in the independent recovery environment.
 
 The installed recovery controller and capture console currently run in a
 separately assembled Linux recovery installation. Capture uses the physical
@@ -37,9 +52,10 @@ The desktop should guide three clearly separated tasks:
    select a source and storage, prepare the recovery environment, capture and
    verify the image, and show its result and how to use it. The initial full raw
    image includes unused sectors and potentially deleted data.
-2. **Prepare recovery media.** Choose a disposable removable device with an
-   explicit erase review, produce and verify a bootable package, and explain how
-   to boot it. Media creation and its platform/firmware qualification remain open.
+2. **Prepare recovery media.** The Linux x64 writer accepts a preassembled
+   recovery image and requires an explicit erase review. The image build still
+   binds the scratch and export volume UUIDs. Distribution of a ready-to-use
+   bootable package and platform/firmware qualification remain open.
 3. **Restore a disk.** Discover available recovery copies, select and verify one,
    choose the actual destination, show what will be overwritten, obtain fresh
    physical confirmation, restore with visible progress, verify the result and
@@ -58,13 +74,14 @@ independent environment. It still requires that environment; a reboot does not
 make overwriting the live system disk safe. Current capture/restore contracts
 require offline, unmounted devices and independent boot admission.
 
-Automatic boot selection and a durable desktop-to-recovery intent handoff are
-not implemented. Their per-platform boot, signing and recovery contracts need
-implementation and measurement before enabling them. A prepared plan may help
-select an image after boot, but must never transfer disk-write authority: image,
-device identity, current observations and physical overwrite consent are checked
-again in recovery. Retain an independently bootable recovery path when the
-installed OS or application cannot start.
+The desktop writes the verified image ID to `.vaultsync-handoff/restore-image`
+on the export volume. A new capture provisions this directory for members of
+the export group. The offline wizard only uses the hint when
+the exact ID matches an admitted catalog entry. Continue runs the independent
+image verification. Recovery still requires current destination observations
+and physical overwrite confirmation. An absent or unusable hint leaves the
+normal image picker available. Boot selection remains manual and the recovery
+medium can boot independently when the installed OS or application cannot start.
 
 Do not promise that the entire operation is applied silently at restart. The
 user must see the fresh destination review before a destructive operation.

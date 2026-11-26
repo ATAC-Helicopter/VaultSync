@@ -112,9 +112,12 @@ internal static class LinuxRecoveryCaptureExport
             if (!Private(originalState) || !ExportRoot(exportState) || !LinuxRecoveryNative.Ext4(original) || !LinuxRecoveryNative.Ext4(exports) ||
                 !LinuxCaptureRepositoryAdmission.Allows(expected, fresh, sourceName, Device(originalState)) ||
                 !LinuxCaptureRepositoryAdmission.Allows(expected, fresh, sourceName, Device(exportState))) throw Refused();
-            if (Directory.EnumerateFileSystemEntries(Root).Take(17).Count() >= 16) throw Refused();
+            if (Directory.EnumerateFileSystemEntries(Root)
+                .Where(path => Path.GetFileName(path) != DiskRecoveryRestoreRequest.DirectoryName)
+                .Take(16).Count() >= 16) throw Refused();
             ulong required = checked(capacity + DiskImageRawProfileVerificationService.MaximumMetadataBytes);
             if (!Space(original, SameDevice(originalState, exportState) ? checked(required * 2) : required) || !Space(exports, required)) throw Refused();
+            PrepareHandoff(exports);
             string temporary = ".vaultsync-export-incomplete-" + Guid.NewGuid().ToString("N");
             LinuxRecoveryNative.MakeDirectory(exports, temporary);
             string path = Root + "/" + temporary;
@@ -131,6 +134,23 @@ internal static class LinuxRecoveryCaptureExport
         {
             if (storage is not null) storage.DisposeAsync().AsTask().GetAwaiter().GetResult();
             workspace?.Dispose(); exports?.Dispose(); original?.Dispose();
+        }
+    }
+
+    private static void PrepareHandoff(SafeFileHandle exports)
+    {
+        try
+        {
+            // Only the advisory request directory is writable by the export group.
+            LinuxRecoveryNative.MakeDirectory(exports, DiskRecoveryRestoreRequest.DirectoryName);
+            using var handoff = LinuxRecoveryNative.OpenDirectory(Root + "/" + DiskRecoveryRestoreRequest.DirectoryName, false);
+            LinuxRecoveryNative.SetGroup(handoff, ControllerGroup, 0x5f8); // 02770
+            LinuxRecoveryNative.Sync(handoff);
+            LinuxRecoveryNative.Sync(exports);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            // Older or read-only handoff directories leave the ordinary picker available.
         }
     }
 

@@ -257,7 +257,7 @@ public sealed class RecoveryControllerPresentationTests
         }, CancellationToken.None);
     }
     [Fact]
-    public async Task Catalog_selection_needs_no_typed_path_and_survives_language_change()
+    public async Task Desktop_suggestion_requires_continue_and_survives_language_change()
     {
         using var session = HeadlessUnitTestSession.StartNew(typeof(RecoveryApp));
         await session.Dispatch(async () =>
@@ -265,11 +265,10 @@ public sealed class RecoveryControllerPresentationTests
             var window = new RecoveryWindow(); window.Show();
             string name = Guid.NewGuid().ToString("N");
             window.ViewModel.CatalogLoader = _ => Task.FromResult(new LinuxRecoveryImageCatalog.Result(
-                LinuxRecoveryImageCatalog.State.Available, [new(name, 1234432)]));
+                LinuxRecoveryImageCatalog.State.Available, [new(name, 1234432)], name));
             var choice = window.ViewModel.ChooseImageFolderAsync(Guid.NewGuid(), CancellationToken.None);
             await Flush();
             var list = window.FindControl<ListBox>("Images")!;
-            list.SelectedIndex = 0;
             var selected = list.SelectedItem;
             Assert.NotNull(selected);
             Assert.Contains(name[..8], Label(selected));

@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -18,24 +19,38 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     private DiskImageInspectionResult? _receipt;
     private bool _checkingFolder;
     private bool _hasImageFiles;
+    private bool _savingRestore;
+    private string? _restoreStatusKey;
 
     public DiskRecoveryViewModel()
     {
         VerifyCommand = new AsyncRelayCommand(_ => VerifyAsync(), _ => CanVerify,
             "inspect-recovery-image");
         CancelCommand = new RelayCommand(_ => _inspection?.Cancel(), _ => IsBusy);
+        PrepareRestoreCommand = new AsyncRelayCommand(_ => PrepareRestoreAsync(), _ => CanPrepareRestore,
+            "prepare-offline-restore");
     }
 
     public AsyncRelayCommand VerifyCommand { get; }
     public RelayCommand CancelCommand { get; }
+    public AsyncRelayCommand PrepareRestoreCommand { get; }
     public bool Supported => OperatingSystem.IsLinux() &&
-        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
+        RuntimeInformation.ProcessArchitecture == Architecture.X64;
+    public bool CanPrepareUsb { get; } = LinuxRecoveryUsbMedia.Supported ||
+        (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64);
     public bool IsBusy => _inspection is not null;
-    public bool CanChoose => !IsBusy && !_checkingFolder;
+    public bool CanChoose => !IsBusy && !_checkingFolder && !_savingRestore;
     public bool CanVerify => Supported && _hasImageFiles && CanChoose;
     public bool HasFolder => _folder is not null;
     public bool HasImageFiles => _hasImageFiles;
     public string Folder => _folder ?? string.Empty;
+    public bool CanPrepareRestore => CanChoose && HasVerifiedExport;
+    public bool HasVerifiedExport => _folder is { } folder &&
+        _receipt is { State: DiskImageInspectionState.Verified } receipt &&
+        DiskRecoveryRestoreRequest.CanSave(folder, receipt.ImageId);
+    public string RestoreImageId => _receipt is { ImageId: var id } && id != Guid.Empty ? id.ToString("N") : string.Empty;
+    public bool HasRestoreStatus => _restoreStatusKey is not null;
+    public string RestoreStatus => _restoreStatusKey is { } key ? Text(key) : string.Empty;
     public string Status
     {
         get
@@ -55,6 +70,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         _hasImageFiles = false;
         _folder = folder;
         _receipt = null;
+        _restoreStatusKey = null;
         _statusKey = "DiskRecovery.Choose";
         Refresh();
         try
@@ -87,7 +103,33 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     }
 
     public void Cancel() => _inspection?.Cancel();
-    public void ReapplyLocalization() => OnPropertyChanged(nameof(Status));
+    public void ReapplyLocalization()
+    {
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(RestoreStatus));
+    }
+
+    private async Task PrepareRestoreAsync()
+    {
+        if (!CanPrepareRestore || _folder is not { } folder || _receipt is not { } receipt) return;
+        _savingRestore = true;
+        _restoreStatusKey = null;
+        Refresh();
+        try
+        {
+            await Task.Run(() => DiskRecoveryRestoreRequest.Save(folder, receipt.ImageId), CancellationToken.None);
+            _restoreStatusKey = "DiskRecovery.RestorePrepared";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            _restoreStatusKey = "DiskRecovery.RestorePrepareFailed";
+        }
+        finally
+        {
+            _savingRestore = false;
+            Refresh();
+        }
+    }
 
     private async Task VerifyAsync()
     {
@@ -95,6 +137,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         using var cancellation = new CancellationTokenSource();
         _inspection = cancellation;
         _receipt = null;
+        _restoreStatusKey = null;
         _statusKey = "DiskRecovery.Checking";
         await Dispatcher.UIThread.InvokeAsync(Refresh);
         try
@@ -147,5 +190,6 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         OnPropertyChanged(string.Empty);
         VerifyCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
+        PrepareRestoreCommand.RaiseCanExecuteChanged();
     }
 }

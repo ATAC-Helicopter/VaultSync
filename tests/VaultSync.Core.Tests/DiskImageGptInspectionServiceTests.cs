@@ -25,6 +25,8 @@ public sealed class DiskImageGptInspectionServiceTests
         await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "disk-gpt-v1.json")),
         new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!).Single(fixture => fixture.Sector == sector);
 
+    internal static async Task<byte[]> GoldenRecoveryUsbImageAsync() => Raw(await FixtureAsync(512));
+
     private static byte[] Raw(Fixture fixture)
     {
         byte[] raw = new byte[fixture.Capacity];
@@ -72,6 +74,85 @@ public sealed class DiskImageGptInspectionServiceTests
         Assert.Equal(DiskImageGptInspectionState.LayoutInspected, result.State);
         Assert.Equal(fixture.Capacity, result.Layout!.Capacity);
         Assert.NotEqual(fixture.MetadataSha256, result.Layout.MetadataSha256);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(4096)]
+    public async Task RecoveryUsbResizePreservesPartitionsAndMovesBackupGpt(int addedSectors)
+    {
+        Fixture fixture = await FixtureAsync(512);
+        byte[] raw = Raw(fixture);
+        using var staging = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite,
+            FileShare.None, 4096, FileOptions.DeleteOnClose);
+        await staging.WriteAsync(raw);
+        ulong capacity = fixture.Capacity + (ulong)addedSectors * fixture.Sector;
+
+        await DiskImageGptInspectionService.ResizeRecoveryUsbImageAsync(staging, (long)capacity, default);
+
+        var result = await DiskImageGptInspectionService.InspectAsync(staging, capacity, fixture.Sector);
+        Assert.Equal(DiskImageGptInspectionState.LayoutInspected, result.State);
+        Assert.Equal(fixture.DiskId, result.Layout!.DiskId);
+        Assert.Equal(fixture.Partitions.Select(p => p.PartitionId), result.Layout.Partitions.Select(p => p.PartitionId));
+        Assert.Equal(fixture.Partitions.Select(p => p.Offset), result.Layout.Partitions.Select(p => p.Offset));
+        Assert.Equal(fixture.Partitions.Select(p => p.Length), result.Layout.Partitions.Select(p => p.Length));
+        Assert.Equal(capacity, result.Layout.Capacity);
+        if (addedSectors == 0)
+            Assert.Equal(fixture.MetadataSha256, result.Layout.MetadataSha256);
+        else
+            Assert.Equal(capacity / fixture.Sector - 34, result.Layout.LastUsableLba);
+    }
+
+    [Fact]
+    public async Task RecoveryUsbResizeRefusesANonstandardButInspectablePartitionTable()
+    {
+        Fixture fixture = await FixtureAsync(512);
+        byte[] raw = Raw(fixture);
+        int backupHeader = raw.Length - 512;
+        const int entryBytes = 128 * 128;
+        int backupTable = backupHeader - entryBytes - 512;
+        raw.AsSpan(1024, entryBytes).CopyTo(raw.AsSpan(backupTable, entryBytes));
+        Put64(raw, backupHeader + 72, (ulong)backupTable / 512);
+        foreach (int header in new[] { 512, backupHeader })
+        {
+            Put64(raw, header + 48, (ulong)backupTable / 512 - 1);
+            FixHeader(raw, header);
+        }
+
+        using var staging = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite,
+            FileShare.None, 4096, FileOptions.DeleteOnClose);
+        await staging.WriteAsync(raw);
+        var inspection = await DiskImageGptInspectionService.InspectAsync(staging, fixture.Capacity, 512);
+        Assert.Equal(DiskImageGptInspectionState.LayoutInspected, inspection.State);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            DiskImageGptInspectionService.ResizeRecoveryUsbImageAsync(staging, raw.Length + 4096, default));
+
+        Assert.Equal("recovery-usb.gpt-layout", error.Message);
+        Assert.Equal(raw.LongLength, staging.Length);
+    }
+
+    [Fact]
+    public async Task RecoveryUsbResizeRefusesInvalidOrSmallerTargetBeforeChangingStaging()
+    {
+        Fixture fixture = await FixtureAsync(512);
+        byte[] raw = Raw(fixture);
+        raw[^512] ^= 1;
+        using var staging = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite,
+            FileShare.None, 4096, FileOptions.DeleteOnClose);
+        await staging.WriteAsync(raw);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            DiskImageGptInspectionService.ResizeRecoveryUsbImageAsync(staging, raw.Length - 512, default));
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            DiskImageGptInspectionService.ResizeRecoveryUsbImageAsync(staging, raw.Length + 512, default));
+
+        Assert.Equal(raw.LongLength, staging.Length);
+        staging.Position = 0;
+        byte[] actual = new byte[raw.Length];
+        await staging.ReadExactlyAsync(actual);
+        Assert.Equal(raw, actual);
     }
 
     [Theory]
