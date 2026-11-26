@@ -98,6 +98,18 @@ class DiscordDevlogTests(unittest.TestCase):
         self.assertEqual(payload["username"], "VaultSync Dev Updates")
         self.assertEqual(payload["embeds"][0]["footer"]["text"], "VaultSync • FG Labs development journal")
 
+    def test_devlog_embed_preserves_paragraphs_and_links(self):
+        item = mod.read_feed(fixture(("update", "VaultSync")))[0]
+        item["summary"] = "First paragraph.\n\nSecond paragraph."
+        embed = mod.message(item)["embeds"][0]
+        self.assertEqual(embed["description"], "First paragraph.\n\nSecond paragraph.")
+        self.assertEqual(embed["thumbnail"]["url"], mod.AVATAR)
+        self.assertIn(item["url"], embed["fields"][0]["value"])
+        item["summary"] = "A longer development update. " * 100
+        description = mod.message(item)["embeds"][0]["description"]
+        self.assertLessEqual(len(description), 600)
+        self.assertTrue(description.endswith("…"))
+
     def test_opt_in_role_only(self):
         item = mod.read_feed(fixture(("update", "VaultSync")))[0]
         role = "123456789012345678"
