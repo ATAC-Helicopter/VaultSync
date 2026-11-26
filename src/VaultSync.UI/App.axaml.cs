@@ -480,7 +480,7 @@ public partial class App : Application
             _trayPanelService ??= new TrayPanelService(desktop, () => AppViewModelInstance);
             _trayIcon.Clicked += (_, _) => _trayPanelService?.Toggle();
         }
-        _trayIcon.IsVisible = true;
+        TrayIcon.SetIcons(this, [_trayIcon]);
     }
 
     private void QueueTrayIconCreate(IClassicDesktopStyleApplicationLifetime desktop)
@@ -824,6 +824,7 @@ public partial class App : Application
 
         try
         {
+            TrayIcon.SetIcons(this, null);
             trayIcon.Dispose();
         }
         catch (Exception ex)

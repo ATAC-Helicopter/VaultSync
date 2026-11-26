@@ -122,7 +122,7 @@ namespace VaultSync.UI.ViewModels
             }
             else if (CurrentView == _diskCloningViewModel)
             {
-                HeaderTitle = L("Nav.DiskCloning", "Disk cloning");
+                HeaderTitle = L("DiskRecovery.Title", "Disk recovery");
                 HeaderKicker = L("DiskCloning.Intro", "Disk image tools. Currently, only image verification is available.");
             }
             else if (CurrentView == _settingsViewModel)
@@ -148,6 +148,7 @@ namespace VaultSync.UI.ViewModels
                 _dashboardViewModel.ReapplyLocalization();
                  _ =_dashboardViewModel.RefreshAsync(force: true);
             }
+            OnboardingTour?.RefreshLocalization();
             if (_backupsViewModel != null)
             {
                 _backupsViewModel.ReapplyLocalization();

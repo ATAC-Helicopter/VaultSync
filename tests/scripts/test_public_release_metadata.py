@@ -86,7 +86,9 @@ class PublicReleaseMetadataTests(unittest.TestCase):
         active = metadata["activeRelease"]
         base = active["version"].split("-", 1)[0]
         beta = f"{base}-beta.1"
-        active.update(version=beta, tag=f"v{beta}", channel="beta", stage="candidate", targetDate="2026-11-18")
+        stable = metadata["currentStable"]["version"]
+        active.update(version=beta, tag=f"v{beta}", channel="beta", stage="candidate",
+                      targetDate="2026-11-18", previousVersion=stable, compatiblePredecessors=[stable])
         cli = f"""
 <Version>{beta}</Version>
 <PackageVersion>{beta}</PackageVersion>

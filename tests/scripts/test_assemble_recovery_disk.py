@@ -74,6 +74,39 @@ class AssembleRecoveryDiskTests(unittest.TestCase):
             disk.main(self.args)
         self.assertIn("output already exists", stderr.getvalue())
 
+    def test_combined_media_verifies_and_places_the_restore_partition(self):
+        restore = Path("restore.ext4")
+        payload = b"test restore".ljust(disk.SECTOR, b"\0")
+        restore.write_bytes(payload)
+        args = self.args + ["--restore-guid", "10000000-0000-0000-0000-000000000004"]
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            disk.main(args + ["--restore-sha256", "0" * 64])
+        self.assertFalse(self.output.exists())
+        with patch.object(disk.subprocess, "run") as sgdisk:
+            disk.main(args + ["--restore-sha256", self.digest(restore)])
+        command = sgdisk.call_args.args[0]
+        start = disk.ROOT_START + 1
+        self.assertIn("--disk-guid=10000000-0000-0000-0000-000000000001", command)
+        self.assertIn(f"--new=3:{start}:{start}", command)
+        self.assertIn("--partition-guid=3:10000000-0000-0000-0000-000000000004", command)
+        with self.output.open("rb") as image:
+            image.seek((disk.ROOT_START + 1) * disk.SECTOR)
+            self.assertEqual(image.read(disk.SECTOR), payload)
+
+    def test_invalid_or_duplicate_guids_are_refused_before_invoking_sgdisk(self):
+        for disk_guid, partition_guid in (
+            ("--clear", "10000000-0000-0000-0000-000000000002"),
+            ("10000000-0000-0000-0000-000000000001", "10000000-0000-0000-0000-000000000001"),
+        ):
+            with self.subTest(disk_guid=disk_guid, partition_guid=partition_guid):
+                args = self.args[:4] + [f"--disk-guid={disk_guid}", f"--esp-guid={partition_guid}"] + self.args[-2:]
+                with patch.object(disk.subprocess, "run") as sgdisk:
+                    with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as failure:
+                        disk.main(args)
+                    self.assertEqual(1, failure.exception.code)
+                    sgdisk.assert_not_called()
+                self.assertFalse(self.output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

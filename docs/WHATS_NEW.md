@@ -1,5 +1,18 @@
 # What's New
 
+## [1.9.0-beta.2]
+
+- Offline recovery adds the measured Windows UEFI/GPT/NTFS profile with
+  512-byte sectors alongside the existing Linux ext4 profile. See the
+  [Windows recovery evidence](release-evidence/1.9-beta2-windows-ntfs-512-loop-2026-11-20.json).
+- ZIP backups use private application staging and are verified against the
+  snapshot recorded with the backup.
+- The Guide keeps one card per step during refresh, and onboarding leaves
+  Recovery and Settings controls accessible.
+
+Patch updates from Beta 1 require qualification for each package and platform.
+The stable release remains **1.8.10**.
+
 ## [1.9.0-beta.1]
 
 The [staged disk beta program](BETA_PROGRAM_1.9.0.md) keeps the desktop app on

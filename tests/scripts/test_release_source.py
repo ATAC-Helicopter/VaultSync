@@ -35,6 +35,9 @@ class BetaSourceTests(unittest.TestCase):
         # Execute the actual workflow beta block with the expensive downstream disk
         # gate removed, rather than testing a duplicate shell authorization policy.
         policy = policy.replace('python3 scripts/disk_support.py check --require-qualified', ':')
+        policy = policy.replace(
+            'python3 scripts/disk_support.py check --require-source-os linux --require-source-os windows',
+            'echo windows-profile-gate; exit 42')
         for ref, version, candidate, accepted in (
             (PREPARATION_REF, '1.9.0-beta.1', 'false', True),
             ('refs/heads/Dev', '1.9.0-beta.1', 'false', True),
@@ -49,3 +52,10 @@ class BetaSourceTests(unittest.TestCase):
                          'release_candidate': candidate, 'GITHUB_REF': ref},
                     capture_output=True, text=True)
                 self.assertEqual(accepted, result.returncode == 0, result.stderr)
+
+        result = subprocess.run(['bash', '-c', 'set -euo pipefail\n' + policy], cwd=ROOT,
+            env={**os.environ, 'channel': 'beta', 'target': '1.9.0-beta.2',
+                 'release_candidate': 'false', 'GITHUB_REF': 'refs/heads/Dev'},
+            capture_output=True, text=True)
+        self.assertEqual(42, result.returncode, result.stderr)
+        self.assertEqual('windows-profile-gate', result.stdout.strip())

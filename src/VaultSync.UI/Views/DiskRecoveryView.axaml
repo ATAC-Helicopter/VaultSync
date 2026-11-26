@@ -4,24 +4,68 @@
              xmlns:infra="clr-namespace:VaultSync.UI.Infrastructure"
              x:Class="VaultSync.UI.Views.DiskRecoveryView"
              x:DataType="vm:DiskRecoveryViewModel">
-  <Border Background="{DynamicResource Surface1}" BorderBrush="{DynamicResource BorderSoft}"
-          BorderThickness="1" CornerRadius="8" Padding="18">
-    <StackPanel Spacing="12">
-      <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Title}" FontSize="20" FontWeight="SemiBold"/>
-      <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Intro}" TextWrapping="Wrap"/>
-      <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Steps}" TextWrapping="Wrap"
-                 Foreground="{DynamicResource TextMuted}"/>
-      <WrapPanel>
-        <Button Content="{infra:LocalizedString Key=DiskRecovery.Choose}" Click="ChooseImage"
-                IsEnabled="{Binding CanChoose}" Margin="0,0,8,8"/>
-        <Button Content="{infra:LocalizedString Key=DiskRecovery.Verify}" Command="{Binding VerifyCommand}" Margin="0,0,8,8"/>
-        <Button Content="{infra:LocalizedString Key=DiskRecovery.Cancel}" Command="{Binding CancelCommand}" Margin="0,0,0,8"/>
-      </WrapPanel>
-      <TextBlock Text="{Binding Folder}" TextWrapping="Wrap"/>
-      <ProgressBar IsVisible="{Binding IsBusy}" IsIndeterminate="True" Height="6"/>
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
-      <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Boundary}" TextWrapping="Wrap"
-                 Foreground="{DynamicResource TextMuted}" FontSize="12"/>
-    </StackPanel>
-  </Border>
+  <UserControl.Styles>
+    <Style Selector="Border.recovery-step">
+      <Setter Property="Background" Value="{DynamicResource Surface1}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderSoft}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+    <Style Selector="TextBlock.recovery-step">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="18" MaxWidth="980" HorizontalAlignment="Stretch">
+    <Border Classes="recovery-step" Padding="24">
+      <StackPanel Spacing="14">
+        <TextBlock x:Name="DiskRecoveryWorkflow"
+                   Text="{infra:LocalizedString Key=DiskRecovery.Verify}"
+                   FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Classes="recovery-step" Text="{infra:LocalizedString Key=DiskRecovery.Intro}" />
+        <Border Background="{DynamicResource Surface2}" CornerRadius="8" Padding="14"
+                IsVisible="{CompiledBinding HasFolder}">
+          <StackPanel Spacing="8">
+            <SelectableTextBlock Text="{CompiledBinding Folder}" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource TextSecondaryBrush}" />
+            <ProgressBar IsVisible="{CompiledBinding IsBusy}" IsIndeterminate="True" Height="6" />
+            <TextBlock Text="{CompiledBinding Status}" TextWrapping="Wrap" FontWeight="SemiBold"
+                       AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
+        </Border>
+        <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Unsupported}" Classes="recovery-step"
+                   IsVisible="{CompiledBinding !Supported}" />
+        <WrapPanel IsVisible="{CompiledBinding Supported}">
+          <Button Classes.action-primary="{CompiledBinding !HasImageFiles}"
+                  Classes.action-ghost="{CompiledBinding HasImageFiles}"
+                  Content="{infra:LocalizedString Key=DiskRecovery.Choose}"
+                  Click="ChooseImage" IsEnabled="{CompiledBinding CanChoose}" Margin="0,0,8,8" />
+          <Button Classes="action-primary" Content="{infra:LocalizedString Key=DiskRecovery.Verify}"
+                  Command="{CompiledBinding VerifyCommand}"
+                  IsVisible="{CompiledBinding HasImageFiles}" Margin="0,0,8,8" />
+          <Button Classes="action-ghost" Content="{infra:LocalizedString Key=DiskRecovery.Cancel}"
+                  Command="{CompiledBinding CancelCommand}" IsVisible="{CompiledBinding IsBusy}" Margin="0,0,0,8" />
+        </WrapPanel>
+        <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Boundary}" Classes="recovery-step" FontSize="12" />
+      </StackPanel>
+    </Border>
+    <Border Classes="recovery-step">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.OfflineTitle}"
+                   FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Overview}" Classes="recovery-step" />
+        <Expander Classes="app-section" HorizontalAlignment="Stretch"
+                  Header="{infra:LocalizedString Key=DiskRecovery.OfflineSteps}">
+          <StackPanel Spacing="10" Margin="0,8,0,0">
+            <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.BootStep}" Classes="recovery-step" />
+            <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.CaptureStep}" Classes="recovery-step" />
+            <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.RestoreStep}" TextWrapping="Wrap" FontWeight="SemiBold" />
+            <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.AfterStep}" Classes="recovery-step" />
+          </StackPanel>
+        </Expander>
+      </StackPanel>
+    </Border>
+  </StackPanel>
 </UserControl>

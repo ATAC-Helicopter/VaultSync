@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using VaultSync.Core.Models;
@@ -53,6 +54,58 @@ public sealed class VerifyServiceTests : IDisposable
     }
 
     public void Dispose() => _tempDir.Dispose();
+
+    [Theory]
+    [InlineData("original", true)]
+    [InlineData("changed!", false)]
+    public async Task VerifyStoredBackupAsync_ReadsZipEntriesUsingTheBackupSnapshot(string payload, bool valid)
+    {
+        VerificationFixture fixture = CreateFixture();
+        string folder = Path.Combine(fixture.Destination, "backup");
+        Directory.CreateDirectory(folder);
+        string archive = Path.Combine(folder, BackupArchiveCryptoService.PlainArchiveFileName);
+        using (var zip = ZipFile.Open(archive, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(zip.CreateEntry("data.txt").Open()))
+            writer.Write(payload);
+
+        string originalHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData("original"u8));
+        int selected = fixture.Repository.CreateSnapshot(fixture.Project.Id, 1, 8);
+        fixture.Repository.InsertFiles(selected, [new FileEntry("data.txt", 8, DateTime.UtcNow, originalHash)]);
+        int newer = fixture.Repository.CreateSnapshot(fixture.Project.Id, 1, 3);
+        fixture.Repository.InsertFiles(newer, [new FileEntry("new.txt", 3, DateTime.UtcNow, "EXPECTED")]);
+        var backup = new Backup { ProjectId = fixture.Project.Id, SnapshotId = selected, Path = "backup" };
+
+        VerifyResult result = Assert.IsType<VerifyResult>(
+            await new VerifyService(fixture.Repository, new HashService()).VerifyStoredBackupAsync(backup, fixture.Destination));
+
+        Assert.Equal(1, result.Checked);
+        Assert.Equal(valid ? 1 : 0, result.Passed);
+        if (valid)
+            Assert.Empty(result.Failures);
+        else
+            Assert.Equal("hash-mismatch", Assert.Single(result.Failures).Reason);
+    }
+
+    [Fact]
+    public async Task VerifyStoredBackupAsync_TreatsAMatchingSourceNamedDataZipAsARegularFile()
+    {
+        VerificationFixture fixture = CreateFixture();
+        string folder = Path.Combine(fixture.Destination, "backup");
+        Directory.CreateDirectory(folder);
+        string name = BackupArchiveCryptoService.PlainArchiveFileName;
+        byte[] content = "source bytes"u8.ToArray();
+        File.WriteAllBytes(Path.Combine(folder, name), content);
+        string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content));
+        int snapshot = fixture.Repository.CreateSnapshot(fixture.Project.Id, 1, content.Length);
+        fixture.Repository.InsertFiles(snapshot, [new FileEntry(name, content.Length, DateTime.UtcNow, hash)]);
+        var backup = new Backup { ProjectId = fixture.Project.Id, SnapshotId = snapshot, Path = "backup" };
+
+        VerifyResult result = Assert.IsType<VerifyResult>(
+            await new VerifyService(fixture.Repository, new HashService()).VerifyStoredBackupAsync(backup, fixture.Destination));
+
+        Assert.Equal(1, result.Passed);
+        Assert.Empty(result.Failures);
+    }
 
     private VerificationFixture CreateFixture()
     {

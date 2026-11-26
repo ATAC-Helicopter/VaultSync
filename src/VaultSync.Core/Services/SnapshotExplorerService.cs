@@ -50,6 +50,9 @@ public sealed class SnapshotExplorerService
         if (source.Kind == SnapshotExplorerSourceKind.EncryptedArchive)
             return new StoredContentEvidence(source.Kind, new Dictionary<string, StoredFileObservation>(), false, 0);
 
+        if (source.Kind == SnapshotExplorerSourceKind.Archive)
+            EnsureNoLinkedSourcePathComponents(backupRoot, source.Path);
+
         return source.Kind == SnapshotExplorerSourceKind.Archive
             ? await ReadArchiveEvidenceAsync(
                 source.Path,

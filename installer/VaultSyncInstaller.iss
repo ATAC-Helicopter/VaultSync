@@ -1,5 +1,5 @@
 ﻿#define MyAppName "VaultSync"
-#define MyAppVersion "1.9.0-beta.1"
+#define MyAppVersion "1.9.0-beta.2"
 #define MyAppPublisher "Flavio Giacchetti"
 #define MyAppExeName "VaultSync.UI.exe"
 #define AppOutputDir "..\\src\\VaultSync.UI\\bin\\Release\\net10.0-windows10.0.19041.0\\win-x64\\publish"
@@ -10,14 +10,14 @@ AppId={{A95C0681-2A65-4C8B-BFA9-VAULTSYNC123456}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={pf}\{#MyAppName}
+DefaultDirName={commonpf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputBaseFilename=VaultSync-Setup-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 DisableDirPage=no
 DisableProgramGroupPage=yes
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesInstallIn64BitMode=x64os
 ; Use your app icon for the installer EXE and wizard
 SetupIconFile="{#AppIconPath}"
 

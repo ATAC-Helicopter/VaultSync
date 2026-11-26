@@ -51,11 +51,11 @@
   </Window.Styles>
 
   <Grid x:Name="RootGrid"
-        RowDefinitions="Auto,*,Auto"
+        RowDefinitions="Auto,*"
         ColumnDefinitions="260,*"
         Background="{DynamicResource WindowBackground}">
 
-    <Canvas Grid.RowSpan="3"
+    <Canvas Grid.RowSpan="2"
             Grid.ColumnSpan="2"
             IsHitTestVisible="False"
             ClipToBounds="True">
@@ -72,7 +72,7 @@
                Opacity="0.72" />
     </Canvas>
 
-    <Border x:Name="SidebarRoot" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
+    <Border x:Name="SidebarRoot" Grid.RowSpan="2" Grid.Column="0" Classes="sidebar" Padding="16,18,16,14">
       <DockPanel>
         <StackPanel x:Name="SidebarTopSection"
                     DockPanel.Dock="Top"
@@ -268,7 +268,7 @@
             </StackPanel>
           </Button>
 
-          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=Nav.DiskCloning}" AutomationProperties.Name="{infra:LocalizedString Key=Nav.DiskCloning}">
+          <Button x:Name="NavDiskCloningButton" Classes="nav" Classes.active="{CompiledBinding IsDiskCloningActive}" Command="{CompiledBinding NavigateDiskCloning}" ToolTip.Tip="{infra:LocalizedString Key=DiskRecovery.Title}" AutomationProperties.Name="{infra:LocalizedString Key=DiskRecovery.Title}">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
               <Border x:Name="NavDiskCloningIconBadge" Classes="nav-icon-badge">
                 <Viewbox Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -277,7 +277,7 @@
                                StrokeLineCap="Round" Fill="Transparent" />
                 </Viewbox>
               </Border>
-              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=Nav.DiskCloning}" VerticalAlignment="Center" />
+              <TextBlock x:Name="NavDiskCloningText" Text="{infra:LocalizedString Key=DiskRecovery.Title}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
 
@@ -444,10 +444,10 @@
       </Grid>
     </Border>
 
-    <!-- Keep toasts above the guided setup row. -->
+    <!-- The guided setup card floats over the shell. -->
     <viewsControls:ToastHost Grid.RowSpan="2" Grid.ColumnSpan="2" />
 
-    <viewsControls:OnboardingTourOverlay Grid.Row="2"
+    <viewsControls:OnboardingTourOverlay Grid.RowSpan="2"
                                          Grid.ColumnSpan="2"
                                          DataContext="{CompiledBinding OnboardingTour}" />
 

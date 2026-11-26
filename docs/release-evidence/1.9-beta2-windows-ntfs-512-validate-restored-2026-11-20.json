@@ -1,0 +1,23 @@
+{
+  "stage": "validate-restored",
+  "profileId": "uefi-gpt-ntfs-512",
+  "kind": "measured",
+  "outcome": "passed",
+  "observedAt": "2026-11-20T16:10:42Z",
+  "environment": "Windows 10 Enterprise LTSC 2021 x64 19044.1288 in QEMU 10.0.13/KVM, OVMF UEFI, 36 GiB GPT/unencrypted NTFS, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+  "hardwareKind": "virtual",
+  "runId": "2026-11-20-windows-ntfs-512-b01217c3",
+  "imageRoot": "5192745126714964b92c439127ca3f8551d1a967f536c53b46fbfbb06ada986a",
+  "captureBuild": "b01217c34e5bc5dd5bfb8fc65938b24bbab37564 / media SHA-256 fc16c9e13f669465e95c10eef7f0af35ed541651f18c0ccf500f75ccc32143d5",
+  "recoveryBuild": "b01217c34e5bc5dd5bfb8fc65938b24bbab37564 / media SHA-256 57cbbe30f01d6f364284d7d4669376e1bb58c6025a6048a28a43f35c1a167856",
+  "checks": {
+    "target-byte-coverage": "passed",
+    "restored-os-boot": "passed",
+    "expected-files": "passed",
+    "desktop-interactive": "passed"
+  },
+  "receipt": {
+    "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-loop-2026-11-20.json",
+    "sha256": "697cb99b8fde5b1829ca28987378ce5404e019d866505edb3ca4f91334164eae"
+  }
+}

@@ -1280,6 +1280,11 @@ Black partial redraws, capacity/media/fault and shared beta gates remain open;
 no support profile is promoted.
 
 - [ ] `BUG-19053` `P2` Keep recovery and language controls accessible during guided setup. Issue #872.
+    - Integrated PR #885 into the release preparation branch. The floating guide starts with language selection and introduces disk recovery after the project recovery drill.
+- [ ] `BUG-19056` `P1` Keep ZIP staging outside the system temporary filesystem. Issue #877.
+- [ ] `BUG-19057` `P2` Investigate the Beta 1 UI watchdog reports on macOS ARM64. Issue #878.
+- [ ] `BUG-19058` `P2` Restore tray icon registration on Windows and Linux. Issue #886.
+- [ ] `BUG-19055` `P1` Verify stored ZIP payloads against their own snapshot after backup. Issue #876.
 - [ ] `BUG-19054` `P2` Render each Guide step once across navigation and language changes. Issue #873.
 - [ ] `BUG-19046` `P0` Avoid duplicate payload scans during offline image verification.
   - Fixed reader2495c59 now verifies the same3GiB in73.807s with24583reads,
@@ -1318,6 +1323,8 @@ no support profile is promoted.
     Issue #826; preparation PR #736; not release-qualified.
 - [ ] `VS-1910` `P0` Define the 1.9 information architecture, route model,
   workflow boundaries, navigation invariants, and legacy-shell migration map.
+  - The desktop Recovery page links to Disk Cloning, which guides offline
+    preparation and restore while keeping desktop image verification read-only.
   - User journey clarification (2026-11-06): distinguish the delivered read-only
     desktop panel and laboratory recovery entry from product image/media creation,
     desktop-to-recovery restart and post-restore application/identity reconciliation.

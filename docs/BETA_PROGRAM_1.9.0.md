@@ -42,11 +42,30 @@ with `target_commitish=Dev` after verifying the tag binding. See
 [release signing](RELEASE_SIGNING.md) for the asset and publication checks.
 For the initial asset run use `release_channel=beta`,
 `target_version=1.9.0-beta.1` and `previous_version=1.8.10` on `Dev`.
-Keep Store upload off and enable patch assets only for qualified bases.
+Keep Store upload off.
 The earlier preparation-branch path remains available as historical tooling.
 This workflow starts only after the maintainer agrees to the cut.
 
-The Linux and Windows candidates currently use the **offline Linux x64 recovery
+### Patch assets across betas
+
+Ship the first beta of a release with full packages. Starting with Beta 2,
+keep the full packages available and include patch assets for the immediately
+preceding beta on each platform and architecture where the installed update
+preserves user data and passes verification of the installed files and startup.
+Use the full package when that upgrade path is unqualified.
+For Beta 2 on macOS, use the DMG on both architectures. The published Beta 1
+helper expects the prerelease string in both numeric Apple bundle version
+fields and rolls back when it reads the valid Beta 2 metadata. The Beta 2
+helper accepts the numeric versions bound to the full VaultSync release
+identity for later updates. The asset workflow exercises the DMG replacement
+on both Mac runners while qualifying the selected Windows and Linux patches.
+The DMG qualification copies the bundle with macOS `ditto` to preserve
+extended attributes before verifying its ad-hoc signature and starting it.
+Qualify the Beta 1 → Beta 2 update against the published `v1.9.0-beta.1`
+packages. Record which architecture and package type actually applied the
+patch and which used the full package.
+
+The Linux and Windows disk profiles use the **offline Linux x64 recovery
 environment**. A Windows source OS is distinct from running an elevated disk
 worker inside Windows. Native live capture, snapshots, encryption and Secure
 Boot are not added implicitly. macOS/APFS remains excluded until its own engine,
@@ -68,6 +87,23 @@ Restore → Validate measurements and destructive-refusal/cancellation evidence.
 At least one real Linux profile must be qualified for beta 1. Candidate profiles
 remain candidates; unsupported combinations refuse before destructive work.
 The existing executable qualification gate remains mandatory and unchanged.
+The Beta 2 asset workflow requires retained qualification for both Linux ext4
+and Windows NTFS. Start the Windows qualification with `uefi-gpt-ntfs-512`
+using a disposable Windows x64 VM installed in UEFI mode with a GPT disk and
+unencrypted NTFS. Disable guest Fast Startup, shut down cleanly, and retain a
+test file and its SHA-256 before booting the offline Linux recovery medium.
+Use a separate blank virtual target with matching sector geometry. Validate
+the restored bytes before the first Windows boot, detach the original disk,
+then verify Windows starts, accepts desktop input, and still has the test
+file. Bind the five measured records to the exact media and build, and record
+the required refusal and cancellation evidence separately.
+
+The Windows 10 Enterprise LTSC 2021 VM qualified `uefi-gpt-ntfs-512` on
+2026-11-20. The restored disk matched the offline source before Windows boot,
+and the target-only boot retained the fixture and its SHA-256. The same media
+refused a read-only destination with zero writes, and a separate capture was
+cancelled before copying. See the [Windows recovery receipt](release-evidence/1.9-beta2-windows-ntfs-512-loop-2026-11-20.json).
+
 Later betas add qualified profiles without dropping previously supported ones.
 Physical hardware breadth remains a stable gate, separate from the explicitly
 measured disposable-VM beta scope.

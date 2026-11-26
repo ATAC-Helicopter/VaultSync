@@ -21,12 +21,16 @@ public partial class DiskRecoveryView : UserControl
         {
             if (DataContext is not DiskRecoveryViewModel model || !model.CanChoose ||
                 TopLevel.GetTopLevel(this)?.StorageProvider is not { CanPickFolder: true } storage) return;
+            using var startFolder = model.HasFolder
+                ? await storage.TryGetFolderFromPathAsync(model.Folder)
+                : null;
             var selected = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = LocalizationProvider.Service?.GetString("DiskRecovery.Choose") ?? "DiskRecovery.Choose",
-                AllowMultiple = false
+                AllowMultiple = false,
+                SuggestedStartLocation = startFolder
             });
             if (selected.Count == 1 && selected[0].TryGetLocalPath() is { } folder)
-                model.SelectFolder(folder);
+                await model.SelectFolderAsync(folder);
         }, "choose-recovery-image");
 }

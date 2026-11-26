@@ -141,6 +141,7 @@ namespace VaultSync.UI.ViewModels
                 activityPhase: ProtectionActivityPhase.Verifying);
             _ = Task.Run(async () =>
             {
+                bool integrityMismatch = false;
                 try
                 {
                     Console.WriteLine($"[Backup] Verification start: project='{project.Name}', backupId={latest.Id}, snapshotId={latest.SnapshotId}");
@@ -148,13 +149,33 @@ namespace VaultSync.UI.ViewModels
                     _ = await snapshotService.HashMissingFilesAsync(project, latest.SnapshotId, CancellationToken.None);
 
                     var verifyService = new VerifyService(_repo, new HashService());
-                    string folder = Path.Combine(backupRoot, latest.Path ?? string.Empty);
-                    _ = await verifyService.VerifyAsync(project, folder, 100, full: true, CancellationToken.None);
+                    var clock = System.Diagnostics.Stopwatch.StartNew();
+                    if (ProductDiagnostics.IsBeta && !latest.IsEncrypted)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Started,
+                            phase: DiagnosticPhase.Verify);
+                    VerifyResult? result = await verifyService.VerifyStoredBackupAsync(latest, backupRoot, CancellationToken.None);
+                    if (result is null)
+                    {
+                        Console.WriteLine($"[Backup] Byte verification skipped for encrypted backup {latest.Id}.");
+                        return;
+                    }
+                    if (result.Failures.Count > 0)
+                    {
+                        integrityMismatch = true;
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed,
+                            phase: DiagnosticPhase.Verify, duration: ProductDiagnostics.IsBeta ? clock.Elapsed : default,
+                            quantity: result.Checked, failure: DiagnosticFailure.IntegrityMismatch);
+                        throw new InvalidDataException($"{result.Failures.Count} of {result.Checked} stored files failed verification.");
+                    }
+                    if (ProductDiagnostics.IsBeta)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Completed,
+                            phase: DiagnosticPhase.Verify, duration: clock.Elapsed, quantity: result.Checked);
                     Console.WriteLine($"[Backup] Verification complete: project='{project.Name}', backupId={latest.Id}");
                 }
                 catch (Exception vex)
                 {
-                    ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed, vex, DiagnosticPhase.Verify);
+                    if (!integrityMismatch)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed, vex, DiagnosticPhase.Verify);
                     Telemetry.Log(telemetryEvent, b => b
                         .WithHashedString("project", project.Name)
                         .WithHashedString("projectRoot", project.RootPath)

@@ -73,9 +73,14 @@ The builder takes the explicitly selected scratch and export filesystem UUIDs
 from the operator. Check that they identify the dedicated, separate volumes
 and each occurs once among the attached disks. Prepare scratch and export
 ownership and permissions as documented in [offline capture](RECOVERY_CAPTURE_1.9.md).
-The media root gets its own UUID. Use a private directory with the trusted
-`installation/` from `scripts/stage_recovery_host.py`, in `capture` or
-`graphical` mode.
+Use a private directory with the trusted `installation/` from
+`scripts/stage_recovery_host.py`. For both operations on one medium, stage
+`installation/` in `capture` mode and `restore-installation/` in
+`graphical` mode from the same source commit, runtime and locale. On boot,
+VaultSync waits for an explicit choice between **Create disk image** and
+**Restore disk image**. Each option starts its own independently admitted,
+read-only root. A workspace with only `installation/` builds the original
+single-operation medium.
 
 ```sh
 bash "$vaultsync_checkout/packaging/recovery/build-debian-media.sh" \
@@ -104,7 +109,8 @@ Root staging places
 `fstab` in `/etc` and `grub.cfg` in `/boot/grub` inside the offline image. Both
 refer to the chosen root, which must already have passed its offline
 filesystem check before the medium is sealed. The generator neither opens nor
-formats devices.
+formats devices. For combined media the first root's EFI loader uses the menu
+with both root UUIDs. The second root has a separate UUID and mount table.
 
 Run `scripts/assemble_recovery_disk.py` from the private build directory
 containing `esp.fat` (256 MiB) and the checked `root.ext4`. It creates
@@ -113,9 +119,10 @@ partition SHA-256 digests from the build record and three distinct GPT GUIDs
 for the disk and its partitions. These GUIDs are separate from the filesystem
 UUIDs in the boot configuration. Record the input hashes, GUIDs and version of
 the pinned `sgdisk` binary used by the builder. The assembler refuses mismatched
-inputs and only exposes the new image after both payloads and the partition
-table have been written. The EFI partition must already contain the removable
-x64 UEFI loader configured for the chosen root filesystem.
+inputs and passes only parsed, canonical GPT UUIDs to `sgdisk`. It exposes the
+new image after the payloads and partition table have been written. The EFI
+partition must already contain the removable x64 UEFI loader configured for
+the chosen root filesystem.
 
 The x64 Debian recipe is in `packaging/recovery/Debian.Containerfile`. Build
 it rootless with Podman, with pulling disabled after resolving its pinned base

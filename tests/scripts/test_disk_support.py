@@ -70,6 +70,15 @@ class DiskSupportTests(unittest.TestCase):
         self.measured_fixture()
         self.assertEqual([], self.check(require=True))
 
+    def test_windows_gate_requires_a_measured_windows_profile(self):
+        profile = self.measured_fixture()
+        self.assertEqual(['No qualified disk profile for windows.'],
+                         disk.validate(self.root, self.data, now=NOW, require_source_os=('linux', 'windows')))
+        profile.update(sourceOS='windows', filesystem='ntfs')
+        self.assertEqual([], disk.validate(self.root, self.data, now=NOW, require_source_os=('windows',)))
+        self.assertEqual(['No qualified disk profile for linux.'],
+                         disk.validate(self.root, self.data, now=NOW, require_source_os=('linux', 'windows')))
+
     def test_approved_direction_without_measured_profile_does_not_pass_release_gate(self):
         self.data['engine'].update(decision='approved', approval={
             'by': 'test reviewer', 'observedAt': '2026-10-04T10:00:00Z',

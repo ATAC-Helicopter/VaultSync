@@ -596,6 +596,11 @@ namespace VaultSync.UI.Services
             if (!OperatingSystem.IsMacOS() || !installDir.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
                 return;
 
+            VerifyMacBundleIdentity(installDir, targetVersion);
+        }
+
+        internal static void VerifyMacBundleIdentity(string installDir, string targetVersion)
+        {
             string plistPath = Path.Combine(installDir, "Contents", "Info.plist");
             if (!File.Exists(plistPath))
                 throw new InvalidDataException("Updated macOS bundle is missing Contents/Info.plist.");
@@ -603,9 +608,12 @@ namespace VaultSync.UI.Services
             XDocument plist = XDocument.Load(plistPath, LoadOptions.None);
             string shortVersion = ReadPlistString(plist, "CFBundleShortVersionString");
             string bundleVersion = ReadPlistString(plist, "CFBundleVersion");
+            string releaseVersion = ReadPlistString(plist, "VaultSyncReleaseVersion");
             string executable = ReadPlistString(plist, "CFBundleExecutable");
-            if (!string.Equals(shortVersion, targetVersion, StringComparison.Ordinal) ||
-                !string.Equals(bundleVersion, targetVersion, StringComparison.Ordinal))
+            bool matches = releaseVersion.Length == 0
+                ? shortVersion == targetVersion && bundleVersion == targetVersion
+                : releaseVersion == targetVersion && MatchesNumericBundleVersion(targetVersion, shortVersion, bundleVersion);
+            if (!matches)
             {
                 throw new InvalidDataException(
                     $"Updated macOS bundle identity does not match target {targetVersion}.");
@@ -614,6 +622,22 @@ namespace VaultSync.UI.Services
             string executablePath = Path.Combine(installDir, "Contents", "MacOS", executable);
             if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executablePath))
                 throw new InvalidDataException("Updated macOS bundle executable is missing.");
+        }
+
+        private static bool MatchesNumericBundleVersion(string release, string shortVersion, string buildVersion)
+        {
+            // Keep the numeric mapping in sync with scripts/macos_bundle_version.py.
+            string[] parts = release.Split("-beta.", 2, StringSplitOptions.None);
+            if (!Version.TryParse(parts[0], out var version) || version.Build < 0 || version.Revision >= 0 ||
+                parts[0] != version.ToString(3) || shortVersion != parts[0])
+                return false;
+
+            int sequence = 999;
+            if (parts.Length == 2 && (!int.TryParse(parts[1], out sequence) || sequence is < 1 or > 998 ||
+                                     parts[1] != sequence.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                return false;
+
+            return buildVersion == FormattableString.Invariant($"{version.Major}.{version.Minor}.{version.Build * 1000L + sequence}");
         }
 
         private static string ReadPlistString(XDocument plist, string key)

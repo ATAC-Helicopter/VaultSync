@@ -10,7 +10,7 @@ namespace VaultSync.Core.Tests;
 public sealed class OnboardingTourOverlayTests
 {
     [Fact]
-    public void Overlay_IsCardSizedSoGuidedViewsRemainInteractive()
+    public void Overlay_UsesTransparentCanvasWithNonBlockingHighlightAndCard()
     {
         string path = FindRepositoryFile(
             "src",
@@ -21,19 +21,28 @@ public sealed class OnboardingTourOverlayTests
 
         XDocument document = XDocument.Load(path);
         XNamespace avalonia = "https://github.com/avaloniaui";
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
         XElement root = document.Root!;
-        Assert.Equal("Right", (string?)root.Attribute("HorizontalAlignment"));
-        Assert.Equal("Bottom", (string?)root.Attribute("VerticalAlignment"));
-        Assert.Equal("430", (string?)root.Attribute("Width"));
         Assert.Null(root.Attribute("Background"));
 
-        XElement tourCard = Assert.Single(root.Elements(avalonia + "Border"));
+        XElement canvas = Assert.Single(root.Elements(avalonia + "Canvas"));
+        Assert.Null(canvas.Attribute("Background"));
+
+        XElement highlight = Assert.Single(
+            canvas.Elements(avalonia + "Border"),
+            border => (string?)border.Attribute(x + "Name") == "TargetHighlight");
+        Assert.Equal("False", (string?)highlight.Attribute("IsHitTestVisible"));
+
+        XElement tourCard = Assert.Single(
+            canvas.Elements(avalonia + "Border"),
+            border => (string?)border.Attribute(x + "Name") == "TourCard");
+        Assert.Equal("300", (string?)tourCard.Attribute("Width"));
         Assert.NotNull(tourCard.Attribute("Background"));
     }
 
     [Fact]
-    public void MainWindow_ReservesSeparateSpaceForGuidedSetup()
+    public void MainWindow_OverlaysGuidedSetupAcrossShell()
     {
         XDocument document = XDocument.Load(FindRepositoryFile("src", "VaultSync.UI", "MainWindow.axaml"));
         XElement tour = Assert.Single(document.Descendants(), element => element.Name.LocalName == "OnboardingTourOverlay");
@@ -41,9 +50,10 @@ public sealed class OnboardingTourOverlayTests
         XNamespace avalonia = "https://github.com/avaloniaui";
         XElement page = Assert.Single(shell.Elements(avalonia + "Border"), border => (string?)border.Attribute("Grid.Row") == "1");
 
-        Assert.Equal("Auto,*,Auto", (string?)shell.Attribute("RowDefinitions"));
-        Assert.Equal("2", (string?)tour.Attribute("Grid.Row"));
-        Assert.Null(tour.Attribute("Grid.RowSpan"));
+        Assert.Equal("Auto,*", (string?)shell.Attribute("RowDefinitions"));
+        Assert.Equal("2", (string?)tour.Attribute("Grid.RowSpan"));
+        Assert.Equal("2", (string?)tour.Attribute("Grid.ColumnSpan"));
+        Assert.Null(tour.Attribute("Grid.Row"));
         Assert.Null(page.Attribute("Grid.RowSpan"));
     }
 

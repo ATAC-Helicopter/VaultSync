@@ -73,7 +73,7 @@
     },
     {
       "id": "uefi-gpt-ntfs-512",
-      "status": "candidate",
+      "status": "qualified",
       "sourceOS": "windows",
       "recoveryEnvironment": "linux-x64-offline",
       "firmware": "uefi",
@@ -86,7 +86,30 @@
       "scope": "disk",
       "owner": "ATAC-Helicopter",
       "method": "docs/adr/001-imaging-engine-1.9.md",
-      "evidence": []
+      "evidence": [
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-capture-2026-11-20.json",
+          "sha256": "80ec256da7fc93cc784b0c14faa8af150ebaf0f44f11f93d2f6173739b3474ed"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-validate-image-2026-11-20.json",
+          "sha256": "7bff5afbbeea095b2fe9e967eb3e3f93a895d8eed35fdf4a70b5489d6ebfe682"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-boot-2026-11-20.json",
+          "sha256": "fe719e72d1ac5d579ff203e4863b8ab4edd3cec12d6e90caecbbadb6d50ae042"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-restore-2026-11-20.json",
+          "sha256": "9d48ec71468b07bfb290edd0953b042153e3eff2b790eb1a601e83815067d7e1"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-validate-restored-2026-11-20.json",
+          "sha256": "df065056533519d43f78132819edf057f41a826cf3721a99c9f99b9954d5462e"
+        }
+      ],
+      "environment": "Windows 10 Enterprise LTSC 2021 x64 19044.1288 in QEMU 10.0.13/KVM, OVMF UEFI, 36 GiB GPT/unencrypted NTFS, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+      "hardwareKind": "virtual"
     },
     {
       "id": "uefi-gpt-ntfs-4096",

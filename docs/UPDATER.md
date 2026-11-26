@@ -2,9 +2,9 @@
 
 VaultSync uses GitHub Releases for update discovery and supports patch assets to avoid full-installer downloads on every update.
 
-The 1.9.0 preparation baseline now follows stable 1.8.10. Its 1.8.10 → 1.9.0-beta.1
-update path still requires actual package and user-data-preservation qualification;
-the published 1.8.9 → 1.8.10 evidence does not qualify this new path.
+The primary patch base for 1.9.0-beta.2 is the published 1.9.0-beta.1.
+Each platform and package layout requires its own installed upgrade and
+user-data-preservation check. Other installations use the full package.
 
 The 1.9 staging change accepts exact release assets under the current
 repository owner and the planned FG Labs owner. This is preparation for a

@@ -43,7 +43,10 @@ public static class DiskImageGptInspectionService
                 return Unsupported(DiskImageGptInspectionReason.ProtectiveMbrRequired);
             if (mbr.AsSpan(462, 48).ContainsAnyExcept((byte)0))
                 return Unsupported(DiskImageGptInspectionReason.HybridMbrUnsupported);
-            if (mbr[446] != 0 || U32(mbr, 454) != 1 || U32(mbr, 458) != Math.Min(lastLba, uint.MaxValue))
+            // Windows Setup can use the saturated size even on small disks; the GPT headers still bind capacity.
+            uint protectiveSize = U32(mbr, 458);
+            if (mbr[446] != 0 || U32(mbr, 454) != 1 ||
+                (protectiveSize != uint.MaxValue && protectiveSize != lastLba))
                 return Invalid(DiskImageGptInspectionReason.InvalidProtectiveMbr);
 
             byte[] primaryBytes = await ReadAtAsync(source, logicalSectorBytes, (int)logicalSectorBytes, cancellationToken).ConfigureAwait(false);
