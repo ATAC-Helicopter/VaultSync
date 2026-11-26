@@ -19,6 +19,7 @@ namespace VaultSync.UI;
 internal static class Program
 {
     private const int MaxActivationPayloadBytes = 8192;
+    internal const string PrepareRecoveryUsbArgument = "--prepare-recovery-usb";
     private const string ActivatePayload = "activate";
     private static SingleInstanceLock? _instanceLock;
     private static CancellationTokenSource? _activationListenerCts;
@@ -28,6 +29,22 @@ internal static class Program
     [System.STAThread]
     public static void Main(string[] args)
     {
+        if (args is [PrepareRecoveryUsbArgument, var language])
+        {
+            if (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64 &&
+                WindowsRecoveryUsbDevices.IsElevated())
+            {
+                using var session = new Mutex(initiallyOwned: true, @"Global\VaultSync.RecoveryUsbWriter", out bool created);
+                if (created)
+                {
+                    UpdaterApp.RecoveryUsbLanguage = language;
+                    BuildUpdaterApp().StartWithClassicDesktopLifetime([]);
+                }
+            }
+
+            return;
+        }
+
         RestrictPrivateDataRoots();
         DiagnosticsLogger.Initialize();
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");

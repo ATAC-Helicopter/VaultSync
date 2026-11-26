@@ -167,7 +167,9 @@ internal sealed class RecoveryViewModel : IRecoveryPresentation
             var result = await CatalogLoader(stop.Token);
             if (stop.IsCancellationRequested || generation != catalogGeneration || screen != Screen.Folder || IsComplete || terminalObserved) return;
             var items = result.Images.Select(image => new ImageItem(image, (key, args) => F(key, args))).ToArray();
-            string? selected = string.IsNullOrWhiteSpace(folder.Text) ? (images.SelectedItem as ImageItem)?.Image.Name : null;
+            string? selected = string.IsNullOrWhiteSpace(folder.Text)
+                ? (images.SelectedItem as ImageItem)?.Image.Name ?? result.SuggestedImage
+                : null;
             images.ItemsSource = items;
             images.SelectedItem = items.FirstOrDefault(item => item.Image.Name == selected);
             catalogStatus = result.Status switch
