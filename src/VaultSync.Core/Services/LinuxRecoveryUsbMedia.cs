@@ -142,7 +142,7 @@ public static class LinuxRecoveryUsbMedia
         catch (OperationCanceledException)
         {
             if (!process.HasExited) process.Kill();
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
         }
         await errors.ConfigureAwait(false);

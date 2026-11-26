@@ -97,6 +97,14 @@ jobs:
           python -m pip install --only-binary :all: coverage==7.10.4
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
+      - name: Install GPT fdisk for Linux USB staging tests
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          if ! command -v sgdisk >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y gdisk
+          fi
+
       - name: Restore
         if: steps.config.outputs.configured == 'true'
         run: dotnet restore VaultSync.sln
@@ -127,6 +135,8 @@ jobs:
 
       - name: Test with coverage
         if: steps.config.outputs.configured == 'true'
+        env:
+          VAULTSYNC_REQUIRE_USB_STAGING_TESTS: "1"
         run: >
           dotnet-coverage collect
           "dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-build"

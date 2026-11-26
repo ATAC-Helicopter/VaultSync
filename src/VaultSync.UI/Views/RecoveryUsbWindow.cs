@@ -183,7 +183,7 @@ internal sealed class RecoveryUsbWindow : Window
         _ => null
     };
 
-    private string NoDevices => Text(OperatingSystem.IsWindows() ? "NoWindowsDevices" : "NoDevices");
+    private static string NoDevices => Text(OperatingSystem.IsWindows() ? "NoWindowsDevices" : "NoDevices");
 
     private bool Ready => _image is not null && _digest.Text is { Length: 64 } hash &&
         hash.All(char.IsAsciiHexDigit) && SelectedPath is { } path && _confirmation.Text == path;

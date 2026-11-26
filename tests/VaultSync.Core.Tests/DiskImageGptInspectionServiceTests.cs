@@ -25,6 +25,8 @@ public sealed class DiskImageGptInspectionServiceTests
         await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "disk-gpt-v1.json")),
         new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!).Single(fixture => fixture.Sector == sector);
 
+    internal static async Task<byte[]> GoldenRecoveryUsbImageAsync() => Raw(await FixtureAsync(512));
+
     private static byte[] Raw(Fixture fixture)
     {
         byte[] raw = new byte[fixture.Capacity];

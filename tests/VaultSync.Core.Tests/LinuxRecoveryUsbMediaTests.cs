@@ -1,3 +1,9 @@
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit.Sdk;
 using VaultSync.Core.Models;
 using VaultSync.Core.Services;
 using Xunit;
@@ -27,6 +33,42 @@ public sealed class LinuxRecoveryUsbMediaTests
         Assert.False(LinuxRecoveryUsbMedia.Eligible(disk with { Identity = LinuxBlockIdentity.Ambiguous }));
         Assert.False(LinuxRecoveryUsbMedia.Eligible(disk with { IsReadOnly = true }));
         Assert.False(LinuxRecoveryUsbMedia.Eligible(disk with { LogicalSectorBytes = 4096 }));
+    }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(false, 4096)]
+    [InlineData(true, 4096)]
+    public async Task StagingVerifiesTheImageBeforeAnAbsentDeviceCanBeOpened(bool incorrectDigest, int growth)
+    {
+        if (!LinuxRecoveryUsbMedia.Supported)
+        {
+            Assert.NotEqual("1", Environment.GetEnvironmentVariable("VAULTSYNC_REQUIRE_USB_STAGING_TESTS"));
+            return;
+        }
+
+        var directory = Directory.CreateTempSubdirectory("recovery-usb-staging-test-");
+        try
+        {
+            byte[] raw = await DiskImageGptInspectionServiceTests.GoldenRecoveryUsbImageAsync();
+            string input = Path.Combine(directory.FullName, "image.raw");
+            await File.WriteAllBytesAsync(input, raw);
+            byte[] digest = SHA256.HashData(raw);
+            if (incorrectDigest) digest[0] ^= 1;
+            var absent = Disk() with { KernelName = "sdzzzzzzzzzzz", Capacity = (ulong)(raw.Length + growth) };
+
+            var error = await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryUsbMedia.WriteAsync(
+                input, Convert.ToHexString(digest), absent,
+                (_, _) => throw new XunitException("An absent USB disk must never be opened."),
+                new Progress<double>(), CancellationToken.None));
+
+            Assert.Equal(incorrectDigest ? "recovery-usb.image-digest" : "recovery-usb.changed", error.Message);
+            Assert.Equal(raw, await File.ReadAllBytesAsync(input));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
     }
 
     [Fact]

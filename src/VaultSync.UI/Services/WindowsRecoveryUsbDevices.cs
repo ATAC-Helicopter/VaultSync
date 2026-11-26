@@ -22,6 +22,7 @@ namespace VaultSync.UI.Services;
 [SupportedOSPlatform("windows")]
 internal static class WindowsRecoveryUsbDevices
 {
+    private const string InventoryError = "recovery-usb.inventory";
     private static readonly JsonSerializerOptions InventoryJson = new() { RespectRequiredConstructorParameters = true };
 
     internal sealed record Target(int Number, string FriendlyName, string SerialNumber, long Size,
@@ -102,6 +103,7 @@ internal static class WindowsRecoveryUsbDevices
                 if (!volumes.SequenceEqual(currentVolumes))
                     throw new IOException("recovery-usb.volumes-changed");
                 CheckHeldDisk(disk, reviewed);
+                token.ThrowIfCancellationRequested();
                 foreach (var volume in locked) Control(volume, 0x00090020, []);
                 await RecoveryUsbImageWriter.WriteAndVerifyAsync(file, disk, digest, progress, token).ConfigureAwait(false);
                 CheckHeldDisk(disk, reviewed);
@@ -171,24 +173,24 @@ internal static class WindowsRecoveryUsbDevices
             info.ArgumentList.Add(argument);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromSeconds(25));
-        using var process = Process.Start(info) ?? throw new IOException("recovery-usb.inventory");
+        using var process = Process.Start(info) ?? throw new IOException(InventoryError);
         var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
         var errors = process.StandardError.ReadToEndAsync(timeout.Token);
         try { await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false); }
         catch (OperationCanceledException)
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             throw;
         }
         await errors.ConfigureAwait(false);
-        if (process.ExitCode != 0) throw new IOException("recovery-usb.inventory");
+        if (process.ExitCode != 0) throw new IOException(InventoryError);
         try
         {
             return JsonSerializer.Deserialize<T>((await output.ConfigureAwait(false)).TrimStart('\uFEFF'), InventoryJson)
-                ?? throw new IOException("recovery-usb.inventory");
+                ?? throw new IOException(InventoryError);
         }
-        catch (JsonException ex) { throw new IOException("recovery-usb.inventory", ex); }
+        catch (JsonException ex) { throw new IOException(InventoryError, ex); }
     }
 
     private static SafeFileHandle Open(string path, bool writeThrough)
