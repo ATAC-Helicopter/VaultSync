@@ -92,12 +92,22 @@ def choose_notifications(posts, state, publish_latest=False):
 def message(post, role_id=""):
     if role_id and not ROLE.fullmatch(role_id):
         raise ValueError("Invalid Discord role ID")
-    summary = " ".join(post["summary"].split())
-    if len(summary) > 380:
-        summary = summary[:379].rstrip() + "…"
+    paragraphs = [" ".join(part.split()) for part in
+                  re.split(r"\n\s*\n", post["summary"]) if part.strip()]
+    summary = "\n\n".join(paragraphs)
+    if len(summary) > 600:
+        prefix = summary[:599]
+        boundary = prefix.rfind(" ")
+        summary = (prefix[:boundary] if boundary >= 480 else prefix).rstrip() + "…"
     embed = {"title": post["title"][:256], "url": post["url"],
              "description": summary or "Read the new development article on FG Labs.",
              "color": 0x4388DB,
+             "thumbnail": {"url": AVATAR},
+             "fields": [{
+                 "name": "Read the development journal",
+                 "value": f"[Full article]({post['url']}) · [VaultSync](https://fglabs.dev/vaultsync)",
+                 "inline": False,
+             }],
              "footer": {"text": "VaultSync • FG Labs development journal"}}
     if post["date"]:
         embed["timestamp"] = post["date"]
