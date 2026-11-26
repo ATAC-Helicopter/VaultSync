@@ -37,7 +37,7 @@ internal static class LinuxRecoveryImageCatalog
             foreach (string name in source.Names)
             {
                 token.ThrowIfCancellationRequested();
-                if (name == DiskRecoveryRestoreRequest.FileName) continue;
+                if (name == DiskRecoveryRestoreRequest.DirectoryName) continue;
                 if (++count > 16) return new(State.Failed, []);
                 if (!CanonicalName(name)) continue;
                 if (source.Inspect(name) is { } image) images.Add(image);
@@ -104,9 +104,13 @@ internal static class LinuxRecoveryImageCatalog
         }
         public string? ReadSuggestion()
         {
-            string path = LinuxRecoveryCaptureExport.Root + "/" + DiskRecoveryRestoreRequest.FileName;
+            string directory = LinuxRecoveryCaptureExport.Root + "/" + DiskRecoveryRestoreRequest.DirectoryName;
+            string path = directory + "/" + DiskRecoveryRestoreRequest.FileName;
             try
             {
+                var handoff = LinuxRecoveryNative.StatPath(directory);
+                if (handoff.Mode != 0x45f8 || handoff.Owner != 0 ||
+                    handoff.Group != LinuxRecoveryCaptureExport.ControllerGroup || !SameDevice(identity, handoff)) return null;
                 var state = LinuxRecoveryNative.StatPath(path);
                 if ((state.Mode & 0xf000) != 0x8000 || state.Size != 32 || state.Links != 1 ||
                     !SameDevice(identity, state)) return null;
@@ -117,11 +121,12 @@ internal static class LinuxRecoveryImageCatalog
                 Span<byte> bytes = stackalloc byte[32];
                 file.ReadExactly(bytes);
                 if (file.ReadByte() != -1 || LinuxRecoveryNative.Stat(handle) != state ||
+                    LinuxRecoveryNative.StatPath(directory) != handoff ||
                     LinuxRecoveryNative.StatPath(path) != state) return null;
                 string suggestion = System.Text.Encoding.ASCII.GetString(bytes);
                 return CanonicalName(suggestion) ? suggestion : null;
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return null; }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { return null; }
         }
         public void Dispose() => root.Dispose();
     }

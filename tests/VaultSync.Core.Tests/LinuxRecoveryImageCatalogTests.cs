@@ -45,7 +45,7 @@ public sealed class LinuxRecoveryImageCatalogTests
     public void Suggestion_is_only_returned_for_an_admitted_image_and_does_not_consume_a_slot()
     {
         var names = Enumerable.Range(0, 16).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
-        using var source = new Source(names.Append(DiskRecoveryRestoreRequest.FileName)) { Suggestion = names[0] };
+        using var source = new Source(names.Append(DiskRecoveryRestoreRequest.DirectoryName)) { Suggestion = names[0] };
         var result = LinuxRecoveryImageCatalog.Read(source, CancellationToken.None);
         Assert.Equal(LinuxRecoveryImageCatalog.State.Available, result.Status);
         Assert.Equal(16, result.Images.Count);

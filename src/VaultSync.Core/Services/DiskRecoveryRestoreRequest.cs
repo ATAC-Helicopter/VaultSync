@@ -3,7 +3,8 @@ namespace VaultSync.Core.Services;
 /// <summary>An image-selection hint carried on the recovery export volume.</summary>
 public static class DiskRecoveryRestoreRequest
 {
-    internal const string FileName = ".vaultsync-restore-request";
+    internal const string DirectoryName = ".vaultsync-handoff";
+    internal const string FileName = "restore-image";
 
     public static bool CanSave(string imageFolder, Guid imageId) =>
         imageId != Guid.Empty && Path.GetFileName(Path.TrimEndingDirectorySeparator(imageFolder)) == imageId.ToString("N");
@@ -15,8 +16,11 @@ public static class DiskRecoveryRestoreRequest
             throw new ArgumentException("Expected the verified export folder.", nameof(imageFolder));
 
         var export = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(imageFolder)))!;
-        string temporary = Path.Combine(export, FileName + "." + Guid.NewGuid().ToString("N"));
-        string destination = Path.Combine(export, FileName);
+        var handoff = new DirectoryInfo(Path.Combine(export, DirectoryName));
+        if (!handoff.Exists || (handoff.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("The recovery handoff directory is unavailable.");
+        string temporary = Path.Combine(handoff.FullName, FileName + "." + Guid.NewGuid().ToString("N"));
+        string destination = Path.Combine(handoff.FullName, FileName);
         var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         try
         {

@@ -20,11 +20,12 @@ public sealed class DiskRecoveryRestoreRequestTests
         File.WriteAllText(payload, "fixture");
 
         Assert.Throws<ArgumentException>(() => DiskRecoveryRestoreRequest.Save(firstFolder, second));
-        Assert.Empty(Directory.EnumerateFiles(temporary.Path));
+        Assert.Throws<IOException>(() => DiskRecoveryRestoreRequest.Save(firstFolder, first));
+        string handoff = Directory.CreateDirectory(Path.Combine(temporary.Path, DiskRecoveryRestoreRequest.DirectoryName)).FullName;
         DiskRecoveryRestoreRequest.Save(firstFolder, first);
         DiskRecoveryRestoreRequest.Save(secondFolder + Path.DirectorySeparatorChar, second);
 
-        string marker = Assert.Single(Directory.GetFiles(temporary.Path));
+        string marker = Assert.Single(Directory.GetFiles(handoff));
         Assert.Equal(DiskRecoveryRestoreRequest.FileName, Path.GetFileName(marker));
         Assert.Equal(second.ToString("N"), File.ReadAllText(marker));
         Assert.Equal("fixture", File.ReadAllText(payload));

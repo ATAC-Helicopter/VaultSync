@@ -65,8 +65,9 @@ independent environment. It still requires that environment; a reboot does not
 make overwriting the live system disk safe. Current capture/restore contracts
 require offline, unmounted devices and independent boot admission.
 
-The desktop writes the verified image ID to `.vaultsync-restore-request` at
-the root of the export volume. The offline wizard only uses the hint when
+The desktop writes the verified image ID to `.vaultsync-handoff/restore-image`
+on the export volume. A new capture provisions this directory for members of
+the export group. The offline wizard only uses the hint when
 the exact ID matches an admitted catalog entry. Continue runs the independent
 image verification. Recovery still requires current destination observations
 and physical overwrite confirmation. An absent or unusable hint leaves the
