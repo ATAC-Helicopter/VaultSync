@@ -81,6 +81,8 @@ def _opening(body):
     paragraph = []
     for line in lines:
         if line.startswith("#"):
+            if not paragraph and line.startswith("# "):
+                continue
             break
         if not line.strip() and paragraph:
             break
@@ -103,6 +105,24 @@ def _highlights(body):
             heading, detail = line[4:].strip(), []
         elif heading and line.strip() and not line.strip().startswith("- "):
             detail.append(line.strip())
+    if not results:
+        # Some release notes use descriptive second-level headings instead of
+        # a dedicated Highlights section. Keep only feature-oriented sections.
+        allowed = {"bootable recovery usb", "system recovery progress",
+                   "desktop improvements", "added", "changed", "fixed",
+                   "security", "improvements", "new features"}
+        for line in body.splitlines():
+            if not line.startswith("## "):
+                continue
+            title = line[3:].strip()
+            if title.casefold() not in allowed:
+                continue
+            details = [s.strip().lstrip("- ").strip()
+                       for s in _section(body, title)
+                       if s.strip() and not s.startswith("#")]
+            if details:
+                value = _compact(details[0], 132)
+                results.append(f"• **{_compact(title, 64)}** — {value}")
     return results[:5]
 
 
@@ -112,7 +132,7 @@ def _qualification(body):
         return ""
     text = "\n".join(lines)
     # The release itself states the validated update path and platforms.
-    version = re.search(r"(\d+\.\d+\.\d+)\s*→\s*(\d+\.\d+\.\d+)", text)
+    version = re.search(r"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\s*→\s*(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)", text)
     platforms = [_compact(line.lstrip("- ").strip(), 45)
                  for line in lines if line.strip().startswith("- ")]
     prefix = (f"**{version.group(1)} → {version.group(2)}**" if version else "Upgrade validation")
@@ -133,11 +153,14 @@ def notification(release):
     qualification = _qualification(release["body"])
     if qualification:
         fields.append({"name": "✅ Tested update", "value": qualification, "inline": False})
+    if release["prerelease"]:
+        fields.append({"name": "Release channel", "value": "Preview build for testing. Use the stable release for everyday backups.", "inline": False})
     fields.append({
         "name": "⬇️ Downloads & details",
         "value": (
-            f"[Get VaultSync](https://fglabs.dev/vaultsync)"
+            f"[Download this release]({release['url']})"
             f"  ·  [Full release notes]({release['url']})"
+            "  ·  [Website](https://fglabs.dev/vaultsync)"
         ),
         "inline": False,
     })

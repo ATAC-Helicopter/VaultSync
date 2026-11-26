@@ -124,6 +124,37 @@ class DiscordReleaseTests(unittest.TestCase):
         self.assertIn("Full release notes", embed["fields"][-1]["value"])
         self.assertEqual(payload["allowed_mentions"], {"parse": [], "roles": list(mod.RELEASE_ROLE_IDS)})
 
+    def test_beta_descriptive_sections_and_version_suffixes(self):
+        body = (
+            "# VaultSync 1.9.0 Beta 2\n\n"
+            "Offline recovery is easier to access.\n\n"
+            "## Bootable recovery USB\n"
+            "Prepare and verify a recovery USB.\n\n"
+            "## System recovery progress\n"
+            "Tested on specific profiles.\n\n"
+            "## Desktop improvements\n"
+            "- Improved setup.\n\n"
+            "## Update qualification\n"
+            "1.9.0-beta.1 → 1.9.0-beta.2\n"
+            "- Windows x64\n"
+            "## Community\n"
+            "Unrelated community content."
+        )
+        payload = mod.notification({
+            "tag": "v1.9.0-beta.2",
+            "name": "Beta 2", "body": body,
+            "url": "https://example.test", "prerelease": True,
+        })
+        embed = payload["embeds"][0]
+        self.assertTrue(embed["description"].startswith("Offline recovery"))
+        self.assertIn("Bootable recovery USB", embed["description"])
+        self.assertIn("System recovery progress", embed["description"])
+        self.assertIn("Improved setup", embed["description"])
+        self.assertNotIn("Unrelated community content", embed["description"])
+        self.assertIn("1.9.0-beta.1 → 1.9.0-beta.2", embed["fields"][0]["value"])
+        self.assertIn("stable release", embed["fields"][1]["value"])
+        self.assertEqual(payload["allowed_mentions"], {"parse": [], "roles": list(mod.RELEASE_ROLE_IDS)})
+
     def test_replacing_old_post_checks_identity_before_resending(self):
         release = {
             "tag": "v1.8.10", "name": "VaultSync v1.8.10", "body": "Details",
