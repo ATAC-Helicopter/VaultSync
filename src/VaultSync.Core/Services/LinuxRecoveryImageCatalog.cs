@@ -8,11 +8,12 @@ internal static class LinuxRecoveryImageCatalog
     {
         internal string Folder => LinuxRecoveryCaptureExport.Root + "/" + Name;
     }
-    internal sealed record Result(State Status, IReadOnlyList<Image> Images);
+    internal sealed record Result(State Status, IReadOnlyList<Image> Images, string? SuggestedImage = null);
     internal interface ISource : IDisposable
     {
         IEnumerable<string> Names { get; }
         Image? Inspect(string name);
+        string? ReadSuggestion() => null;
         void Recheck();
     }
 
@@ -36,13 +37,16 @@ internal static class LinuxRecoveryImageCatalog
             foreach (string name in source.Names)
             {
                 token.ThrowIfCancellationRequested();
+                if (name == DiskRecoveryRestoreRequest.FileName) continue;
                 if (++count > 16) return new(State.Failed, []);
                 if (!CanonicalName(name)) continue;
                 if (source.Inspect(name) is { } image) images.Add(image);
             }
             token.ThrowIfCancellationRequested();
+            string? suggestion = images.Count == 0 ? null : source.ReadSuggestion();
             source.Recheck();
-            return new(State.Available, images.OrderBy(image => image.Name, StringComparer.Ordinal).ToArray());
+            return new(State.Available, images.OrderBy(image => image.Name, StringComparer.Ordinal).ToArray(),
+                images.Any(image => image.Name == suggestion) ? suggestion : null);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
@@ -97,6 +101,27 @@ internal static class LinuxRecoveryImageCatalog
         {
             if (LinuxRecoveryNative.Stat(root) != identity || LinuxRecoveryNative.StatPath(LinuxRecoveryCaptureExport.Root) != identity)
                 throw new IOException("recovery-catalog.changed");
+        }
+        public string? ReadSuggestion()
+        {
+            string path = LinuxRecoveryCaptureExport.Root + "/" + DiskRecoveryRestoreRequest.FileName;
+            try
+            {
+                var state = LinuxRecoveryNative.StatPath(path);
+                if ((state.Mode & 0xf000) != 0x8000 || state.Size != 32 || state.Links != 1 ||
+                    !SameDevice(identity, state)) return null;
+                using var handle = LinuxRecoveryNative.Open(path, 0x800 | 0x20000 | 0x80000);
+                if (LinuxRecoveryNative.Stat(handle) != state) return null;
+
+                using var file = new FileStream(handle, FileAccess.Read);
+                Span<byte> bytes = stackalloc byte[32];
+                file.ReadExactly(bytes);
+                if (file.ReadByte() != -1 || LinuxRecoveryNative.Stat(handle) != state ||
+                    LinuxRecoveryNative.StatPath(path) != state) return null;
+                string suggestion = System.Text.Encoding.ASCII.GetString(bytes);
+                return CanonicalName(suggestion) ? suggestion : null;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return null; }
         }
         public void Dispose() => root.Dispose();
     }

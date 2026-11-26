@@ -14,6 +14,7 @@ Historical technical detail is retained in the [detail archive](docs/release-evi
 - [VS-1904] Capture Linux system disks offline and create verified recovery copies while preserving private originals.
 - [VS-1907] Browse recovery images and restore them through a graphical wizard with separate overwrite confirmation and disk read-back.
 - [VS-1910] Open Disk Recovery from the sidebar or Recovery, see which image files are required before verification, and find the offline restore steps.
+- [VS-1910] Prepare a verified image selection in the desktop app for the offline restore wizard.
 - [VS-1910] Navigate desktop pages with Back, Forward and keyboard shortcuts.
 - [VS-1813] Search and filter backups, and browse versions at the same location from one row.
 - [VS-1995] Identify imported projects and see whether their source folders are available locally.

@@ -112,7 +112,9 @@ internal static class LinuxRecoveryCaptureExport
             if (!Private(originalState) || !ExportRoot(exportState) || !LinuxRecoveryNative.Ext4(original) || !LinuxRecoveryNative.Ext4(exports) ||
                 !LinuxCaptureRepositoryAdmission.Allows(expected, fresh, sourceName, Device(originalState)) ||
                 !LinuxCaptureRepositoryAdmission.Allows(expected, fresh, sourceName, Device(exportState))) throw Refused();
-            if (Directory.EnumerateFileSystemEntries(Root).Take(17).Count() >= 16) throw Refused();
+            if (Directory.EnumerateFileSystemEntries(Root)
+                .Where(path => Path.GetFileName(path) != DiskRecoveryRestoreRequest.FileName)
+                .Take(16).Count() >= 16) throw Refused();
             ulong required = checked(capacity + DiskImageRawProfileVerificationService.MaximumMetadataBytes);
             if (!Space(original, SameDevice(originalState, exportState) ? checked(required * 2) : required) || !Space(exports, required)) throw Refused();
             string temporary = ".vaultsync-export-incomplete-" + Guid.NewGuid().ToString("N");

@@ -4,7 +4,10 @@ public enum DiskImageInspectionState { Verified, Rejected, UnsupportedPlatform, 
 
 /// <summary>A read-only inspection receipt, never a staged image or device authorization.</summary>
 public sealed record DiskImageInspectionResult(DiskImageInspectionState State,
-    ulong VerifiedBytes = 0, uint LogicalSectorBytes = 0);
+    ulong VerifiedBytes = 0, uint LogicalSectorBytes = 0)
+{
+    public Guid ImageId { get; init; }
+}
 
 /// <summary>Desktop entry point for the fixed, authenticated, isolated image reader.</summary>
 public static class DiskImageInspectionService
@@ -28,7 +31,8 @@ public static class DiskImageInspectionService
         DiskImageInspectionWorkerOutcome.TimedOut => new(DiskImageInspectionState.TimedOut),
         DiskImageInspectionWorkerOutcome.Completed when result.Observation is
             { State: DiskImageRawProfileVerificationState.ContentAndLayoutVerified } observation =>
-            new(DiskImageInspectionState.Verified, observation.VerifiedBytes, observation.LogicalSectorBytes),
+            new(DiskImageInspectionState.Verified, observation.VerifiedBytes, observation.LogicalSectorBytes)
+            { ImageId = observation.ImageId },
         DiskImageInspectionWorkerOutcome.Completed when result.Observation is not null => new(DiskImageInspectionState.Rejected),
         _ => new(DiskImageInspectionState.Failed)
     };

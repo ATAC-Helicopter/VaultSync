@@ -17,6 +17,8 @@ public sealed class LinuxRecoveryImageCatalogTests
         internal readonly List<string> Inspected = [];
         internal bool Changed;
         internal int Checks;
+        internal string? Suggestion;
+        public string? ReadSuggestion() => Suggestion;
         public LinuxRecoveryImageCatalog.Image? Inspect(string name) { Inspected.Add(name); return new(name, 4096); }
         public void Recheck() { if (++Checks == 2 && Changed) throw new IOException(); }
         public void Dispose() { }
@@ -38,6 +40,19 @@ public sealed class LinuxRecoveryImageCatalogTests
         var result = LinuxRecoveryImageCatalog.Read(source, CancellationToken.None);
         Assert.Equal(LinuxRecoveryImageCatalog.State.Failed, result.Status); Assert.Empty(result.Images);
         Assert.Equal(16, source.Inspected.Count);
+    }
+    [Fact]
+    public void Suggestion_is_only_returned_for_an_admitted_image_and_does_not_consume_a_slot()
+    {
+        var names = Enumerable.Range(0, 16).Select(_ => Guid.NewGuid().ToString("N")).ToArray();
+        using var source = new Source(names.Append(DiskRecoveryRestoreRequest.FileName)) { Suggestion = names[0] };
+        var result = LinuxRecoveryImageCatalog.Read(source, CancellationToken.None);
+        Assert.Equal(LinuxRecoveryImageCatalog.State.Available, result.Status);
+        Assert.Equal(16, result.Images.Count);
+        Assert.Equal(names[0], result.SuggestedImage);
+
+        source.Suggestion = Guid.NewGuid().ToString("N");
+        Assert.Null(LinuxRecoveryImageCatalog.Read(source, CancellationToken.None).SuggestedImage);
     }
     [Fact]
     public void Changed_root_discards_candidates()

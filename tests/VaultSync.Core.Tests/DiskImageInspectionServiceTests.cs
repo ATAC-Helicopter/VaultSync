@@ -35,11 +35,12 @@ public sealed class DiskImageInspectionServiceTests
     }
 
     [Fact]
-    public void VerifiedReceiptCarriesOnlyMeasuredGeometry()
+    public void VerifiedReceiptCarriesImageIdentityAndMeasuredGeometry()
     {
+        var id = Guid.NewGuid();
         var result = DiskImageInspectionService.Translate(new(DiskImageInspectionWorkerOutcome.Completed,
-            new(DiskImageRawProfileVerificationState.ContentAndLayoutVerified, VerifiedBytes: 8192, LogicalSectorBytes: 4096)));
-        Assert.Equal(new(DiskImageInspectionState.Verified, 8192, 4096), result);
+            new(DiskImageRawProfileVerificationState.ContentAndLayoutVerified, ImageId: id, VerifiedBytes: 8192, LogicalSectorBytes: 4096)));
+        Assert.Equal(new(DiskImageInspectionState.Verified, 8192, 4096) { ImageId = id }, result);
     }
 
     [Fact]

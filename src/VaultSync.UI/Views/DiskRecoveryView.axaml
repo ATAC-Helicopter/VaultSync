@@ -47,7 +47,16 @@
                   IsVisible="{CompiledBinding HasImageFiles}" Margin="0,0,8,8" />
           <Button Classes="action-ghost" Content="{infra:LocalizedString Key=DiskRecovery.Cancel}"
                   Command="{CompiledBinding CancelCommand}" IsVisible="{CompiledBinding IsBusy}" Margin="0,0,0,8" />
+          <Button Classes="action-ghost" Content="{infra:LocalizedString Key=DiskRecovery.PrepareRestore}"
+                  Command="{CompiledBinding PrepareRestoreCommand}" IsVisible="{CompiledBinding HasVerifiedExport}"
+                  Margin="0,0,8,8" />
         </WrapPanel>
+        <TextBlock Text="{CompiledBinding RestoreStatus}" IsVisible="{CompiledBinding HasRestoreStatus}"
+                   Classes="recovery-step" />
+        <StackPanel IsVisible="{CompiledBinding HasVerifiedExport}" Spacing="4">
+          <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.RestoreImageId}" Classes="recovery-step" />
+          <SelectableTextBlock Text="{CompiledBinding RestoreImageId}" TextWrapping="Wrap" />
+        </StackPanel>
         <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Boundary}" Classes="recovery-step" FontSize="12" />
       </StackPanel>
     </Border>

@@ -13,6 +13,13 @@ On Linux x64, open the individual exported image folder that contains both
 `image.metadata` and `payload.raw`. The page reports missing files before
 enabling read-only verification of the image contents and layout. Windows and
 macOS users can view the offline steps and use Linux x64 for verification.
+After verifying a VaultSync export, select **Prepare offline restore** while
+the export volume is writable. Boot the VaultSync recovery medium with that
+same export volume attached and choose **Restore disk image**. The wizard
+highlights the matching catalog entry so you can review it and continue.
+If the volume is read-only or the desktop user cannot save the selection,
+match the first eight characters of the displayed image ID in the offline
+catalog.
 Expand **Show offline steps** for UEFI recovery media, image capture to a
 different physical drive, destination checks and post-restore read-back and
 boot checks.
@@ -58,13 +65,13 @@ independent environment. It still requires that environment; a reboot does not
 make overwriting the live system disk safe. Current capture/restore contracts
 require offline, unmounted devices and independent boot admission.
 
-Automatic boot selection and a durable desktop-to-recovery intent handoff are
-not implemented. Their per-platform boot, signing and recovery contracts need
-implementation and measurement before enabling them. A prepared plan may help
-select an image after boot, but must never transfer disk-write authority: image,
-device identity, current observations and physical overwrite consent are checked
-again in recovery. Retain an independently bootable recovery path when the
-installed OS or application cannot start.
+The desktop writes the verified image ID to `.vaultsync-restore-request` at
+the root of the export volume. The offline wizard only uses the hint when
+the exact ID matches an admitted catalog entry. Continue runs the independent
+image verification. Recovery still requires current destination observations
+and physical overwrite confirmation. An absent or unusable hint leaves the
+normal image picker available. Boot selection remains manual and the recovery
+medium can boot independently when the installed OS or application cannot start.
 
 Do not promise that the entire operation is applied silently at restart. The
 user must see the fresh destination review before a destructive operation.
