@@ -59,6 +59,8 @@ fields and rolls back when it reads the valid Beta 2 metadata. The Beta 2
 helper accepts the numeric versions bound to the full VaultSync release
 identity for later updates. The asset workflow exercises the DMG replacement
 on both Mac runners while qualifying the selected Windows and Linux patches.
+The DMG qualification copies the bundle with macOS `ditto` to preserve
+extended attributes before verifying its ad-hoc signature and starting it.
 Qualify the Beta 1 → Beta 2 update against the published `v1.9.0-beta.1`
 packages. Record which architecture and package type actually applied the
 patch and which used the full package.

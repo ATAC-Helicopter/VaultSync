@@ -85,7 +85,9 @@ def copy_dmg_bundle(package, mount, bundle):
     subprocess.run(["hdiutil", "attach", str(package), "-readonly", "-nobrowse",
                     "-mountpoint", str(mount)], check=True, timeout=120)
     try:
-        shutil.copytree(mount / APP_BUNDLE, bundle, symlinks=True)
+        # Ad-hoc signatures on non-Mach-O bundle members live in extended attributes.
+        subprocess.run(["/usr/bin/ditto", str(mount / APP_BUNDLE), str(bundle)],
+                       check=True, timeout=120)
     finally:
         subprocess.run(["hdiutil", "detach", str(mount)], check=True, timeout=60)
 
