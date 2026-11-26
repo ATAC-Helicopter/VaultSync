@@ -44,7 +44,10 @@ internal static class LinuxRecoveryUsbDevices
                     targets.Add(target);
             }
             catch (Exception error) when (error is DBusErrorReplyException or KeyNotFoundException)
-            { } // A device can disappear or change interfaces during enumeration.
+            {
+                // A device can disappear or change interfaces during enumeration.
+                continue;
+            }
         }
         return targets.GroupBy(target => target.Serial, StringComparer.Ordinal)
             .Where(group => group.Count() == 1).Select(group => group.Single()).ToArray();

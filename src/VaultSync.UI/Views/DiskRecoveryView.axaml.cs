@@ -37,7 +37,7 @@ public partial class DiskRecoveryView : UserControl
                 launch.ArgumentList.Add(Program.PrepareRecoveryUsbArgument);
                 launch.ArgumentList.Add(LocalizationProvider.Service?.CurrentLanguage ?? "en");
                 try { using var child = Process.Start(launch); }
-                catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { }
+                catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { return; }
             }
             else if (TopLevel.GetTopLevel(this) is Window owner)
             {

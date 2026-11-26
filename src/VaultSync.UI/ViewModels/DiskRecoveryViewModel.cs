@@ -36,7 +36,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     public AsyncRelayCommand PrepareRestoreCommand { get; }
     public bool Supported => OperatingSystem.IsLinux() &&
         RuntimeInformation.ProcessArchitecture == Architecture.X64;
-    public bool CanPrepareUsb => LinuxRecoveryUsbMedia.Supported ||
+    public bool CanPrepareUsb { get; } = LinuxRecoveryUsbMedia.Supported ||
         (OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64);
     public bool IsBusy => _inspection is not null;
     public bool CanChoose => !IsBusy && !_checkingFolder && !_savingRestore;
@@ -117,7 +117,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
         Refresh();
         try
         {
-            await Task.Run(() => DiskRecoveryRestoreRequest.Save(folder, receipt.ImageId));
+            await Task.Run(() => DiskRecoveryRestoreRequest.Save(folder, receipt.ImageId), CancellationToken.None);
             _restoreStatusKey = "DiskRecovery.RestorePrepared";
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
