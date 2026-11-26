@@ -2,8 +2,9 @@ name: VaultSync devlog to Discord
 
 on:
   schedule:
-    # UTC. Scheduled GitHub jobs may be delayed, so do not rely on precise delivery time.
-    - cron: "17 * * * *"
+    # Poll the production RSS feed every ten minutes, off the hour.
+    # GitHub may delay scheduled jobs. No preview or private-site CI is required.
+    - cron: "7,17,27,37,47,57 * * * *"
   workflow_dispatch:
     inputs:
       publish:
