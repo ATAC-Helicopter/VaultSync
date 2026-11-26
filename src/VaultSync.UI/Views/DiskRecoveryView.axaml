@@ -65,6 +65,8 @@
         <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.OfflineTitle}"
                    FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Text="{infra:LocalizedString Key=DiskRecovery.Overview}" Classes="recovery-step" />
+        <Button Classes="action-primary" Content="{infra:LocalizedString Key=DiskRecovery.Usb.Title}"
+                IsVisible="{CompiledBinding CanPrepareUsb}" Click="PrepareUsb" />
         <Expander Classes="app-section" HorizontalAlignment="Stretch"
                   Header="{infra:LocalizedString Key=DiskRecovery.OfflineSteps}">
           <StackPanel Spacing="10" Margin="0,8,0,0">

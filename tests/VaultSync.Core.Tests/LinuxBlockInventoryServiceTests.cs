@@ -114,6 +114,22 @@ public sealed class LinuxBlockInventoryServiceTests
     }
 
     [Fact]
+    public async Task UsbIdentityAttributeReturningEnxioDoesNotDiscardTheInventory()
+    {
+        var files = Basic();
+        files.Text.Remove(Root + "/vdb/serial");
+        files.OnRead = (path, _) =>
+        {
+            if (path == Root + "/vdb/device/wwid") throw new IOException("fixture ENXIO", 6);
+        };
+        var snapshot = await LinuxBlockInventoryService.ObserveAsync(files);
+        Assert.Equal(LinuxBlockInventoryState.Observed, snapshot.State);
+        var disk = snapshot.Devices.Single(d => d.KernelName == "vdb");
+        Assert.Equal(LinuxBlockIdentity.Unknown, disk.Identity);
+        Assert.NotNull(disk.DiskSequence);
+    }
+
+    [Fact]
     public async Task StackedDevicePropagatesUseThroughSlaveAndPartitionAncestry()
     {
         var files = Basic();

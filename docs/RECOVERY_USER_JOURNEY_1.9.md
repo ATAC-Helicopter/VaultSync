@@ -23,8 +23,14 @@ catalog.
 Expand **Show offline steps** for UEFI recovery media, image capture to a
 different physical drive, destination checks and post-restore read-back and
 boot checks.
-Capture, media preparation and destination writes require the separate recovery
-environment.
+On Linux x64, **Prepare recovery USB** writes a preassembled VaultSync UEFI
+image from a trusted source to a dedicated USB drive. It requires UDisks2 with
+an authorization agent, `sgdisk` from GPT fdisk, and the expected SHA-256 from
+the image's trusted build record. Select an unmounted USB drive, check its
+model, serial number and capacity, and type its displayed device path. A larger
+drive gets a relocated backup GPT. The desktop flushes the write and reads back
+the full drive before reporting success.
+System disk capture and restore run in the independent recovery environment.
 
 The installed recovery controller and capture console currently run in a
 separately assembled Linux recovery installation. Capture uses the physical
@@ -44,9 +50,10 @@ The desktop should guide three clearly separated tasks:
    select a source and storage, prepare the recovery environment, capture and
    verify the image, and show its result and how to use it. The initial full raw
    image includes unused sectors and potentially deleted data.
-2. **Prepare recovery media.** Choose a disposable removable device with an
-   explicit erase review, produce and verify a bootable package, and explain how
-   to boot it. Media creation and its platform/firmware qualification remain open.
+2. **Prepare recovery media.** The Linux x64 writer accepts a preassembled
+   recovery image and requires an explicit erase review. The image build still
+   binds the scratch and export volume UUIDs. Distribution of a ready-to-use
+   bootable package and platform/firmware qualification remain open.
 3. **Restore a disk.** Discover available recovery copies, select and verify one,
    choose the actual destination, show what will be overwritten, obtain fresh
    physical confirmation, restore with visible progress, verify the result and

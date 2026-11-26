@@ -35,6 +35,7 @@ public sealed class DiskRecoveryViewModel : ViewModelBase
     public AsyncRelayCommand PrepareRestoreCommand { get; }
     public bool Supported => OperatingSystem.IsLinux() &&
         System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64;
+    public bool CanPrepareUsb => Supported;
     public bool IsBusy => _inspection is not null;
     public bool CanChoose => !IsBusy && !_checkingFolder && !_savingRestore;
     public bool CanVerify => Supported && _hasImageFiles && CanChoose;

@@ -16,6 +16,14 @@ public partial class DiskRecoveryView : UserControl
         DetachedFromVisualTree += (_, _) => (DataContext as DiskRecoveryViewModel)?.Cancel();
     }
 
+    private void PrepareUsb(object? sender, RoutedEventArgs args) =>
+        _ = DetachedTask.RunAsync(async () =>
+        {
+            if (DataContext is DiskRecoveryViewModel { CanPrepareUsb: true } &&
+                TopLevel.GetTopLevel(this) is Window owner)
+                await new RecoveryUsbWindow().ShowDialog(owner);
+        }, "prepare-recovery-usb");
+
     private void ChooseImage(object? sender, RoutedEventArgs args) =>
         _ = DetachedTask.RunAsync(async () =>
         {
