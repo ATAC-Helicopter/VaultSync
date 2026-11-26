@@ -105,6 +105,35 @@ public sealed class DiskImageGptInspectionServiceTests
     }
 
     [Fact]
+    public async Task RecoveryUsbResizeRefusesANonstandardButInspectablePartitionTable()
+    {
+        Fixture fixture = await FixtureAsync(512);
+        byte[] raw = Raw(fixture);
+        int backupHeader = raw.Length - 512;
+        const int entryBytes = 128 * 128;
+        int backupTable = backupHeader - entryBytes - 512;
+        raw.AsSpan(1024, entryBytes).CopyTo(raw.AsSpan(backupTable, entryBytes));
+        Put64(raw, backupHeader + 72, (ulong)backupTable / 512);
+        foreach (int header in new[] { 512, backupHeader })
+        {
+            Put64(raw, header + 48, (ulong)backupTable / 512 - 1);
+            FixHeader(raw, header);
+        }
+
+        using var staging = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite,
+            FileShare.None, 4096, FileOptions.DeleteOnClose);
+        await staging.WriteAsync(raw);
+        var inspection = await DiskImageGptInspectionService.InspectAsync(staging, fixture.Capacity, 512);
+        Assert.Equal(DiskImageGptInspectionState.LayoutInspected, inspection.State);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            DiskImageGptInspectionService.ResizeRecoveryUsbImageAsync(staging, raw.Length + 4096, default));
+
+        Assert.Equal("recovery-usb.gpt-layout", error.Message);
+        Assert.Equal(raw.LongLength, staging.Length);
+    }
+
+    [Fact]
     public async Task RecoveryUsbResizeRefusesInvalidOrSmallerTargetBeforeChangingStaging()
     {
         Fixture fixture = await FixtureAsync(512);

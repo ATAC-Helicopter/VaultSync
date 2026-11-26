@@ -71,6 +71,44 @@ public sealed class LinuxRecoveryUsbMediaTests
         }
     }
 
+    [Theory]
+    [InlineData("mounted", "recovery-usb.invalid-input")]
+    [InlineData("too-large", "recovery-usb.image-size")]
+    [InlineData("non-recovery-image", "recovery-usb.partitions")]
+    public async Task InvalidMediaOrTargetRefusesBeforeOpeningTheDisk(string scenario, string expectedError)
+    {
+        if (!LinuxRecoveryUsbMedia.Supported)
+        {
+            Assert.NotEqual("1", Environment.GetEnvironmentVariable("VAULTSYNC_REQUIRE_USB_STAGING_TESTS"));
+            return;
+        }
+
+        var directory = Directory.CreateTempSubdirectory("recovery-usb-refusal-test-");
+        try
+        {
+            byte[] raw = new byte[64 * 1024];
+            string input = Path.Combine(directory.FullName, "image.raw");
+            await File.WriteAllBytesAsync(input, raw);
+            var disk = Disk() with
+            {
+                MountObserved = scenario == "mounted",
+                Capacity = (ulong)(scenario == "too-large" ? raw.Length - 512 : raw.Length)
+            };
+
+            var error = await Assert.ThrowsAsync<IOException>(() => LinuxRecoveryUsbMedia.WriteAsync(
+                input, Convert.ToHexString(SHA256.HashData(raw)), disk,
+                (_, _) => throw new XunitException("Rejected input must never open a USB disk."),
+                new Progress<double>(), CancellationToken.None));
+
+            Assert.Equal(expectedError, error.Message);
+            Assert.Equal(raw, await File.ReadAllBytesAsync(input));
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     [Fact]
     public void Partition_names_cannot_stand_in_for_gpt_codes()
     {
