@@ -17,7 +17,8 @@ public sealed class InstallationIdentityServiceTests
 
         Assert.Equal(
             Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify),
                 "VaultSync",
                 InstallationIdentityService.IdentityFileName),
             service.IdentityPath);

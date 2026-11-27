@@ -84,6 +84,23 @@ Drill history contains local database IDs, timestamps, status, counts, and human
   report and JSON include 3-2-1, protected-point, per-project, and proof-evidence
   details without raw local paths.
 
+## What a passing drill does not establish
+
+The current stable 1.8.x read-only drill measures a **bounded file-level**
+subset and restore plan; it neither reboots a restored operating system nor
+runs an application's own consistency checker. A successful SHA-256 and size
+comparison cannot prove database transaction consistency, credential access,
+version compatibility or live application behavior. Treat unexamined files,
+remote dependencies and application states as **not tested**, not automatically
+healthy. Do not reinterpret historical `Passed` evidence as a complete
+system-recovery or application guarantee.
+
+The planned 1.9 disk recovery work separates recorded copies, payload
+integrity, actual restore/read-back, target-only boot, named application
+checks and failure independence. These are future scoped evidence categories,
+not shipped stable features; see
+[Recovery Horizon evidence limits](RECOVERY_EVIDENCE_SCOPE_1.9.md).
+
 ## Emergency recovery on another machine
 
 1. Stop VaultSync writers that can reach the destination and make a byte-for-byte

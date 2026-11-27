@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-17",
+  "owner": "VS-1904",
+  "issue": 492,
+  "preparationPR": 736,
+  "sourceBase": "ab3f5e183ebb0c82d6aa6ef0d125fa03455ff0bb",
+  "sourceSha256": {
+    "VaultSync.sln": "5fa9f08df5963dfcd10ba48b3a58dac9f68a072d793a3cbc4c01aa9dadda4067",
+    "src/VaultSync.Core/Services/DiskInventoryWorkerService.cs": "f770a964b124a695fbabeb9b1c302bf99c758884bba2b25823be52815ade9d1d",
+    "src/VaultSync.DiskWorker/Program.cs": "626ba249fa97143136cfc67a5c225d0d0eabf211eca415dcf714d3e7f080bf35",
+    "src/VaultSync.DiskWorker/VaultSync.DiskWorker.csproj": "b7526a48d2ae2a6f8cdbdad6e6fcf919b1747b359dc3cc3caa6ae1d65193b575",
+    "tests/VaultSync.Core.Tests/DiskInventoryWorkerServiceTests.cs": "386d3c5c0af1a4df9dea7ea5a98d719bcc967b46f92fc4ac79201e4782a1d46e"
+  },
+  "currentRelease": {
+    "coreCases": 1395,
+    "workerCases": 50,
+    "pythonCases": 221,
+    "warnings": 0,
+    "errors": 0,
+    "skipped": 0,
+    "localeKeys": 1932,
+    "locales": 19,
+    "trxSha256": "0fc15c7a3caa14d871543974b70735b7b40f51eff3b3b504358b00e9826048c9",
+    "logSha256": "041fd272fb00c3a88d29920bc488f0828a703dd468b3001164048962a6b3914e"
+  },
+  "currentMacProcess": {
+    "sourceBase": "ab3f5e183ebb0c82d6aa6ef0d125fa03455ff0bb",
+    "workerAssemblySha256": "bc8740a974bda68617780928a8fcf38329e402d8f5e52b61396b3dd719b25251",
+    "coreAssemblySha256": "b2d2dcc0580a2f6fca877356562aab37edcb16a763dcce3ea84c38a71364dd9a",
+    "frameSha256": "c9ad5939601d2b0109e46e6da1360a6696c965b6ef15eef6a8698882937fa24d",
+    "cases": [
+      {
+        "case": "valid-one-shot",
+        "exit": 0,
+        "stdoutBytes": 274,
+        "stderrBytes": 0,
+        "seconds": 0.07
+      },
+      {
+        "case": "truncated-0",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.096
+      },
+      {
+        "case": "truncated-1",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.043
+      },
+      {
+        "case": "truncated-8",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.036
+      },
+      {
+        "case": "truncated-16",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.036
+      },
+      {
+        "case": "truncated-31",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.036
+      },
+      {
+        "case": "trailing-byte",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.031
+      },
+      {
+        "case": "second-request",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.032
+      },
+      {
+        "case": "unknown-version",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.03
+      },
+      {
+        "case": "unknown-operation",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.034
+      },
+      {
+        "case": "empty-id",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.031
+      },
+      {
+        "case": "arguments-refused",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.023
+      },
+      {
+        "case": "missing-eof-deadline",
+        "exit": 124,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 30.074
+      }
+    ]
+  },
+  "linuxVMTransport": {
+    "processExitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 194.4,
+    "guestCompleted": true,
+    "nativeExitZero": true,
+    "sourceSha512": "f46f0671a6e5bdec5291ab8972bae2f10e5408c2f64a74078f11efc2f06a436a9d0313ed50e0472542eeabf780e9f7c792ac0a314c6c20507fcd9fd81b468c3d",
+    "firmwareSha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "nvramTemplateSha256": "5d2ac383371b408398accee7ec27c8c09ea5b74a0de0ceea6513388b15be5d1e",
+    "coreAssemblySha256": "b2d2dcc0580a2f6fca877356562aab37edcb16a763dcce3ea84c38a71364dd9a",
+    "workerSha256": "c1157bdcc789c4f54b0f00b046652486dd1a19a78facd41d50231daaabe48fb6",
+    "serialSha256": "410bf66c2996e893dc9ac1815eea1f592a0552b05992d29218da761b12269f0b",
+    "devices": [
+      {
+        "KernelName": "sr0",
+        "Kind": 3,
+        "Capacity": 86562816,
+        "LogicalSectorBytes": 2048,
+        "PhysicalSectorBytes": 2048,
+        "IsReadOnly": true,
+        "Identity": 0,
+        "MountObserved": true,
+        "Use": 1
+      },
+      {
+        "KernelName": "sr1",
+        "Kind": 3,
+        "Capacity": 1073741312,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": true,
+        "Identity": 0,
+        "MountObserved": false,
+        "Use": 0
+      },
+      {
+        "KernelName": "vda",
+        "Kind": 0,
+        "Capacity": 3221225472,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": false,
+        "Identity": 1,
+        "MountObserved": false,
+        "Use": 1
+      },
+      {
+        "KernelName": "vda1",
+        "Kind": 1,
+        "Capacity": 3085959168,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": false,
+        "Identity": 0,
+        "MountObserved": true,
+        "Use": 1
+      },
+      {
+        "KernelName": "vda14",
+        "Kind": 1,
+        "Capacity": 3145728,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": false,
+        "Identity": 0,
+        "MountObserved": false,
+        "Use": 1
+      },
+      {
+        "KernelName": "vda15",
+        "Kind": 1,
+        "Capacity": 130023424,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": false,
+        "Identity": 0,
+        "MountObserved": true,
+        "Use": 1
+      },
+      {
+        "KernelName": "vdb",
+        "Kind": 0,
+        "Capacity": 134217728,
+        "LogicalSectorBytes": 512,
+        "PhysicalSectorBytes": 512,
+        "IsReadOnly": false,
+        "Identity": 1,
+        "MountObserved": false,
+        "Use": 0
+      },
+      {
+        "KernelName": "vdc",
+        "Kind": 0,
+        "Capacity": 134217728,
+        "LogicalSectorBytes": 4096,
+        "PhysicalSectorBytes": 4096,
+        "IsReadOnly": true,
+        "Identity": 1,
+        "MountObserved": false,
+        "Use": 0
+      }
+    ],
+    "cases": [
+      {
+        "case": "valid-one-shot",
+        "exit": 0,
+        "stdoutBytes": 3078,
+        "stderrBytes": 0,
+        "seconds": 2.218
+      },
+      {
+        "case": "truncated-0",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.574
+      },
+      {
+        "case": "truncated-1",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.526
+      },
+      {
+        "case": "truncated-8",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.591
+      },
+      {
+        "case": "truncated-16",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.407
+      },
+      {
+        "case": "truncated-31",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.427
+      },
+      {
+        "case": "trailing-byte",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.39
+      },
+      {
+        "case": "second-request",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.378
+      },
+      {
+        "case": "unknown-version",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.363
+      },
+      {
+        "case": "unknown-operation",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.342
+      },
+      {
+        "case": "empty-id",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.348
+      },
+      {
+        "case": "arguments-refused",
+        "exit": 64,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 0.206
+      },
+      {
+        "case": "missing-eof-deadline",
+        "exit": 124,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "seconds": 30.419
+      }
+    ],
+    "hostSourceSha256": "ca1f70666d80d6b0e969fe7c80bdd1a337b3ed163dd0b1403a58e95af9333bec",
+    "hostSourceScope": "Before final InvalidDataException and unexpected Exception redacting exit handlers; protocol and inventory provider match final source. Not current-host exception-handler qualification.",
+    "inputs": {
+      "vm/run_lab.py": "2292451e612bab346b509b5dd9244ef28483d6e7ff65c1f4ebf9cdc7d66a1f66",
+      "vm/app/worker_probe.py": "85d6b664e280a63dbf67814d178165bea128ca34ab07b866da4ada8a838c89f3",
+      "vm/seed/app.tar": "9f3b8fece1a7ebe59c2f3f71bb42abfc715be693acaef69d19b8bc791a77c51f",
+      "vm/seed/user-data": "960a84ca06517dd3524697da2b2e11217258e3f5e2f6eedf74405f65c3100eda",
+      "vm/seed/meta-data": "8b1329e9c554f31a0a26e66bc63b2887be57a6760bf9b04a6774fd40224fe9ed",
+      "vm/seed.iso": "63fb7a2fecc3beeb7a218739575268141365b97023b0ce641b45b720b8805e96"
+    }
+  },
+  "tracking": {
+    "activeWorkItems": 42,
+    "discrepancies": 0,
+    "issueState": "open",
+    "projectStatus": "In progress",
+    "actualStartDate": "2026-10-13",
+    "targetDate": "2027-03-26"
+  },
+  "qualification": {
+    "candidateProfiles": 4,
+    "qualifiedProfiles": 0,
+    "privilegedWorker": false,
+    "authenticatedChannel": false,
+    "captureOrRestore": false,
+    "releaseAsset": false
+  },
+  "privateEvidence": "/tmp/vaultsync-worker-lab-20261017"
+}

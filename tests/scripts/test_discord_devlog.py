@@ -405,4 +405,3 @@ class DiscordDevlogTests(unittest.TestCase):
             with self.subTest(xml=xml):
                 with self.assertRaisesRegex(ValueError, "declarations are not allowed"):
                     mod.read_feed(xml)
-

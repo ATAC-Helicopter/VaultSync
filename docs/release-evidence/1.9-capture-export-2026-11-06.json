@@ -1,0 +1,57 @@
+{
+  "observedOn": "2026-11-06",
+  "owner": "VS-1904/#492",
+  "baseCommit": "5e77dea",
+  "sourceSha256": {
+    "Localization/strings.ar.json": "d77946646e329952ddfe6f3690106787de4be19e13beaa681e154a69c7fde8b1",
+    "Localization/strings.bn.json": "a534fe12976100f50f155dd4461c2563664057fa83aba6c11ce4c0cb4e5192c0",
+    "Localization/strings.de.json": "f1bf805e63a26089ee076c7090d02c78bdddf743aa6ec8d99c68ee8df2a89afc",
+    "Localization/strings.en.json": "18749fce645524d0dbef9e408f392a37c287df5829984e4e3355b49c6cc9cb3d",
+    "Localization/strings.es.json": "8c96706123b4ecc0f26b00e14c88f9f04af3b3d6d6c25978e889981af086d84a",
+    "Localization/strings.fr.json": "432df3bc935c148fb7c040e248d964e5acbc98d300b1a42042741446e022ba61",
+    "Localization/strings.hi.json": "f27e207409b65f86893dd25a4e2e8ca0f7b9b14a083441a5f876eca3ed254245",
+    "Localization/strings.id.json": "4b61ad6d46dae2e4b23bb0e7afbe3b6a2419a5b21f2e3c5eeedceffa43bb928c",
+    "Localization/strings.it.json": "b1d9560d1f0b30a97af4cffbac1d32086c0e6d43d19802d0b3badd2aa1edd046",
+    "Localization/strings.ja.json": "22b2ec82ed839475b2b4a43fbe947ef7fbdc0172573fe5ddb9fd4d851791285e",
+    "Localization/strings.ko.json": "276f903eacb59e8eff5669811b122cadb7aa074d54c8c066c82049aa28a2f2d0",
+    "Localization/strings.nl.json": "ca033d9a9a6055129a020ebbc24a29be3e925e56da70faa2c39911a8a9aa6e4a",
+    "Localization/strings.pl.json": "537e9751da7494e4036a42deb2580c4544779c86c4bfc737e42fc966da5506cd",
+    "Localization/strings.pt.json": "65cde52903729ab1e0c8822a0c150e9621db9f21df7df2904ee585f655e622b5",
+    "Localization/strings.ru.json": "eb329e5b6e508492a4a11cf7f13f7312c07f37522547f614d0f56f57263d59f7",
+    "Localization/strings.tr.json": "bd885aa4c5537c1404ac943d5f760bdc49d459688ad2a40249717686a4f67922",
+    "Localization/strings.uk.json": "dd1b10a50e0ac433ca75f0c62193b07203551c85c7e11d9a03f25ec52b882f87",
+    "Localization/strings.vi.json": "3054b0fae0e85a93e1c6cef0d43e6e07c75030019ce89d28862eea5f8e372a2d",
+    "Localization/strings.zh.json": "13b7354eed7b084c4543c30f624a2e9bdbac06996b52e74ea88cd4ce707daa0a",
+    "scripts/stage_recovery_host.py": "ef79b5d366efdb563846817f77192cf46f8d1799ad5311cc5353e505af1676cf",
+    "src/VaultSync.Core/Services/LinuxRawImageStorage.cs": "87dfb8e7a90d7b83b8b0f5011a31083738b80a975f46d6268a3a3d8b5bff7572",
+    "src/VaultSync.Core/Services/LinuxRecoveryCaptureExport.cs": "03a543518699e3fb6409024eb77ee9d8584e00dd4c27ea8d6318f4e4f4fd32a0",
+    "src/VaultSync.Core/Services/LinuxRecoveryCaptureHost.cs": "46e3dd603befed8d2c6e329ce282e9b3e484e4b81e8a80ed868a02eabb4516d9",
+    "src/VaultSync.Core/Services/LinuxRecoveryMediaInstallation.cs": "db824dd28e6e0f91215a7dbda31493f1bce75d353b7cb7be0749e08569ceb438",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryCaptureExportTests.cs": "930e05853b48230529ccbaf5b8b0b3e6921f6455e66fc71b91dad22ef3740a2b",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryMediaInstallationTests.cs": "f624725ac03834c178b8e37d515edb2a0498c767b0d1b9bb5120968bcfd47d01",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryStorageNativeTests.cs": "2fda30a1019f70dd0799866edf72d27ad8af3c7d8b4e409d25d42a68d7c254c9",
+    "tests/scripts/test_stage_recovery_host.py": "45669d49cece67090bedcc30095e257093ad5e1d000fdeae3ffbfe099d0958c2"
+  },
+  "checks": {
+    "focusedReleasePassed": 81,
+    "failed": 0,
+    "reportedSkipped": 0,
+    "warningsAsErrors": true,
+    "stagingPassed": 10,
+    "hostReleaseBuild": "zero warnings/errors",
+    "localizationKeys": 2014,
+    "locales": 19,
+    "independentReview": "no remaining blocker; no duplicated test execution"
+  },
+  "nativeStorageExecuted": false,
+  "historicalFailures": [
+    "Initial public theory/internal enum accessibility compile failure",
+    "Sealed copied streams were at EOF before inspection; explicit reset precedes passing81case checkpoint"
+  ],
+  "limits": [
+    "Fixed preprovisioned export root; private originals untouched",
+    "16parententries include retained empty hiddenworkspaces, atmost8successfulexports before trustedmaintenance",
+    "Native UID60999 read/pathselection, capture/export, bootmode selection and full OS/media loop remain unqualified"
+  ],
+  "qualification": "none"
+}

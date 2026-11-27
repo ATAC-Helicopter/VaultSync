@@ -1,0 +1,32 @@
+{
+  "owner": "VS-1917",
+  "issue": 574,
+  "sourceBase": "694176afa0e3e0af23638bfc79728dd0fe35f476",
+  "sourceHashes": {
+    "src/VaultSync.Core/Services/DiskImageRawMetadataEncodingService.cs": "46cf87cedfe0a3f978bfed1d895b4f80efbe578f33a87ee05a3687ebd7b7b8d5",
+    "tests/VaultSync.Core.Tests/DiskImageRawMetadataEncodingServiceTests.cs": "e304b31acd6ffe02819a887a7e7d8233c0cfd51a289ba523d174dd11398ba731",
+    "tests/VaultSync.Core.Tests/DiskImageRawProfileVerificationServiceTests.cs": "94763b97ae1c5f5cca85d9905b8d8f84bc054241cce2173b4e47a4df38065ea9",
+    "docs/DISK_IMAGE_RAW_WIRE_1.9.md": "db8622b1239ffd2d0ac9ec22b09339c35f26f7f4f92cdea9d3244b33cc264489"
+  },
+  "releaseChecks": {
+    "core": 1630,
+    "python": 236,
+    "newCoreCases": 23,
+    "focusedCases": 63,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localeKeys": 1942,
+    "localeFiles": 19,
+    "log": "/tmp/vaultsync-raw-codec-release-20261020.log",
+    "trx": "/var/folders/98/rp_mspy95h175s5xn22b7gqc0000gn/T/vaultsync-validation.c92AA8/test-results/core-tests.trx"
+  },
+  "limits": [
+    "Pure encoder; no stream/path/device I/O",
+    "Caller-supplied offline/source/tool/layout claims remain unauthenticated",
+    "MetadataEncoded is not acquisition, verified payload or durable completion",
+    "Existing fixture writer and its 1 GiB guard remain unchanged",
+    "All disk profiles remain candidate, none qualified",
+    "Hosted gate must match the actual delivered head"
+  ]
+}

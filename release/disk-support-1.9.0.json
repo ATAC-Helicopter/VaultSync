@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "release": "1.9.0",
+  "engine": {
+    "proposal": "internal-raw-offline",
+    "decision": "approved",
+    "approval": {
+      "by": "ATAC-Helicopter",
+      "observedAt": "2026-10-20T08:27:28Z",
+      "artifact": {
+        "path": "docs/release-evidence/1.9-joint-architecture-approval-2026-10-20.md",
+        "sha256": "d35256e282cf0131e9c88c51b5fee874e62ee4c96c3f0256eb4f8ad3b96dfd03"
+      }
+    }
+  },
+  "profiles": [
+    {
+      "id": "uefi-gpt-ext4-512",
+      "status": "qualified",
+      "sourceOS": "linux",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ext4",
+      "logicalSectorBytes": 512,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": [
+        {
+          "path": "docs/release-evidence/1.9-beta1-debian-512-capture-2026-11-18.json",
+          "sha256": "beb1c0a7fb29da2a69ececc230282d2732ab0dab0ea0588f9e0ec9a84e1fe420"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta1-debian-512-validate-image-2026-11-18.json",
+          "sha256": "0dd7d02c834ed02fa179bec8df151371d1f63876313adddf72bf46024a92a9bf"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta1-debian-512-boot-2026-11-18.json",
+          "sha256": "d673acdaa31a89b9f6400f130a98f2c3956b8be2709777b3f6483f6b11852547"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta1-debian-512-restore-2026-11-18.json",
+          "sha256": "95c241f13be484fb2f9dd01fcb7f229cdbb13c2ad53ec7e393ef1531979c2bf0"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta1-debian-512-validate-restored-2026-11-18.json",
+          "sha256": "dffc833468d1c172c7a10b58cae5a56342857f1a5c57e6feb79ca992c6638a5d"
+        }
+      ],
+      "environment": "Debian 13 x64 in QEMU 11.1.3/KVM, OVMF UEFI, one 8 GiB GPT/ext4 virtual disk, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+      "hardwareKind": "virtual"
+    },
+    {
+      "id": "uefi-gpt-ext4-4096",
+      "status": "candidate",
+      "sourceOS": "linux",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ext4",
+      "logicalSectorBytes": 4096,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    },
+    {
+      "id": "uefi-gpt-ntfs-512",
+      "status": "qualified",
+      "sourceOS": "windows",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ntfs",
+      "logicalSectorBytes": 512,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": [
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-capture-2026-11-20.json",
+          "sha256": "80ec256da7fc93cc784b0c14faa8af150ebaf0f44f11f93d2f6173739b3474ed"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-validate-image-2026-11-20.json",
+          "sha256": "7bff5afbbeea095b2fe9e967eb3e3f93a895d8eed35fdf4a70b5489d6ebfe682"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-boot-2026-11-20.json",
+          "sha256": "fe719e72d1ac5d579ff203e4863b8ab4edd3cec12d6e90caecbbadb6d50ae042"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-restore-2026-11-20.json",
+          "sha256": "9d48ec71468b07bfb290edd0953b042153e3eff2b790eb1a601e83815067d7e1"
+        },
+        {
+          "path": "docs/release-evidence/1.9-beta2-windows-ntfs-512-validate-restored-2026-11-20.json",
+          "sha256": "df065056533519d43f78132819edf057f41a826cf3721a99c9f99b9954d5462e"
+        }
+      ],
+      "environment": "Windows 10 Enterprise LTSC 2021 x64 19044.1288 in QEMU 10.0.13/KVM, OVMF UEFI, 36 GiB GPT/unencrypted NTFS, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+      "hardwareKind": "virtual"
+    },
+    {
+      "id": "uefi-gpt-ntfs-4096",
+      "status": "candidate",
+      "sourceOS": "windows",
+      "recoveryEnvironment": "linux-x64-offline",
+      "firmware": "uefi",
+      "partitionTable": "gpt",
+      "filesystem": "ntfs",
+      "logicalSectorBytes": 4096,
+      "encryption": "none",
+      "liveCapture": false,
+      "secureBoot": false,
+      "scope": "disk",
+      "owner": "ATAC-Helicopter",
+      "method": "docs/adr/001-imaging-engine-1.9.md",
+      "evidence": []
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "live-capture",
+      "reason": "No reviewed live consistency or snapshot contract.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "secure-boot",
+      "reason": "Recovery signing and Secure Boot chain are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "encryption",
+      "reason": "Source unlocking, image encryption and independent key recovery are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "macos-apfs",
+      "reason": "macOS/APFS boot and restore adapters are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "multi-disk",
+      "reason": "RAID/LVM and multi-disk dependency reconstruction are unqualified.",
+      "behavior": "reject-before-device-write"
+    },
+    {
+      "id": "other-layouts",
+      "reason": "BIOS/MBR, sector translation and partition resizing are outside the first proposal.",
+      "behavior": "reject-before-device-write"
+    }
+  ]
+}

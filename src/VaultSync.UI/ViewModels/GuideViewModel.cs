@@ -17,7 +17,7 @@ public sealed class GuideViewModel : ViewModelBase
     private readonly AppViewModel _app;
     private readonly IAppConfigStore _configStore;
     private readonly IRepositoryFactory _repositoryFactory;
-    private string _progressSummary = "Checking your setup…";
+    private string _progressSummary = L("Guide.Checking", "Checking your setup…");
     private string _pageTitle = string.Empty;
     private string _pageDescription = string.Empty;
     private string _restartSetupLabel = string.Empty;
@@ -27,6 +27,7 @@ public sealed class GuideViewModel : ViewModelBase
     private string _terminologyTitle = string.Empty;
     private string _terminologyDescription = string.Empty;
     private int _refreshRevision;
+    private GuideProgressSnapshot? _lastProgressSnapshot;
 
     public GuideViewModel(
         AppViewModel app,
@@ -41,6 +42,17 @@ public sealed class GuideViewModel : ViewModelBase
             SystemFileLauncher.OpenUri("https://github.com/ATAC-Helicopter/VaultSync/blob/Stable/docs/wiki/Home.md"));
         RefreshHeaderText();
         RebuildContent();
+    }
+
+    public void ReapplyLocalization()
+    {
+        RefreshHeaderText();
+        RebuildContent();
+        if (_lastProgressSnapshot is { } snapshot)
+            ApplyProgressSnapshot(Volatile.Read(ref _refreshRevision), snapshot);
+        else
+            ProgressSummary = L("Guide.Checking", "Checking your setup…");
+        OnPropertyChanged(string.Empty);
     }
 
     public ObservableCollection<GuideTopicViewModel> Topics { get; } = [];
@@ -140,18 +152,6 @@ public sealed class GuideViewModel : ViewModelBase
     public async Task RefreshAsync()
     {
         int revision = Interlocked.Increment(ref _refreshRevision);
-        RefreshHeaderText();
-        RebuildContent();
-        OnPropertiesChanged(
-            nameof(PageTitle),
-            nameof(PageDescription),
-            nameof(RestartSetupLabel),
-            nameof(DocumentationLabel),
-            nameof(RecoveryRuleTitle),
-            nameof(RecoveryRuleBody),
-            nameof(TerminologyTitle),
-            nameof(TerminologyDescription));
-
         GuideProgressSnapshot snapshot = await Task.Run(BuildProgressSnapshot).ConfigureAwait(false);
         if (revision != Volatile.Read(ref _refreshRevision))
             return;
@@ -185,6 +185,7 @@ public sealed class GuideViewModel : ViewModelBase
         if (revision != Volatile.Read(ref _refreshRevision))
             return;
 
+        _lastProgressSnapshot = snapshot;
         ProgressSummary = snapshot.IsAvailable
             ? string.Format(
                 L("Guide.Progress", "{0} project(s) · {1} backup(s) · {2} recovery proof(s) passed"),

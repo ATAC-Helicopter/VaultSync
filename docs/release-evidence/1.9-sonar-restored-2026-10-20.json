@@ -1,0 +1,1121 @@
+{
+  "gate": {
+    "projectStatus": {
+      "status": "OK",
+      "conditions": [
+        {
+          "status": "OK",
+          "metricKey": "new_reliability_rating",
+          "comparator": "GT",
+          "periodIndex": 1,
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_security_rating",
+          "comparator": "GT",
+          "periodIndex": 1,
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_maintainability_rating",
+          "comparator": "GT",
+          "periodIndex": 1,
+          "errorThreshold": "1",
+          "actualValue": "1"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_coverage",
+          "comparator": "LT",
+          "periodIndex": 1,
+          "errorThreshold": "80",
+          "actualValue": "83.6"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_duplicated_lines_density",
+          "comparator": "GT",
+          "periodIndex": 1,
+          "errorThreshold": "3",
+          "actualValue": "0.0"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_security_hotspots_reviewed",
+          "comparator": "LT",
+          "periodIndex": 1,
+          "errorThreshold": "100",
+          "actualValue": "100.0"
+        }
+      ],
+      "periods": [],
+      "ignoredConditions": false
+    }
+  },
+  "pullRequests": [
+    {
+      "key": "736",
+      "title": "1.9.0: Disk and Bootable Recovery Foundation \u2014 consolidated release preparation",
+      "branch": "work/1.9-roadmap-realignment",
+      "base": "Stable",
+      "status": {
+        "qualityGateStatus": "OK",
+        "bugs": 0,
+        "vulnerabilities": 0,
+        "codeSmells": 140
+      },
+      "analysisDate": "2026-10-19T09:19:32+0000",
+      "url": "https://github.com/ATAC-Helicopter/VaultSync/pull/736",
+      "target": "Dev",
+      "commit": {
+        "sha": "6ee344e8a31fe1fe8a8b5422a5c55d26f818b366",
+        "author": {
+          "name": "Flavio Giacchetti",
+          "login": "ATAC-Helicopter-pSJjG@github",
+          "avatar": "bc9f25ded23f8fd2bf26393359a93f02"
+        },
+        "date": "2026-10-19T09:14:52+0000",
+        "message": "fix(BUG-19034): bind provenance verifier option values"
+      },
+      "contributors": [
+        {
+          "name": "Flavio Giacchetti",
+          "login": "ATAC-Helicopter-pSJjG@github",
+          "avatar": "bc9f25ded23f8fd2bf26393359a93f02"
+        }
+      ],
+      "pullRequestUuidV1": "AaFTRhaKLtPD4__y4OvN",
+      "pullRequestId": "073814e9-1a7e-47f1-9feb-5c5865d68f79"
+    }
+  ],
+  "resolvedSecurity": {
+    "total": 12,
+    "p": 1,
+    "ps": 100,
+    "paging": {
+      "pageIndex": 1,
+      "pageSize": 100,
+      "total": 12
+    },
+    "effortTotal": 275,
+    "debtTotal": 275,
+    "issues": [
+      {
+        "key": "AaFTdmE8Ro-Jwhl1qidj",
+        "rule": "pythonsecurity:S8705",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "line": 75,
+        "hash": "89d614d29660ff48a5be494bf50334e9",
+        "textRange": {
+          "startLine": 75,
+          "endLine": 75,
+          "startOffset": 8,
+          "endOffset": 122
+        },
+        "flows": [
+          {
+            "locations": [
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "startOffset": 8,
+                  "endOffset": 122
+                },
+                "msg": "Sink: this invocation is not safe; a malicious value can be used as argument"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 69,
+                  "endLine": 72,
+                  "startOffset": 8,
+                  "endOffset": 48
+                },
+                "msg": "A malicious value can be assigned to variable \u2018command\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 71,
+                  "endLine": 71,
+                  "startOffset": 19,
+                  "endOffset": 47
+                },
+                "msg": "This concatenation can propagate malicious content to the newly created string"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 71,
+                  "endLine": 71,
+                  "startOffset": 35,
+                  "endOffset": 45
+                },
+                "msg": "The malicious content is concatenated into the string"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 60,
+                  "endOffset": 75
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 4,
+                  "endOffset": 10
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 8,
+                  "endOffset": 100
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 52,
+                  "endOffset": 67
+                },
+                "msg": "A malicious value was previously assigned to the field \u2018source_ref\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 88,
+                  "endLine": 88,
+                  "startOffset": 11,
+                  "endOffset": 30
+                },
+                "msg": "Source: a user can craft an HTTP request with malicious content"
+              }
+            ]
+          }
+        ],
+        "resolution": "FALSE-POSITIVE",
+        "status": "RESOLVED",
+        "message": "Command Argument Injection via faulty LLM-supplied CLI arguments in release_signing.verify()",
+        "effort": "30min",
+        "debt": "30min",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-10-19T09:14:52+0000",
+        "updateDate": "2026-10-20T07:35:09+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "HIGH"
+          }
+        ],
+        "issueStatus": "FALSE_POSITIVE",
+        "projectName": "VaultSync",
+        "internalTags": [
+          "taint"
+        ],
+        "lastChangeAnalysisUuid": "496da265-a278-4cac-a6b1-63edbcb0ce21",
+        "lastChangeSource": "USER"
+      },
+      {
+        "key": "AaFTZJvS6bMH27N8zjOG",
+        "rule": "python:S2245",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "line": 95,
+        "hash": "9e641a854607ccc6fdc25f783c2e793f",
+        "textRange": {
+          "startLine": 95,
+          "endLine": 95,
+          "startOffset": 24,
+          "endOffset": 49
+        },
+        "flows": [],
+        "resolution": "FALSE-POSITIVE",
+        "status": "RESOLVED",
+        "message": "Make sure that using this pseudorandom number generator is safe here.",
+        "effort": "10min",
+        "debt": "10min",
+        "tags": [
+          "cryptography",
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-19T08:54:16+0000",
+        "updateDate": "2026-10-19T09:12:46+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FALSE_POSITIVE",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "USER"
+      },
+      {
+        "key": "AaFTZJvS6bMH27N8zjOI",
+        "rule": "python:S2245",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "line": 102,
+        "hash": "f6b43b047a4d1b53754714380e14888c",
+        "textRange": {
+          "startLine": 102,
+          "endLine": 102,
+          "startOffset": 17,
+          "endOffset": 34
+        },
+        "flows": [],
+        "resolution": "FALSE-POSITIVE",
+        "status": "RESOLVED",
+        "message": "Make sure that using this pseudorandom number generator is safe here.",
+        "effort": "10min",
+        "debt": "10min",
+        "tags": [
+          "cryptography",
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-19T08:54:16+0000",
+        "updateDate": "2026-10-19T09:13:24+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FALSE_POSITIVE",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "USER"
+      },
+      {
+        "key": "AaFTRsh2CaaKS4UBl4TR",
+        "rule": "python:S2245",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "5e854e8a2013ea21427ba81664e6711d",
+        "textRange": {
+          "startLine": 101,
+          "endLine": 101,
+          "startOffset": 17,
+          "endOffset": 34
+        },
+        "flows": [],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Make sure that using this pseudorandom number generator is safe here.",
+        "effort": "10min",
+        "debt": "10min",
+        "tags": [
+          "cryptography",
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-15T08:48:11+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsg3CaaKS4UBl4TA",
+        "rule": "csharpsquid:S2245",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "02afdfb9fe5816a0e7e7ecde70b31e87",
+        "textRange": {
+          "startLine": 23,
+          "endLine": 23,
+          "startOffset": 21,
+          "endOffset": 37
+        },
+        "flows": [],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Use a cryptographically strong random number generator.",
+        "effort": "10min",
+        "debt": "10min",
+        "tags": [
+          "cryptography",
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-13T21:10:21+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsg3CaaKS4UBl4TB",
+        "rule": "csharpsquid:S4036",
+        "severity": "MINOR",
+        "component": "ATAC-Helicopter_VaultSync:benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "ea3c6ab15c2336ce3997e0ae9ae0bc9b",
+        "textRange": {
+          "startLine": 90,
+          "endLine": 90,
+          "startOffset": 19,
+          "endOffset": 105
+        },
+        "flows": [],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Use an absolute path for this command.",
+        "effort": "15min",
+        "debt": "15min",
+        "tags": [
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-13T21:10:21+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "LOW"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsh2CaaKS4UBl4TQ",
+        "rule": "python:S2245",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "51353943c135017289483aefb5f3a080",
+        "textRange": {
+          "startLine": 94,
+          "endLine": 94,
+          "startOffset": 24,
+          "endOffset": 49
+        },
+        "flows": [],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Make sure that using this pseudorandom number generator is safe here.",
+        "effort": "10min",
+        "debt": "10min",
+        "tags": [
+          "cryptography",
+          "cwe",
+          "former-hotspot"
+        ],
+        "creationDate": "2026-10-13T21:10:21+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsh2CaaKS4UBl4TU",
+        "rule": "pythonsecurity:S8707",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "babb2eb23b4c788105beebe478dc7f42",
+        "textRange": {
+          "startLine": 158,
+          "endLine": 158,
+          "startOffset": 4,
+          "endOffset": 66
+        },
+        "flows": [
+          {
+            "locations": [
+              {
+                "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+                "textRange": {
+                  "startLine": 158,
+                  "endLine": 158,
+                  "startOffset": 4,
+                  "endOffset": 66
+                },
+                "msg": "Sink: this invocation is not safe; a malicious value can be used as argument"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+                "textRange": {
+                  "startLine": 158,
+                  "endLine": 158,
+                  "startOffset": 4,
+                  "endOffset": 18
+                },
+                "msg": "A malicious value was previously assigned to the field \u2018output\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+                "textRange": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "startOffset": 14,
+                  "endOffset": 33
+                },
+                "msg": "Source: a user can craft an HTTP request with malicious content"
+              }
+            ]
+          }
+        ],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Path Traversal via faulty LLM-supplied CLI arguments in benchmark.run()",
+        "effort": "30min",
+        "debt": "30min",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-10-13T21:10:21+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "HIGH"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [
+          "taint"
+        ],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsgMCaaKS4UBl4S4",
+        "rule": "pythonsecurity:S8705",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "a0d3785dd6a4917c9938cce43717e602",
+        "textRange": {
+          "startLine": 74,
+          "endLine": 75,
+          "startOffset": 8,
+          "endOffset": 77
+        },
+        "flows": [
+          {
+            "locations": [
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 74,
+                  "endLine": 75,
+                  "startOffset": 8,
+                  "endOffset": 77
+                },
+                "msg": "Sink: this invocation is not safe; a malicious value can be used as argument"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 68,
+                  "endLine": 71,
+                  "startOffset": 8,
+                  "endOffset": 48
+                },
+                "msg": "A malicious value can be assigned to variable \u2018command\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 60,
+                  "endOffset": 75
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 4,
+                  "endOffset": 10
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 8,
+                  "endOffset": 100
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 52,
+                  "endOffset": 67
+                },
+                "msg": "A malicious value was previously assigned to the field \u2018source_ref\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 88,
+                  "endLine": 88,
+                  "startOffset": 11,
+                  "endOffset": 30
+                },
+                "msg": "Source: a user can craft an HTTP request with malicious content"
+              }
+            ]
+          }
+        ],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Command Argument Injection via faulty LLM-supplied CLI arguments in release_signing.verify()",
+        "effort": "30min",
+        "debt": "30min",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-10-13T18:50:07+0000",
+        "updateDate": "2026-10-19T09:19:32+0000",
+        "closeDate": "2026-10-19T09:19:32+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "HIGH"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [
+          "taint"
+        ],
+        "lastChangeAnalysisUuid": "496da265-a278-4cac-a6b1-63edbcb0ce21",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsgMCaaKS4UBl4S5",
+        "rule": "pythonsecurity:S8705",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "line": 74,
+        "hash": "001e0e5ba369a8a73a281177582416cc",
+        "textRange": {
+          "startLine": 74,
+          "endLine": 74,
+          "startOffset": 12,
+          "endOffset": 60
+        },
+        "flows": [
+          {
+            "locations": [
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 74,
+                  "endLine": 74,
+                  "startOffset": 12,
+                  "endOffset": 60
+                },
+                "msg": "Sink: this invocation is not safe; a malicious value can be used as argument"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 69,
+                  "endLine": 72,
+                  "startOffset": 8,
+                  "endOffset": 48
+                },
+                "msg": "A malicious value can be assigned to variable \u2018command\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 71,
+                  "endLine": 71,
+                  "startOffset": 19,
+                  "endOffset": 47
+                },
+                "msg": "This concatenation can propagate malicious content to the newly created string"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 71,
+                  "endLine": 71,
+                  "startOffset": 35,
+                  "endOffset": 45
+                },
+                "msg": "The malicious content is concatenated into the string"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 60,
+                  "endOffset": 75
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "startOffset": 4,
+                  "endOffset": 10
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 8,
+                  "endOffset": 100
+                },
+                "msg": "This instruction can propagate malicious content"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "startOffset": 52,
+                  "endOffset": 67
+                },
+                "msg": "A malicious value was previously assigned to the field \u2018source_ref\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 88,
+                  "endLine": 88,
+                  "startOffset": 11,
+                  "endOffset": 30
+                },
+                "msg": "Source: a user can craft an HTTP request with malicious content"
+              }
+            ]
+          }
+        ],
+        "resolution": "FALSE-POSITIVE",
+        "status": "RESOLVED",
+        "message": "Command Argument Injection via faulty LLM-supplied CLI arguments in release_signing.verify()",
+        "effort": "30min",
+        "debt": "30min",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-10-13T18:50:07+0000",
+        "updateDate": "2026-10-20T07:34:37+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "HIGH"
+          }
+        ],
+        "issueStatus": "FALSE_POSITIVE",
+        "projectName": "VaultSync",
+        "internalTags": [
+          "taint"
+        ],
+        "lastChangeAnalysisUuid": "496da265-a278-4cac-a6b1-63edbcb0ce21",
+        "lastChangeSource": "USER"
+      },
+      {
+        "key": "AaFTRsgMCaaKS4UBl4S6",
+        "rule": "pythonsecurity:S8707",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "6f57b61ff5b8e9b98d63510d49bf4b7c",
+        "textRange": {
+          "startLine": 74,
+          "endLine": 74,
+          "startOffset": 8,
+          "endOffset": 111
+        },
+        "flows": [
+          {
+            "locations": [
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 74,
+                  "endLine": 74,
+                  "startOffset": 8,
+                  "endOffset": 111
+                },
+                "msg": "Sink: this invocation is not safe; a malicious value can be used as argument"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 74,
+                  "endLine": 74,
+                  "startOffset": 8,
+                  "endOffset": 19
+                },
+                "msg": "A malicious value was previously assigned to the field \u2018output\u2019"
+              },
+              {
+                "component": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+                "textRange": {
+                  "startLine": 68,
+                  "endLine": 68,
+                  "startOffset": 11,
+                  "endOffset": 30
+                },
+                "msg": "Source: a user can craft an HTTP request with malicious content"
+              }
+            ]
+          }
+        ],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Path Traversal via faulty LLM-supplied CLI arguments in release_signing.main()",
+        "effort": "30min",
+        "debt": "30min",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-10-13T18:50:07+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "COMPLETE",
+        "cleanCodeAttributeCategory": "INTENTIONAL",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "HIGH"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [
+          "taint"
+        ],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      },
+      {
+        "key": "AaFTRsgrCaaKS4UBl4S_",
+        "rule": "githubactions:S8541",
+        "severity": "MAJOR",
+        "component": "ATAC-Helicopter_VaultSync:.github/workflows/sonarqube.yml",
+        "project": "ATAC-Helicopter_VaultSync",
+        "hash": "18fde86965cc58c47435f7c71de55788",
+        "textRange": {
+          "startLine": 85,
+          "endLine": 85,
+          "startOffset": 10,
+          "endOffset": 31
+        },
+        "flows": [],
+        "resolution": "FIXED",
+        "status": "CLOSED",
+        "message": "Omitting \"--only-binary :all:\" can lead to the execution of setup scripts. Make sure it is safe here.",
+        "effort": "1h",
+        "debt": "1h",
+        "tags": [
+          "cwe"
+        ],
+        "creationDate": "2026-08-05T13:05:02+0000",
+        "updateDate": "2026-10-19T08:59:56+0000",
+        "closeDate": "2026-10-19T08:59:56+0000",
+        "type": "VULNERABILITY",
+        "organization": "atac-helicopter",
+        "pullRequest": "736",
+        "cleanCodeAttribute": "TRUSTWORTHY",
+        "cleanCodeAttributeCategory": "RESPONSIBLE",
+        "impacts": [
+          {
+            "softwareQuality": "SECURITY",
+            "severity": "MEDIUM"
+          }
+        ],
+        "issueStatus": "FIXED",
+        "projectName": "VaultSync",
+        "internalTags": [],
+        "lastChangeAnalysisUuid": "2c5d360b-79ef-4cc2-bffc-6e4231fd179a",
+        "lastChangeSource": "ANALYSIS"
+      }
+    ],
+    "components": [
+      {
+        "organization": "atac-helicopter",
+        "key": "ATAC-Helicopter_VaultSync:scripts/release_signing.py",
+        "uuid": "AaFTRrErCaaKS4UBl4Qi",
+        "enabled": true,
+        "qualifier": "FIL",
+        "name": "release_signing.py",
+        "longName": "scripts/release_signing.py",
+        "path": "scripts/release_signing.py",
+        "pullRequest": "736"
+      },
+      {
+        "organization": "atac-helicopter",
+        "key": "ATAC-Helicopter_VaultSync",
+        "uuid": "AaFTRhaKLtPD4__y4OvN",
+        "enabled": true,
+        "qualifier": "TRK",
+        "name": "VaultSync",
+        "longName": "VaultSync",
+        "pullRequest": "736"
+      },
+      {
+        "organization": "atac-helicopter",
+        "key": "ATAC-Helicopter_VaultSync:benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+        "uuid": "AaFTRrErCaaKS4UBl4Q0",
+        "enabled": true,
+        "qualifier": "FIL",
+        "name": "CompressionProfile.cs",
+        "longName": "benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+        "path": "benchmarks/VaultSync.Benchmarks/CompressionProfile.cs",
+        "pullRequest": "736"
+      },
+      {
+        "organization": "atac-helicopter",
+        "key": "ATAC-Helicopter_VaultSync:experiments/compression/benchmark.py",
+        "uuid": "AaFTRrErCaaKS4UBl4RA",
+        "enabled": true,
+        "qualifier": "FIL",
+        "name": "benchmark.py",
+        "longName": "experiments/compression/benchmark.py",
+        "path": "experiments/compression/benchmark.py",
+        "pullRequest": "736"
+      },
+      {
+        "organization": "atac-helicopter",
+        "key": "ATAC-Helicopter_VaultSync:.github/workflows/sonarqube.yml",
+        "uuid": "AaFTRrErCaaKS4UBl4Qu",
+        "enabled": true,
+        "qualifier": "FIL",
+        "name": "sonarqube.yml",
+        "longName": ".github/workflows/sonarqube.yml",
+        "path": ".github/workflows/sonarqube.yml",
+        "pullRequest": "736"
+      }
+    ],
+    "organizations": [
+      {
+        "key": "atac-helicopter",
+        "name": "Flavio Giacchetti"
+      }
+    ],
+    "facets": []
+  },
+  "checks": [
+    {
+      "name": "SonarCloud Code Analysis",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Tracking policy",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Microsoft Store metadata preflight",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Release metadata preflight",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Script tests",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "YAML and template lint",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "macOS release profile",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "macOS build and test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows release profile",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Windows build and test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (python)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Linux build and test",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "UI localization coverage",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Linux release profile",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (csharp)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "SonarQube Cloud analysis",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Detect changed areas",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Analyze (actions)",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "submit-nuget",
+      "state": "SUCCESS"
+    },
+    {
+      "name": "Tracking policy",
+      "state": "SUCCESS"
+    }
+  ],
+  "observedOn": "2026-10-20",
+  "source": "6ee344e8a31fe1fe8a8b5422a5c55d26f818b366",
+  "run": 39228620692
+}

@@ -139,6 +139,28 @@
                        Text="{infra:LocalizedString Key=Settings.General.Title}" />
             <TextBlock Text="{infra:LocalizedString Key=Settings.General.Description}"
                        Foreground="{DynamicResource TextSecondary}" />
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  Margin="0,8,0,0">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
+                <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           FontSize="11" />
+              </StackPanel>
+              <ComboBox x:Name="LanguageSelectCombo"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Width="160"
+                        ItemsSource="{Binding LanguageOptions}"
+                        SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
           </StackPanel>
         </Border>
 
@@ -2014,6 +2036,22 @@
                                   IsChecked="{Binding CrashReportAssistanceEnabled, Mode=TwoWay}" />
                   </Grid>
 
+                  <Grid Margin="0,12,0,0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,0"
+                               Text="{infra:LocalizedString Key=Diagnostics.Enable}" TextWrapping="Wrap" />
+                    <ToggleSwitch Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"
+                                  AutomationProperties.Name="{infra:LocalizedString Key=Diagnostics.Enable}"
+                                  OnContent="{infra:LocalizedString Key=Common.Yes}" OffContent="{infra:LocalizedString Key=Common.No}"
+                                  IsChecked="{Binding AutomaticDiagnosticsEnabled, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" IsVisible="{Binding !IsBetaDiagnostics}" Text="{infra:LocalizedString Key=Diagnostics.Description}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" IsVisible="{Binding IsBetaDiagnostics}" Text="{infra:LocalizedString Key=Diagnostics.BetaDescription}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,6,0,0" Text="{infra:LocalizedString Key=Diagnostics.Privacy}" TextWrapping="Wrap" FontSize="11" />
+                    <WrapPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,6,0,0" ItemSpacing="10" LineSpacing="6">
+                      <Button Classes="action-ghost" Content="{infra:LocalizedString Key=Diagnostics.Review}" Command="{Binding ReviewDiagnosticReportsCommand}" />
+                      <Button Classes="action-ghost" Content="{infra:LocalizedString Key=Diagnostics.PrivacyLink}" Command="{Binding DiagnosticPrivacyCommand}" />
+                    </WrapPanel>
+                  </Grid>
+
                   <Border Classes="subtle-card"
                           Margin="0,8,0,0"
                           Padding="12"
@@ -2481,28 +2519,6 @@
                            Margin="0,6,0,0"
                            TextWrapping="Wrap"
                            IsVisible="{Binding CanUseSelfUpdate}" />
-
-                <Grid ColumnDefinitions="*,Auto"
-                      Margin="0,4,0,0">
-                  <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageLabel}" />
-                    <TextBlock Text="{infra:LocalizedString Key=Settings.Advanced.LanguageDescription}"
-                               Foreground="{DynamicResource TextSecondary}"
-                               FontSize="11" />
-                  </StackPanel>
-                  <ComboBox x:Name="LanguageSelectCombo"
-                            Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Width="160"
-                            ItemsSource="{Binding LanguageOptions}"
-                            SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding DisplayName}" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
-                </Grid>
 
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"

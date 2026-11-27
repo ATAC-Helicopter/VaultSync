@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using VaultSync.Core.Config;
@@ -32,6 +34,7 @@ public sealed class AppConfigStoreTests
 
         AppConfigStore.Save(config);
 
+        Assert.Equal(config.DbPath, AppConfigStore.ReadForInspection().DbPath);
         AppConfig reloaded = AppConfigStore.Load();
         Assert.Equal(config.ProjectsRoot, reloaded.ProjectsRoot);
         Assert.Equal(config.DbPath, reloaded.DbPath);
@@ -206,6 +209,44 @@ public sealed class AppConfigStoreTests
 
         Assert.Equal(projectsRoot, reloaded.ProjectsRoot);
         Assert.Equal(dbPath, reloaded.DbPath);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{malformed")]
+    [InlineData("null")]
+    public void ReadForInspection_UsesBackupWithoutWritingPrimary(string? primaryContents)
+    {
+        using var scope = new TestAppConfigScope();
+        string primaryPath = Path.Combine(scope.ConfigDirectory, "appsettings.json");
+        string backupPath = Path.Combine(scope.ConfigDirectory, "appsettings.bak.json");
+        const string backupContents = """{"DbPath":"fixture.db"}""";
+        File.WriteAllText(backupPath, backupContents);
+        if (primaryContents is not null)
+            File.WriteAllText(primaryPath, primaryContents);
+
+        Assert.Equal("fixture.db", AppConfigStore.ReadForInspection().DbPath);
+        Assert.Equal(primaryContents, File.Exists(primaryPath) ? File.ReadAllText(primaryPath) : null);
+        Assert.Equal(backupContents, File.ReadAllText(backupPath));
+    }
+
+    [Fact]
+    public void ReadForInspection_DoesNotTreatAnUnreadableConfigAsAnEmptyProfile()
+    {
+        using var scope = new TestAppConfigScope();
+        string primaryPath = Path.Combine(scope.ConfigDirectory, "appsettings.json");
+        string backupPath = Path.Combine(scope.ConfigDirectory, "appsettings.bak.json");
+
+        Assert.NotNull(AppConfigStore.ReadForInspection());
+        Assert.Empty(Directory.GetFileSystemEntries(scope.ConfigDirectory));
+        Assert.Equal(Path.Combine(scope.ConfigDirectory, "vaultsync.db"), AppConfigStore.GetDefaultDbPathForInspection());
+        File.WriteAllText(primaryPath, "{malformed");
+        Assert.IsType<System.Text.Json.JsonException>(
+            Assert.Throws<InvalidDataException>(() => AppConfigStore.ReadForInspection()).InnerException);
+
+        File.WriteAllText(backupPath, "null");
+        Assert.IsType<InvalidDataException>(
+            Assert.Throws<InvalidDataException>(() => AppConfigStore.ReadForInspection()).InnerException);
     }
 
     [Fact]

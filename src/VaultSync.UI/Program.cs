@@ -19,6 +19,7 @@ namespace VaultSync.UI;
 internal static class Program
 {
     private const int MaxActivationPayloadBytes = 8192;
+    internal const string PrepareRecoveryUsbArgument = "--prepare-recovery-usb";
     private const string ActivatePayload = "activate";
     private static SingleInstanceLock? _instanceLock;
     private static CancellationTokenSource? _activationListenerCts;
@@ -28,6 +29,12 @@ internal static class Program
     [System.STAThread]
     public static void Main(string[] args)
     {
+        if (args is [PrepareRecoveryUsbArgument, var language])
+        {
+            RunRecoveryUsb(language);
+            return;
+        }
+
         RestrictPrivateDataRoots();
         DiagnosticsLogger.Initialize();
         DiagnosticsLogger.Record($"Process start. PID={Environment.ProcessId}, Args='{string.Join(' ', args)}'.");
@@ -126,8 +133,8 @@ internal static class Program
                      Environment.SpecialFolder.LocalApplicationData
                  })
         {
-            string root = Environment.GetFolderPath(folder);
-            if (!string.IsNullOrWhiteSpace(root))
+            string root = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
+            if (Path.IsPathFullyQualified(root))
             {
                 try
                 {
@@ -463,6 +470,16 @@ internal static class Program
         return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RunRecoveryUsb(string language)
+    {
+        if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
+            !WindowsRecoveryUsbDevices.IsElevated()) return;
+        using var session = new Mutex(initiallyOwned: true, @"Global\VaultSync.RecoveryUsbWriter", out bool created);
+        if (!created) return;
+        UpdaterApp.RecoveryUsbLanguage = language;
+        BuildUpdaterApp().StartWithClassicDesktopLifetime([]);
     }
 
     private static AppBuilder BuildUpdaterApp()

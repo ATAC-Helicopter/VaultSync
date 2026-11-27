@@ -272,8 +272,13 @@ public static class RecoveryConfidenceService
     private static bool HasCode(IEnumerable<RecoveryConfidenceEvidence> evidence, string code) =>
         evidence.Any(item => string.Equals(item.Code, code, StringComparison.Ordinal));
 
-    private static bool IsStale(DateTime? observedUtc, DateTime nowUtc, TimeSpan freshness) =>
-        observedUtc is null || nowUtc - NormalizeUtc(observedUtc.Value) > freshness;
+    private static bool IsStale(DateTime? observedUtc, DateTime nowUtc, TimeSpan freshness)
+    {
+        if (observedUtc is null)
+            return true;
+        DateTime observed = NormalizeUtc(observedUtc.Value);
+        return observed > nowUtc || nowUtc - observed > freshness;
+    }
 
     private static DateTime NormalizeUtc(DateTime value) =>
         value.Kind == DateTimeKind.Utc ? value : value.ToUniversalTime();

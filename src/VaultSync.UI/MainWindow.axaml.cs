@@ -185,6 +185,7 @@ public partial class MainWindow : Window
         NavScheduleText.IsVisible = !collapsed;
         NavHistoryText.IsVisible = !collapsed;
         NavRecoveryText.IsVisible = !collapsed;
+        NavDiskCloningText.IsVisible = !collapsed;
         NavGuideText.IsVisible = !collapsed;
         NavSettingsText.IsVisible = !collapsed;
 
@@ -199,6 +200,7 @@ public partial class MainWindow : Window
         NavScheduleButton.HorizontalContentAlignment = contentAlignment;
         NavHistoryButton.HorizontalContentAlignment = contentAlignment;
         NavRecoveryButton.HorizontalContentAlignment = contentAlignment;
+        NavDiskCloningButton.HorizontalContentAlignment = contentAlignment;
         NavGuideButton.HorizontalContentAlignment = contentAlignment;
         NavSettingsButton.HorizontalContentAlignment = contentAlignment;
         NavDashboardButton.HorizontalAlignment = buttonAlignment;
@@ -207,6 +209,7 @@ public partial class MainWindow : Window
         NavScheduleButton.HorizontalAlignment = buttonAlignment;
         NavHistoryButton.HorizontalAlignment = buttonAlignment;
         NavRecoveryButton.HorizontalAlignment = buttonAlignment;
+        NavDiskCloningButton.HorizontalAlignment = buttonAlignment;
         NavGuideButton.HorizontalAlignment = buttonAlignment;
         NavSettingsButton.HorizontalAlignment = buttonAlignment;
         NavDashboardButton.Width = navButtonWidth;
@@ -215,6 +218,7 @@ public partial class MainWindow : Window
         NavScheduleButton.Width = navButtonWidth;
         NavHistoryButton.Width = navButtonWidth;
         NavRecoveryButton.Width = navButtonWidth;
+        NavDiskCloningButton.Width = navButtonWidth;
         NavGuideButton.Width = navButtonWidth;
         NavSettingsButton.Width = navButtonWidth;
         NavDashboardButton.Height = navButtonHeight;
@@ -223,6 +227,7 @@ public partial class MainWindow : Window
         NavScheduleButton.Height = navButtonHeight;
         NavHistoryButton.Height = navButtonHeight;
         NavRecoveryButton.Height = navButtonHeight;
+        NavDiskCloningButton.Height = navButtonHeight;
         NavGuideButton.Height = navButtonHeight;
         NavSettingsButton.Height = navButtonHeight;
         NavDashboardButton.Padding = navButtonPadding;
@@ -231,6 +236,7 @@ public partial class MainWindow : Window
         NavScheduleButton.Padding = navButtonPadding;
         NavHistoryButton.Padding = navButtonPadding;
         NavRecoveryButton.Padding = navButtonPadding;
+        NavDiskCloningButton.Padding = navButtonPadding;
         NavGuideButton.Padding = navButtonPadding;
         NavSettingsButton.Padding = navButtonPadding;
 
@@ -240,6 +246,7 @@ public partial class MainWindow : Window
         NavScheduleButton.Classes.Set(CompactClass, collapsed);
         NavHistoryButton.Classes.Set(CompactClass, collapsed);
         NavRecoveryButton.Classes.Set(CompactClass, collapsed);
+        NavDiskCloningButton.Classes.Set(CompactClass, collapsed);
         NavGuideButton.Classes.Set(CompactClass, collapsed);
         NavSettingsButton.Classes.Set(CompactClass, collapsed);
         NavDashboardIconBadge.Classes.Set(CompactClass, collapsed);
@@ -248,6 +255,7 @@ public partial class MainWindow : Window
         NavScheduleIconBadge.Classes.Set(CompactClass, collapsed);
         NavHistoryIconBadge.Classes.Set(CompactClass, collapsed);
         NavRecoveryIconBadge.Classes.Set(CompactClass, collapsed);
+        NavDiskCloningIconBadge.Classes.Set(CompactClass, collapsed);
         NavGuideIconBadge.Classes.Set(CompactClass, collapsed);
         NavSettingsIconBadge.Classes.Set(CompactClass, collapsed);
     }

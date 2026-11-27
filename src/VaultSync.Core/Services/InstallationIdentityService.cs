@@ -120,8 +120,9 @@ public sealed class InstallationIdentityService : IInstallationIdentityProvider
 
     private static string ResolveDefaultDataDirectory()
     {
-        string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (string.IsNullOrWhiteSpace(appData))
+        string appData = Environment.GetFolderPath(
+            Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+        if (!Path.IsPathFullyQualified(appData))
         {
             throw new InvalidOperationException(
                 "The application data directory is unavailable; a durable installation identity cannot be created.");

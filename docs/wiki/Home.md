@@ -4,18 +4,18 @@ Welcome to the VaultSync documentation.
 
 VaultSync is an open-source backup and recovery application for Windows, macOS, and Linux. This wiki explains how to configure protection, inspect backup history, verify stored data, and recover files safely.
 
-![VaultSync dashboard showing protection, activity, storage, and recovery status](../images/Dashboard.png)
+Current stable is **1.8.9**, published September 16, 2026. The **1.9.5** development CLI and
+recovery architecture are in development; see [development status](Development-Status.md)
+and the [development CLI guide](CLI-Development.md) before using preview commands.
+
+![VaultSync dashboard showing protection, activity, storage, and recovery status](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/images/Dashboard.png)
 
 ## Getting Started
-
-- [Installation](Installation.md) — Download and install VaultSync on your platform.
-- [Quick Start](Quick-Start.md) — Create and verify your first backup.
-- [Guided Tour](Guided-Tour.md) — Explore the desktop application.
-- [Recovery Lab](Recovery-Lab.md) — Practice a safe backup and restore with disposable files.
-- [Configuration](Configuration.md) — Configure projects, backup destinations, and protection.
-- [Settings Reference](Settings-Reference.md) — Understand individual settings and controls.
-
-**New to VaultSync?** Start with the Quick Start, then complete the Recovery Lab using disposable data.
+- [Quick start](Quick-Start.md)
+- [Guided app tour](Guided-Tour.md)
+- [Installation](Installation.md)
+- [Configuration](Configuration.md)
+- [Every setting and toggle](Settings-Reference.md)
 
 ## Backups and Storage
 
@@ -30,7 +30,16 @@ VaultSync is an open-source backup and recovery application for Windows, macOS, 
 
 A snapshot, a stored backup, and a verified restore are different things. See the [Backup Pipeline](Backup-Pipeline.md) for an explanation of how the pieces fit together.
 
-## Verification and Recovery
+## Recovery Horizon development (1.9)
+- [Current development, release gates, and PR stack](Development-Status.md)
+- [CLI backup, verification, selective restore, and watcher plans](CLI-Development.md)
+- [Delivery Project](https://github.com/users/ATAC-Helicopter/projects/7)
+
+## Chronicle (1.8) focus areas
+- History, Snapshot Explorer, and comparisons explain what changed between restore points.
+- Recovery drills prove that bounded stored bytes remain readable without touching live project data.
+- The 3-2-1 advisor measures reachable copies, distinct storage media, and user-confirmed offsite coverage.
+- Protected points and byte-proof retention floors preserve important recovery baselines.
 
 - [Recovery Guide](Recovery.md) — Run read-only drills and interpret recovery evidence.
 - [Recovery Lab](Recovery-Lab.md) — Restore disposable test data to an independent destination.
@@ -74,12 +83,21 @@ VaultSync continues to develop additional recovery capabilities, including plann
 
 **Bootable system recovery is not a capability to assume is available in the latest stable release.** Platform and disk-profile support must be explicitly qualified and published.
 
-- [Roadmap](../../ROADMAP.md)
-- [Changelog](../../CHANGELOG.md)
-- [Contributing](../../CONTRIBUTING.md)
-- [Security Policy](../../SECURITY.md)
-- [Documentation Hub](../../DOCUMENTATION.md)
+## Repository Docs
+- [Documentation index](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/README.md)
+- [Documentation hub](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/DOCUMENTATION.md)
+- [Roadmap](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/ROADMAP.md)
+- [Changelog](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CHANGELOG.md)
+- [Contributing](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CONTRIBUTING.md)
+- [Security](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/SECURITY.md)
 
----
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.
 
-[VaultSync Repository](https://github.com/ATAC-Helicopter/VaultSync) · [Download](https://github.com/ATAC-Helicopter/VaultSync/releases/latest) · [Website](https://fglabs.dev/vaultsync) · [Discord](https://discord.gg/sgP8UzeAQt) · [Reddit](https://www.reddit.com/r/VaultSync/)
+## Release grouping and dependency audit — 2026-10-03
+
+One open draft PR per release now includes its preparation and corrections;
+see [Release Plan](Release-Plan.md). Dependabot #661/#720 merged as verified
+maintenance; rendering/CLI compatibility fixes are assembled in 1.9.0 and
+propagated to later implemented CLI variants. Unused Inter packaging is removed.
+[Development status](Development-Status.md) and the linked daily ledger record
+full changelog ownership, dependency consumers and remaining qualification gates.

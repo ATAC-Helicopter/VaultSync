@@ -1,0 +1,131 @@
+{
+  "owner": "VS-1909",
+  "issues": [
+    492,
+    495
+  ],
+  "environment": "Debian 13 x64 in QEMU 11.1.3/KVM, OVMF UEFI, one 8 GiB GPT/ext4 virtual disk, 512/512-byte sectors, Secure Boot off, no virtual NIC",
+  "runId": "2026-11-18-debian-gpt-ext4-512-e84715a5",
+  "runtimeSourceCommit": "e84715a50b33d311611d83e73255d010ae73bf69",
+  "captureMediaSha256": "612eb6c26230c771cd4476adbd20df534998036c1375aea57bb33259cddd2a98",
+  "restoreMediaSha256": "8f7f938e45612d07e58008ee631087088a63066529e7c841185ea7db1783b3c3",
+  "sourceDiskSha256": "e9783ca0022a2de73f3b8bab9d8a66f81d7abc0d084c0d9eec6c59255885a0cf",
+  "exportPayloadSha256": "e9783ca0022a2de73f3b8bab9d8a66f81d7abc0d084c0d9eec6c59255885a0cf",
+  "exportMetadataSha256": "5ad1b34ad748531c5fd2b5a908ce629fe7ae9659926b335ecdc9b34bb6f40f89",
+  "capture": {
+    "sourceReadOnly": true,
+    "bytes": 8589934592,
+    "serviceExitCode": 0,
+    "privateImageAndSharedCopyVerified": true,
+    "shutdown": {
+      "timestamp": {
+        "seconds": 1795018843,
+        "microseconds": 969843
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    }
+  },
+  "restore": {
+    "sourceDetached": true,
+    "offline": true,
+    "serviceExitCode": 0,
+    "graphicalCloseObserved": true,
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "e84715a50b33d311611d83e73255d010ae73bf69",
+      "operation": "3055a844-0dac-46e6-8026-df3bfb68413a",
+      "phase": "Completed",
+      "review": "441b91f0-5bbc-4b81-9a84-12509a83b07a",
+      "image": "70761a4d-eb63-4add-8e62-1368af16c46e",
+      "capture": "e12534dc-8f7f-4d8c-b3de-b0759c406eb9",
+      "manifestRoot": "88a3f427c265a87f10faa0a94bf07b0428f02b3768a3bb41685126c7afca2b34",
+      "acknowledgedBytes": 8589934592,
+      "execution": {
+        "State": 3,
+        "Reason": 11,
+        "WriteResult": {
+          "State": 3,
+          "AcknowledgedBytes": 8589934592,
+          "UncertainOffset": 0,
+          "UncertainLength": 0,
+          "TerminalRecordWritten": true
+        },
+        "JournalAcquired": true,
+        "CleanupConfirmed": true
+      },
+      "stagingRetained": false,
+      "stagingCleanupPending": false
+    },
+    "shutdown": {
+      "timestamp": {
+        "seconds": 1795020923,
+        "microseconds": 126596
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    }
+  },
+  "expiredConfirmation": {
+    "result": "Rejected before destination writes",
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "e84715a50b33d311611d83e73255d010ae73bf69",
+      "operation": "d09b7c13-8373-4d83-b14f-20458de053d8",
+      "phase": "Faulted",
+      "review": "946a6295-d1cd-47dd-85f4-e6a28b5d6f2c",
+      "image": "70761a4d-eb63-4add-8e62-1368af16c46e",
+      "capture": "e12534dc-8f7f-4d8c-b3de-b0759c406eb9",
+      "manifestRoot": "88a3f427c265a87f10faa0a94bf07b0428f02b3768a3bb41685126c7afca2b34",
+      "acknowledgedBytes": 0,
+      "execution": null,
+      "stagingRetained": true,
+      "stagingCleanupPending": false
+    },
+    "targetAllocatedBlocks": 0,
+    "shutdown": {
+      "timestamp": {
+        "seconds": 1795019150,
+        "microseconds": 843241
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    }
+  },
+  "targetOnly": {
+    "compareResult": "Images are identical.",
+    "uefiObserved": true,
+    "desktop": "Xorg/xterm",
+    "fixtureMarkersPreserved": true,
+    "keyboardMarkerIndependentlyObserved": true,
+    "shutdown": {
+      "timestamp": {
+        "seconds": 1795020965,
+        "microseconds": 54098
+      },
+      "event": "SHUTDOWN",
+      "data": {
+        "guest": true,
+        "reason": "guest-shutdown"
+      }
+    }
+  },
+  "privateFrameHashes": {
+    "capture/final.png": "9c5f55919d5bc8dcb3f8bb91a69d2c5fbe30fc6e87ccf6742618acb31d1fd8b6",
+    "restore/catalog.png": "e24e17f99766bc88dd7ef6ad2db08c42d53d1fcafc915e3f87d047da412bbeb9",
+    "restore/review.png": "d751afffcf5001bb2ca6b643590f24873c99827d62be6525795bd76508099a84",
+    "restore/progress.png": "d2d36188f90272a0565d22dbb23271a10007f22630461157f191e3048f46cd50",
+    "restore/terminal.png": "b8b70a6ddb84ddf734f8923dbac2cd5e7fa78303b7df60dae60bba1e5466afb4",
+    "target/desktop.png": "d1923ff052007ebbb99272527f0d24bac57c8a85d8c584b1473a060ec0951d06"
+  },
+  "limits": "Scope applies only to this virtual Debian fixture and the measured source builds. Signed release artifacts and physical hardware require their own evidence."
+}

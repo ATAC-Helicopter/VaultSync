@@ -2,35 +2,29 @@
   "schemaVersion": 1,
   "repository": "ATAC-Helicopter/VaultSync",
   "activeRelease": {
-    "version": "1.8.10",
-    "channel": "stable",
+    "version": "1.9.0-beta.2",
+    "channel": "beta",
     "stage": "planned",
-    "tag": "v1.8.10",
-    "targetDate": "2026-11-14",
-    "previousVersion": "1.8.9",
+    "tag": "v1.9.0-beta.2",
+    "targetDate": null,
+    "previousVersion": "1.9.0-beta.1",
     "compatiblePredecessors": [
-      "1.8.9"
+      "1.9.0-beta.1"
     ],
     "patchBaseCandidates": {
-      "windows": [
-        "1.8.9"
-      ],
-      "macos": [
-        "1.8.9"
-      ],
-      "linux": [
-        "1.8.9"
-      ]
+      "windows": [],
+      "macos": [],
+      "linux": []
     },
-    "tagline": "Security and dependency maintenance.",
-    "releaseBranch": "release/1.8.10",
+    "tagline": "Recover when the installed system cannot.",
+    "releaseBranch": "release/1.9.0",
     "integrationBranch": "Dev",
     "stableBranch": "Stable"
   },
   "currentStable": {
-    "version": "1.8.9",
-    "tag": "v1.8.9",
-    "releasedDate": "2026-09-16"
+    "version": "1.8.10",
+    "tag": "v1.8.10",
+    "releasedDate": "2026-11-15"
   },
   "platforms": [
     "Windows",
@@ -39,7 +33,7 @@
   ],
   "store": {
     "status": "planned",
-    "packageVersion": "1.8.10.0",
+    "packageVersion": "1.9.0.0",
     "storeId": "9N9HRX4JCLCP"
   }
 }

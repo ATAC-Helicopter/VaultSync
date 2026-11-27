@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import plistlib
 import shutil
 import signal
 import subprocess
@@ -80,6 +81,17 @@ def install_windows(installer, destination, log):
         raise RuntimeError(f"Windows installer failed: {result.returncode}")
 
 
+def copy_dmg_bundle(package, mount, bundle):
+    subprocess.run(["hdiutil", "attach", str(package), "-readonly", "-nobrowse",
+                    "-mountpoint", str(mount)], check=True, timeout=120)
+    try:
+        # Ad-hoc signatures on non-Mach-O bundle members live in extended attributes.
+        subprocess.run(["/usr/bin/ditto", str(mount / APP_BUNDLE), str(bundle)],
+                       check=True, timeout=120)
+    finally:
+        subprocess.run(["hdiutil", "detach", str(mount)], check=True, timeout=60)
+
+
 def prepare_base(root, version, system, suffix):
     install = root / "base-install"
     install.mkdir()
@@ -96,13 +108,8 @@ def prepare_base(root, version, system, suffix):
         package = root / "base.dmg"
         mount = root / "dmg-mount"
         download_base(version, f"VaultSync-{version}-{suffix}.dmg", package)
-        subprocess.run(["hdiutil", "attach", str(package), "-readonly", "-nobrowse",
-                        "-mountpoint", str(mount)], check=True, timeout=120)
-        try:
-            shutil.copytree(mount / APP_BUNDLE, install / APP_BUNDLE, symlinks=True)
-        finally:
-            subprocess.run(["hdiutil", "detach", str(mount)], check=True, timeout=60)
         install = install / APP_BUNDLE
+        copy_dmg_bundle(package, mount, install)
     return install
 
 
@@ -229,10 +236,53 @@ def qualify_installer(args, root, base, system, suffix, manifest, evidence):
         evidence["checks"].append("candidate Debian package upgraded released Linux installation")
 
 
+def qualify_macos_dmg(args):
+    suffix = "macos-apple-silicon" if platform.machine() == "arm64" else "macos-intel"
+    name = f"VaultSync-{args.target}-{suffix}.dmg"
+    candidate = next(args.assets.resolve().rglob(name))
+    evidence = {"platform": "Darwin", "mode": "dmg", "architecture": platform.machine(),
+                "previous": args.previous, "target": args.target, "archiveSha256": sha256(candidate),
+                "checks": []}
+    with qualification_workspace(args.evidence) as root:
+        install = prepare_base(root, args.previous, "Darwin", suffix)
+        profile = root / "profile"
+        profile.mkdir()
+        sentinel = profile / "qualification-sentinel.txt"
+        sentinel.write_text("user data must survive")
+        env = dict(os.environ, VAULTSYNC_CONFIG_DIR=str(profile))
+        env.pop("GH_TOKEN", None)
+        smoke_startup(install, "Darwin", env)
+        evidence["checks"].append("released application started")
+
+        staged = root / APP_BUNDLE
+        copy_dmg_bundle(candidate, root / "candidate-mount", staged)
+        with (staged / "Contents" / "Info.plist").open("rb") as stream:
+            if plistlib.load(stream).get("VaultSyncReleaseVersion") != args.target:
+                raise ValueError("Candidate DMG bundle has the wrong release identity")
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(staged)],
+                       check=True, timeout=60)
+        install.rename(root / "previous.app")
+        staged.rename(install)
+        smoke_startup(install, "Darwin", env)
+        if sentinel.read_text() != "user data must survive":
+            raise RuntimeError("DMG replacement changed user data sentinel")
+        evidence["checks"].extend(["candidate DMG replaced the released bundle and started",
+                                   "external user data preserved"])
+    return evidence
+
+
 def qualify(args):
     if os.environ.get("GITHUB_ACTIONS") != "true":
         raise RuntimeError("Executable qualification requires a disposable GitHub Actions host")
     system = platform.system()
+    if getattr(args, "macos_dmg_only", False):
+        if system != "Darwin":
+            raise RuntimeError("DMG upgrade qualification requires macOS")
+        args.evidence.mkdir(parents=True, exist_ok=True)
+        evidence = qualify_macos_dmg(args)
+        (args.evidence / "updater-qualification.json").write_text(json.dumps(evidence, indent=2) + "\n")
+        print(json.dumps(evidence, indent=2))
+        return
     suffix, manifest_path, archive, manifest = candidate_payload(args, system)
     args.evidence.mkdir(parents=True, exist_ok=True)
     evidence = {"platform": system, "previous": args.previous, "target": args.target,
@@ -281,6 +331,7 @@ def main(argv=None):
     parser.add_argument("--previous", required=True)
     parser.add_argument("--target", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--macos-dmg-only", action="store_true")
     options = parser.parse_args(argv)
     try:
         qualify(options)

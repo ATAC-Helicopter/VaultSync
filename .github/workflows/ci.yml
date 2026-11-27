@@ -3,16 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [ "Dev", "Stable", "release/**" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   push:
     # Release branches are validated by their required PR. Keep post-merge
     # validation on the integration and stable branches.
     branches: [ "Dev", "Stable" ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -58,19 +52,66 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Validate UI localization
+        run: |
+          python3 scripts/localization_audit.py --check
+          python3 scripts/localization_audit.py --check --source-dir src/VaultSync.RecoveryController
+
       - name: Restore
         run: dotnet restore VaultSync.sln
 
-      - name: Build UI generic target
-        run: dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+      - name: Build application projects
+        run: |
+          dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+          dotnet build src/VaultSync.RecoveryHost/VaultSync.RecoveryHost.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+          dotnet build src/VaultSync.RecoveryController/VaultSync.RecoveryController.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
       - name: Publish and audit self-contained runtime
         run: |
           dotnet publish src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/runtime-audit"
           python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/runtime-audit/VaultSync.UI.runtimeconfig.json"
 
+      - name: Stage and audit read-only Linux worker
+        run: |
+          dotnet publish src/VaultSync.DiskWorker/VaultSync.DiskWorker.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/disk-worker"
+          python3 scripts/stage_disk_worker.py --worker-dir "${{ runner.temp }}/disk-worker" --app-dir "${{ runner.temp }}/runtime-audit" --source-commit "${{ github.sha }}"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/runtime-audit/DiskWorker/VaultSync.DiskWorker.runtimeconfig.json"
+
+      - name: Stage headless recovery entry
+        run: |
+          dotnet publish src/VaultSync.RecoveryHost/VaultSync.RecoveryHost.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/recovery-host"
+          dotnet publish src/VaultSync.RecoveryController/VaultSync.RecoveryController.csproj --configuration Release --runtime linux-x64 --self-contained true --output "${{ runner.temp }}/recovery-controller"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/recovery-host/VaultSync.RecoveryHost.runtimeconfig.json"
+          python3 scripts/runtime_pack_audit.py --runtimeconfig "${{ runner.temp }}/recovery-controller/VaultSync.RecoveryController.runtimeconfig.json"
+          mkdir "${{ runner.temp }}/recovery-inputs"
+          cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 '-DSOURCE_COMMIT="${{ github.sha }}"' src/VaultSync.RecoveryHost/Native/controller-launch.c -Wl,-z,relro,-z,now -o "${{ runner.temp }}/recovery-inputs/recovery-controller-launch"
+          cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=3 '-DSOURCE_COMMIT="${{ github.sha }}"' src/VaultSync.RecoveryHost/Native/display-launch.c -Wl,-z,relro,-z,now -o "${{ runner.temp }}/recovery-inputs/recovery-display-launch"
+          cp -L /usr/lib/systemd/systemd "${{ runner.temp }}/recovery-inputs/systemd"
+          python3 scripts/stage_recovery_host.py --host-dir "${{ runner.temp }}/recovery-host" --controller-dir "${{ runner.temp }}/recovery-controller" --reader-dir "${{ runner.temp }}/runtime-audit/DiskWorker" --launcher "${{ runner.temp }}/recovery-inputs/recovery-controller-launch" --systemd "${{ runner.temp }}/recovery-inputs/systemd" --output "${{ runner.temp }}/recovery-installation" --source-commit "${{ github.sha }}" --console-culture en
+
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+
+      - name: Validate release ownership and metadata
+        run: |
+          python3 scripts/release_family.py
+          python3 scripts/public_release_metadata.py check
+          python3 scripts/changelog.py check
+          python3 scripts/disk_support.py check
+          python3 -m unittest discover -s tests/scripts -q
+
+      - name: Verify AppImage packaging
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("release/release-metadata.json"))["activeRelease"]["version"])')"
+          bash scripts/build_linux_release.sh "$version" x64 "${{ runner.temp }}/runtime-audit"
+          appimage="$(realpath "dist/linux/VaultSync-${version}-linux-x64.AppImage")"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "$extract_dir"' EXIT
+          (cd "$extract_dir" && "$appimage" --appimage-extract >/dev/null)
+          root="$extract_dir/squashfs-root"
+          [[ "$(stat -c '%a' "$root")" == 755 ]]
+          [[ -x "$root/AppRun" && -x "$root/usr/bin/VaultSync.UI" ]]
 
   macos:
     name: macOS build and test
@@ -88,8 +129,11 @@ jobs:
       - name: Restore
         run: dotnet restore VaultSync.sln
 
-      - name: Build UI generic target
-        run: dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+      - name: Build application projects
+        run: |
+          dotnet build src/VaultSync.UI/VaultSync.UI.csproj --framework net10.0 --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+          dotnet build src/VaultSync.RecoveryHost/VaultSync.RecoveryHost.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
+          dotnet build src/VaultSync.RecoveryController/VaultSync.RecoveryController.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false
 
       - name: Test
         run: dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj --configuration Release --no-restore -warnaserror -p:UseSharedCompilation=false

@@ -19,6 +19,15 @@ The application database and configuration are not a shared multi-writer
 database. Copying them between live installations is not a supported sync
 mechanism.
 
+The local `projects.is_imported` column records creation through metadata or
+legacy backup import. It defaults to false in additive upgrades and remains
+independent of `needs_restore`: restoring or linking a local source does not
+erase origin. It is not exported as portable project settings or accepted as
+device authorization. For older local rows, Projects can recover import origin
+only when source content is absent and all recorded backups are imported.
+Available sources and any local backup prevent this conservative recovery.
+Rows without evidence are not guessed from `needs_restore` alone.
+
 ## Portable metadata store — Current
 
 The SQLite metadata store uses schema version `3`. Its logical tables are:

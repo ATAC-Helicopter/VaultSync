@@ -1,6 +1,8 @@
-# VaultSync 1.8.10 — Security and Dependency Maintenance (candidate)
+# VaultSync 1.8.10 — retained maintenance preparation contract
 
-This is a **pre-release preparation**, not a published update or announcement that any unverified fix has shipped.
+Published as [v1.8.10](https://github.com/ATAC-Helicopter/VaultSync/releases/tag/v1.8.10)
+on 2026-11-15. The candidate state and pending checks below are retained historical
+preparation notes; use the published release for its delivered scope and evidence.
 
 For the mandatory branch policy, independent test evidence and complete
 release gate, use [engineering workflow](ENGINEERING_WORKFLOW.md). No public

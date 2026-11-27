@@ -4,6 +4,9 @@ This page follows the same path as first-run onboarding and then explains the
 rest of the app. If you already skipped onboarding, you can use this page
 without resetting VaultSync.
 
+Screenshots were refreshed on November 16, 2026 using **1.8.10 stable** and
+synthetic demonstration projects.
+
 ## The eight main pages
 
 | Page | Use it for |

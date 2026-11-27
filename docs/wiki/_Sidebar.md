@@ -4,9 +4,8 @@
 
 - Getting Started
   - [Installation](Installation.md)
-  - [Quick Start](Quick-Start.md)
-  - [Guided Tour](Guided-Tour.md)
-  - [Recovery Lab](Recovery-Lab.md)
+  - [Quick start](Quick-Start.md)
+  - [Guided app tour](Guided-Tour.md)
   - [Configuration](Configuration.md)
   - [Settings Reference](Settings-Reference.md)
 
@@ -30,18 +29,32 @@
   - [Updates and Release Channels](Updates.md)
   - [Official Releases](https://github.com/ATAC-Helicopter/VaultSync/releases/latest)
 
-- Community and Support
-  - [Community and Discord](../COMMUNITY.md)
+- Chronicle (1.8)
+  - History and comparison: [Snapshots](Snapshots.md)
+  - Recovery readiness: [Recovery](Recovery.md)
+  - Update flow: [Updates](Updates.md)
+  - Troubleshooting: [Troubleshooting](Troubleshooting.md)
+
+- Recovery Horizon development (1.9)
+  - [Development status and PR stack](Development-Status.md)
+  - [Development CLI workflows](CLI-Development.md)
+  - [Delivery Project](https://github.com/users/ATAC-Helicopter/projects/7)
+
+- Support
   - [Troubleshooting](Troubleshooting.md)
   - [FAQ](FAQ.md)
   - [Reporting Bugs](Reporting-Bugs.md)
   - [GitHub Issues](https://github.com/ATAC-Helicopter/VaultSync/issues/new/choose)
   - [Reddit](https://www.reddit.com/r/VaultSync/)
 
-- Project
-  - [Documentation Hub](../../DOCUMENTATION.md)
-  - [Roadmap](../../ROADMAP.md)
-  - [Changelog](../../CHANGELOG.md)
-  - [Contributing](../../CONTRIBUTING.md)
-  - [Security](../../SECURITY.md)
-  - [Microsoft Store](../MICROSOFT_STORE.md)
+- Repository Docs
+  - [Docs index](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/README.md)
+  - [Documentation](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/DOCUMENTATION.md)
+  - [Microsoft Store](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/MICROSOFT_STORE.md)
+  - [Store submission checklist](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/docs/MICROSOFT_STORE_SUBMISSION_CHECKLIST.md)
+  - [Roadmap](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/ROADMAP.md)
+  - [Changelog](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CHANGELOG.md)
+  - [Contributing](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/CONTRIBUTING.md)
+  - [Security](https://github.com/ATAC-Helicopter/VaultSync/blob/work/1.9-roadmap-realignment/SECURITY.md)
+
+- [Complete Recovery Horizon release plan](Release-Plan.md): CLI ownership and immutable BSC ID crosswalk.

@@ -1,0 +1,37 @@
+{
+  "owner": "VS-1917",
+  "issue": 574,
+  "sourceBase": "50d1926aa8e0adac3817a96de77cea64e9a62461",
+  "sourceHashes": {
+    "src/VaultSync.Core/Services/DiskImageRawProfileVerificationService.cs": "5783073f26602d235727416c92ba352f94539e6ccaf518b1585eef4b4c5fdbc8",
+    "src/VaultSync.Core/Services/DiskImageGptInspectionService.cs": "bba4d2706d9f5000bbb08ca642843676a2f81cd280b3a7e62e188c73516020fd",
+    "src/VaultSync.Core/Services/DiskImageOriginRecordCodec.cs": "bffb0b1f7c068688ec29ca980ced6db42f6a1ea5e291064664922773968f78ce",
+    "src/VaultSync.Core/Models/DiskImageCaptureOrigin.cs": "f4977b9792e2be86b746b97f721abd96e533c12afea0c135367029c33219238d",
+    "tests/VaultSync.Core.Tests/DiskImageRawProfileVerificationServiceTests.cs": "120730f6b63c37fb220dfb5e94667f830472d466f48a20802e539517447c7633",
+    "tests/VaultSync.Core.Tests/Fixtures/disk-image-raw-profile-v1.json": "748af1787b1a5f1c0f6700a96315b1137e7e51758c9642ba9f14aa7d1d29800b",
+    "scripts/generate_raw_profile_fixtures.py": "6e7831817af61932d62ced261ef35f661678bfba51023f0a761d4bfdb7936dae",
+    "docs/DISK_IMAGE_RAW_WIRE_1.9.md": "2afc94f5226d690f421ff10bcd3b769a89616252240c29eaabd41c2020ecb058"
+  },
+  "releaseChecks": {
+    "core": 1607,
+    "python": 236,
+    "newCoreCases": 40,
+    "independentPermanentCases": 32,
+    "warnings": 0,
+    "errors": 0,
+    "skips": 0,
+    "localeKeys": 1942,
+    "localeFiles": 19,
+    "log": "/tmp/vaultsync-raw-reader-release-20261020.log",
+    "trx": "/var/folders/98/rp_mspy95h175s5xn22b7gqc0000gn/T/vaultsync-validation.UGJNWc/test-results/core-tests.trx"
+  },
+  "limits": [
+    "No native capture or image writer",
+    "No device/path access or write operations",
+    "Unkeyed origin claims do not authenticate offline consistency or producer",
+    "Caller-held streams may change; no future-read or restore authorization",
+    "No durable-publication or boot/recovery qualification",
+    "All four profiles remain candidates, zero qualified",
+    "Hosted results for sourceBase are historical; delivered head requires its own analysis"
+  ]
+}

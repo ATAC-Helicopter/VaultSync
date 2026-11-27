@@ -5,149 +5,103 @@
     x:Class="VaultSync.UI.Views.Controls.OnboardingTourOverlay"
     x:DataType="vm:OnboardingTourViewModel"
     IsVisible="{CompiledBinding IsActive}"
-    HorizontalAlignment="Right"
-    VerticalAlignment="Bottom"
-    Margin="24"
-    Width="430"
-    MaxWidth="430"
-    MinWidth="280"
     AutomationProperties.Name="{CompiledBinding Title}">
 
-  <!--
-    The control is deliberately card-sized. A full-window UserControl remains
-    part of Avalonia's pointer route even when a visual scrim is marked as
-    non-hit-testable, which blocks the Settings/Projects/Backups interactions
-    that the guided tour asks the user to perform.
-  -->
-  <Border Background="{DynamicResource Surface1}"
-            BorderBrush="{DynamicResource BorderSoft}"
+  <Canvas x:Name="OverlayCanvas">
+    <Border x:Name="TargetHighlight"
+            IsHitTestVisible="False"
+            IsVisible="False"
+            CornerRadius="10"
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="2"
+            Background="#144C8DFF" />
+
+    <Border x:Name="TourCard"
+            Width="300"
+            BoxShadow="0 12 32 0 #80000000"
+            Background="{DynamicResource Surface1}"
+            BorderBrush="{DynamicResource AccentBrush}"
             BorderThickness="1"
-            CornerRadius="8"
-            Padding="18">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
-      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-            RowSpacing="14">
+            CornerRadius="10"
+            Padding="14">
 
-        <Grid ColumnDefinitions="*,Auto"
-              ColumnSpacing="12">
-          <StackPanel Spacing="4">
-            <TextBlock Text="{CompiledBinding StepCounter}"
-                       FontSize="12"
-                       Foreground="{DynamicResource AccentBrush}"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="{CompiledBinding ProgressText}"
-                       FontSize="12"
-                       Foreground="{DynamicResource TextSecondary}" />
-          </StackPanel>
-          <TextBlock Grid.Column="1"
-                     Text="{CompiledBinding StatusText}"
-                     FontSize="12"
-                     FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextSecondary}"
-                     VerticalAlignment="Top" />
-        </Grid>
+      <Grid RowDefinitions="*,Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+              RowSpacing="8">
 
-        <ProgressBar Grid.Row="1"
-                     Minimum="0"
-                     Maximum="1"
-                     Height="6"
-                     Value="{CompiledBinding ProgressValue}" />
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="12">
+              <TextBlock Text="{CompiledBinding StepCounter}"
+                         FontSize="12"
+                         HorizontalAlignment="Left"
+                         Grid.Column="0"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontWeight="SemiBold" />
+            <Button Content="{CompiledBinding SkipLabel}"
+                    Command="{CompiledBinding SkipCommand}"
+                    Classes="action-ghost"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Padding="8,4" />
+          </Grid>
 
-        <StackPanel Grid.Row="2"
-                    Spacing="7">
-          <TextBlock Text="{CompiledBinding Title}"
-                     FontSize="20"
-                     FontWeight="SemiBold"
-                     TextWrapping="Wrap" />
-          <TextBlock Text="{CompiledBinding Body}"
-                     FontSize="13"
-                     Foreground="{DynamicResource TextSecondary}"
-                     TextWrapping="Wrap"
-                     LineHeight="21" />
-        </StackPanel>
+          <ProgressBar Grid.Row="1"
+                       Minimum="0"
+                       Maximum="1"
+                       Height="3"
+                       Value="{CompiledBinding ProgressValue}" />
 
-        <Border Grid.Row="3"
-                Background="{DynamicResource Surface2}"
-                BorderBrush="{DynamicResource BorderSoft}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="12"
-                IsVisible="{CompiledBinding HasActionText}">
-          <StackPanel Spacing="5">
-            <TextBlock Text="{CompiledBinding ActionHeadingText}"
-                       FontSize="11"
+          <StackPanel Grid.Row="2"
+                      Spacing="7">
+            <TextBlock Text="{CompiledBinding Title}"
+                       FontSize="15"
                        FontWeight="SemiBold"
-                       Foreground="{DynamicResource AccentBrush}" />
-            <TextBlock Text="{CompiledBinding ActionText}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{CompiledBinding Body}"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondary}"
                        TextWrapping="Wrap"
-                       LineHeight="19" />
+                       LineHeight="17" />
           </StackPanel>
-        </Border>
 
-        <Grid Grid.Row="4"
-              RowDefinitions="Auto,Auto"
-              RowSpacing="14">
-          <ItemsControl ItemsSource="{CompiledBinding ChecklistItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:OnboardingChecklistItem">
-                <Grid ColumnDefinitions="28,*,Auto"
-                      ColumnSpacing="10"
-                      Margin="0,0,0,8">
-                  <Border Width="22"
-                          Height="22"
-                          CornerRadius="6"
-                          BorderBrush="{Binding NumberBrush}"
-                          BorderThickness="1"
-                          Background="{DynamicResource Surface1}"
-                          VerticalAlignment="Top">
-                    <TextBlock Text="{Binding NumberText}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{Binding NumberBrush}" />
-                  </Border>
-                  <TextBlock Grid.Column="1"
-                             Text="{Binding Title}"
-                             FontSize="12"
-                             FontWeight="SemiBold"
-                             TextWrapping="Wrap"
-                             Foreground="{DynamicResource TextPrimary}" />
-                  <TextBlock Grid.Column="2"
-                             Text="{Binding StatusText}"
-                             FontSize="11"
-                             FontWeight="SemiBold"
-                             Foreground="{Binding StatusBrush}"
-                             VerticalAlignment="Top" />
-                </Grid>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
-          <Grid Grid.Row="1"
-                ColumnDefinitions="Auto,*,Auto,Auto"
-                ColumnSpacing="8">
-            <Button Content="{CompiledBinding BackLabel}"
-                    Command="{CompiledBinding PreviousCommand}"
-                    IsVisible="{CompiledBinding CanGoBack}"
-                    Classes="action-ghost"
-                    Padding="12,7" />
-            <Button Content="{CompiledBinding SkipLabel}"
-                    Grid.Column="2"
-                    Command="{CompiledBinding SkipCommand}"
-                    Classes="action-ghost"
-                    Padding="12,7" />
-            <Button Content="{CompiledBinding PrimaryLabel}"
-                    Grid.Column="3"
-                    Command="{CompiledBinding PrimaryCommand}"
-                    Classes="action-primary"
-                    Padding="14,7" />
-          </Grid>
+          <Border Grid.Row="3"
+                  Background="{DynamicResource Surface2}"
+                  BorderBrush="{DynamicResource BorderSoft}"
+                  BorderThickness="1"
+                  CornerRadius="8"
+                  Padding="8"
+                  IsVisible="{CompiledBinding HasActionText}">
+            <StackPanel Spacing="5">
+              <TextBlock Text="{CompiledBinding ActionHeadingText}"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{CompiledBinding ActionText}"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextSecondary}"
+                         TextWrapping="Wrap"
+                         LineHeight="19" />
+            </StackPanel>
+          </Border>
         </Grid>
+      <Grid Grid.Row="1"
+            Margin="0,8,0,0"
+            ColumnDefinitions="Auto,*,Auto,Auto"
+            ColumnSpacing="8">
+        <Button Content="{CompiledBinding BackLabel}"
+                Command="{CompiledBinding PreviousCommand}"
+                IsVisible="{CompiledBinding CanGoBack}"
+                Classes="action-ghost"
+                Padding="8,4" />
+        <Button Content="{CompiledBinding PrimaryLabel}"
+                Grid.Column="3"
+                Command="{CompiledBinding PrimaryCommand}"
+                Classes="action-primary"
+                Padding="10,6" />
       </Grid>
-    </ScrollViewer>
+    </Grid>
   </Border>
+  </Canvas>
 </UserControl>

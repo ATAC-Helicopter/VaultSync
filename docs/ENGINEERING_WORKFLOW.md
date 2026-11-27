@@ -1,23 +1,28 @@
-# VaultSync: engineering workflow and review requirements
+# VaultSync Engineering Workflow: Review, Tracking, Security and Release
 
-This is the maintenance-line operational guide. The active 1.9 development
-policy is also documented in `CONTRIBUTING.md` and the corresponding
-`docs/ENGINEERING_WORKFLOW.md` on the 1.9 preparation branch.
+This guide consolidates operational decisions. For detailed contracts see
+[CONTRIBUTING](../CONTRIBUTING.md), [work tracking](WORK_TRACKING.md),
+[workspaces](VALIDATION_WORKSPACES.md), [releasing](RELEASING.md),
+and [security](../SECURITY.md).
 
-## Merge policy: Stable is the default mainline
+## Merge policy and release ownership
 
-- All PRs targeting **non-Stable** branches: choose GitHub's **Create a merge
-  commit**. Do not squash or rebase; preserve the individual original commits
-  and contributor attribution.
-- For **Stable**: use exactly one **release/hotfix merge commit** in the
-  **first-parent history** per qualified promotion. A genuine Git merge
-  keeps source commits reachable in the full graph; it does not collapse
-  them. `git log --first-parent --oneline Stable` is the intended release view.
-  If literally only one reachable commit is desired, GitHub **Squash and merge**
-  is a different policy, not a merge commit. Do not silently conflate them.
-- No direct feature/fix pushes to Stable, no force updates, no bypassed CI.
-  Isolate hotfixes in reviewed branches; leave release PRs Draft until all
-  gates are satisfied.
+- **Non-Stable target branches:** always **Create a merge commit**, preserving all
+  individual commits and authors. Do not squash/rebase contributor work.
+- **Stable:** one *real merge commit* per qualified release or emergency hotfix
+  on Stable's **first-parent history**. No direct feature/fix commits, rebase,
+  fast-forward or force push. Git's complete DAG still exposes incoming
+  commits under that merge. View the one-merge-per-release spine using
+  `git log --first-parent --oneline Stable`. Getting literally one commit
+  in the entire history would require GitHub's **Squash and merge**,
+  which is *not* a real merge commit. The default mainline here is `Stable`,
+  not a separate branch named `main`.
+- For 1.9.0, independent fixes target `work/1.9-roadmap-realignment` and
+  enter `Dev` through the single consolidated release PR #736. Later releases
+  retain their own sole preparation PR and predecessor integration gates.
+- Stable maintenance/security patches stay isolated from later 1.9 features;
+  use the existing release PR and never publish directly from an unqualified
+  development head.
 
 ## GitHub ruleset enforcement — manual owner action
 
@@ -29,64 +34,104 @@ As audited on 2026-11-14, the repository has:
 
 Repository ruleset updates require admin permission and are **not** completed by changing this documentation. Verify live rulesets before stating the policy is fully enforced.
 
-## Mandatory issue, PR and Project classification
+## Issue, PR, labels and Project #7
 
-- Use the canonical work ID (`VS-xxxx` or `BUG-xxxxx`) and link to
-  an owning issue via `Refs #N` while release-gated, not `Closes` on
-  an intermediate preparation merge.
-- Label each PR with one valid `kind:*` (except version-prefixed umbrella
-  releases under `area:release`), at least one `area:*`, exactly one
-  `priority:p0..p3`, one `status:*` and one exact `release:X.Y.Z`.
-  A family label may coexist but cannot replace the exact release label.
-- Project #7 contains owning issues; keep milestone, assignee, Priority,
-  Area, Release and meaningful date/status fields consistent. Do not
-  duplicate Project cards for every PR; use Issues as work records.
-- The Work Tracking job validates labels and issue links on PR and label
-  changes. This becomes a **merge requirement only when configured** as
-  a required status check on the target branch. An action alone does not
-  enforce branch protection. Manual Project-field checking remains necessary
-  when GraphQL access or field-specific automation is unavailable.
+- Reuse exactly one owning canonical `VS-xxxx` or `BUG-xxxxx` issue, linked
+  in the PR as `Refs #N` while release-gated, or `Closes #N` only when
+  closing the issue is actually appropriate.
+- Every engineering PR must have **one** exact `release:X.Y.Z` label, **one**
+  `priority:p0..p3`, **one** `status:*`, at least one `area:*`, and
+  exactly one `kind:*`. Version-prefixed `area:release` umbrella PRs may
+  omit `kind:*` because they aggregate mixed work. An additional family
+  label `release:X.Y.x` is allowed.
+- The Work Tracking workflow checks reference and label completeness when a
+  PR changes or its labels change. To make this a **merge requirement**, add
+  `Tracking policy` to the target branch's required checks **once the
+  workflow is present there**. A successful tracking check is *not* CI or
+  release qualification.
+- Project #7: make the owning **Issue** the work item (auto-add filter
+  `is:issue`, not a duplicate card for every PR). Align its Status, Priority,
+  Area, Release, milestone, assignee and dates to the issue and release plan.
+  A release-gated merged implementation stays **In progress** until accepted
+  and shipped; only then mark **Done** and close as completed.
+- `./dev audit --release <version>` or `--all-releases` requires a complete
+  API/Project snapshot; missing permissions or partial data do not count as a
+  pass. Project date sync needs its configured token and field types; do
+  not assume it is active.
 
-## Independent verification with minimal wasted work
+## Minimal independent review and test sequence
 
-1. Check the current PR head SHA and compare its diff to the trusted
-   published source. Treat new dependencies, CI changes and links as
-   untrusted until reviewed.
-2. Use disposable test fixtures and an isolated detached worktree at the
-   exact head SHA; respect `global.json` and install the pinned SDK
-   side-by-side rather than changing the pin.
-3. Run the smallest relevant tests with single-threaded MSBuild for
-   independent verification when shared project outputs collide:
+1. Read the exact head SHA and scoped diff. Review tests, process invocation,
+   path handling, workflow edits, dependencies and secret/network access.
+2. Compare tests claimed by the contributor with actual independent evidence.
+   A local report, `action_required`, or tracking-only CI is not proof that
+   .NET builds and regressions passed.
+3. Use a detached **worktree**, disposable data and the exact reviewed SHA.
+   Respect the pinned SDK in `global.json`; install it side-by-side rather
+   than changing that pin to bypass a test.
+4. Run the smallest relevant test filter first. If multiple MSBuild project
+   paths share output files, force serial compilation with `-m:1` and
+   `-p:BuildInParallel=false` rather than deleting unknown build output.
+   Only broaden to affected build, full core suite or native Windows/macOS/Linux
+   qualification when scope or release/safety gate requires it.
+   Docs-only changes need relevant formatting/linkage/script tests.
+5. Record command, **process exit code** (not only xUnit pass count), SDK,
+   OS, SHA, pass/fail counts, exclusions, and remaining risks. A passing
+   test summary with a failed build is not a passing verification. Re-review
+   if the head changes, then merge using the target policy.
 
-   ```bash
-   dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj \
-     --configuration Release --filter 'FullyQualifiedName~RsyncRunnerTests' \
-     -m:1 -p:BuildInParallel=false -p:UseSharedCompilation=false -warnaserror
-   ```
+### Example: PR #849 (rsync cleanup)
 
-4. Check the **process exit code** as well as the test count. A passing
-   xUnit run together with a failed MSBuild is **not** an accepted build.
-   Contributors' self-reported counts and a tracking-only workflow do not
-   substitute for independent CI. Recheck changed heads.
-5. For maintenance backports, require identical production-code baseline
-   against the **published latest Stable tag**; cherry-pick only the
-   applicable behavior, with negative and ordinary positive regression
-   tests. Record the backport in the release notes and retain unrelated
-   1.9 features outside the maintenance release.
-6. Before any Stable promotion: exact-head build/test matrix on Windows,
-   Linux and macOS, native packaging and runtime checks, updater/rollback,
-   integrity/provenance and security acceptance. Do not run global suites
-   repeatedly for doc-only edits or claim unperformed QA passed.
+From the primary repository checkout:
 
-## Confidential vulnerability coordination
+```bash
+git fetch origin pull/849/head
+git worktree add --detach ../VaultSync-pr849-test FETCH_HEAD
+cd ../VaultSync-pr849-test
+git rev-parse --short HEAD
+dotnet --version
+dotnet test tests/VaultSync.Core.Tests/VaultSync.Core.Tests.csproj \
+  --configuration Release \
+  --filter 'FullyQualifiedName~RsyncRunnerTests' \
+  -m:1 -p:BuildInParallel=false -p:UseSharedCompilation=false -warnaserror
+```
 
-Use the **private GitHub Security Advisory** and temporary private fork
-for report details, reproduction, patch review and reporter collaboration.
-Do not add exploit-sensitive examples, private hashes/fork paths or draft
-advisory details to public PRs, issue comments, changelog, CI logs or
-community channels. Invite reporters to the advisory, not repository
-administration. Validate platform-specific link and filesystem-race
-boundaries privately, coordinate the qualified fix's release and only
-then publish the advisory with reporter credit.
+The reviewed PR #849 head is `817d9e0d` as of 2026-11-14. The SDK
+pin is `10.0.404`; install it if unavailable. The expected regression
+filter selects three tests. Do not merge based solely on the contributor's
+reported run. After retaining the test receipt and returning to the primary
+checkout, remove *only* the worktree you created:
 
-See [SECURITY.md](../SECURITY.md) and [RELEASING.md](RELEASING.md).
+```bash
+git worktree remove ../VaultSync-pr849-test
+```
+
+Do not use broad `git clean` or `reset --hard` to clean test fixtures.
+
+## Private security workflow
+
+- Receive and investigate sensitive reports through a **draft private GitHub
+  Security Advisory**, not a public exploit issue, PR or chat log.
+- Use its temporary private fork for confidential regression tests, evidence
+  and minimal remediation. Invite the reporter as an *advisory collaborator*
+  for independent review, without granting general repository write/admin.
+  A private Discord channel is suitable for coordination, not canonical
+  security evidence.
+- Validate a real affected shipped baseline, normal safe controls, boundary
+  refusals and platform-specific filesystem semantics/races. Report known
+  unqualified scenarios; never infer remote exploitability or cross-platform
+  safety from disposable Linux tests alone.
+- Complete private review and release gates before coordinated integration,
+  release, public advisory and contributor attribution. Backport to supported
+  future development branches after it is safe to disclose.
+- Never include embargoed paths, reproduction payloads, private fork commit
+  references, private email contents or secrets in public branch documents.
+
+## Efficient agent and workflow operation
+
+Use the short `AGENTS.md` and only the relevant domain contract; scoped
+searches, minimal diff, targeted tests and bounded logs. Avoid redundant
+full-suite retries, overlong context dumps, model/reasoning routing or
+automatic permissions changes. Preserve existing project history. A request
+to prepare a merge is not authorization to publish a release or bypass
+protected branch rules.

@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "workId": "VS-1907",
+  "issue": 495,
+  "releasePr": 736,
+  "sourceBaseCommit": "be9177e953bffc4d9c27ed35b17a35ea02af3087",
+  "sourceBinding": "Unpublished working-tree component checksums below; native private QA build identifies the base commit. This is not final-package provenance or exact release-head qualification.",
+  "sourceSha256": {
+    "src/VaultSync.Core/Services/LinuxRecoverySupervisor.cs": "2980f48bbd84a6c21e533413c4fcb221b0747951df56cb2c80c1aadbaf5f6bf6",
+    "src/VaultSync.Core/Services/LinuxRecoveryLocalConsole.cs": "6ea0b31f19d5715496f5f9252e2483f45de8ea2c65c6c9e5ed07e4e85218c3d9",
+    "tests/VaultSync.Core.Tests/LinuxRecoverySupervisorTests.cs": "309aee04a4f55db5a8b72428b0e5f2099091a314359ae77df5e48fcb16e48b57",
+    "tests/VaultSync.Core.Tests/LinuxRecoveryLocalConsoleTests.cs": "f3838da862e0f8f1b5ecf5ca9d212e4c38c493c2235690aff02d804d976f5719",
+    "tests/VaultSync.Core.Tests/LinuxRawRestoreOperationTests.cs": "87037324a56a3ed519b94789bd93482d213e07ccf073dd160ff8fb9449055d17",
+    "Localization/strings.nl.json": "d92ce841055e02369b09fae77fa9fc43461bc95d656ea7720e89d4c2ff89d707",
+    "Localization/strings.ja.json": "09a2f2d86fcc3f913ff0803a98928092d9a9a10d14245456137c183a5d133a9f",
+    "Localization/strings.tr.json": "3e03115d2e66c17df62dac11e605add7c582d98561d70437103ed5c4c3db7e1e",
+    "Localization/strings.zh.json": "7c3b5aa8b90bc4247ea47f28659829e4edf758106b4c0bf9504775043006e493",
+    "Localization/strings.bn.json": "846bc0bd8819906e07c2db1dc4ca35f8b04c5ee227796d4d1f88488991eec586",
+    "Localization/strings.en.json": "99379b487b38bf6c08a8ba4591f07302b4797c1142b46787c91bd126c92982a5",
+    "Localization/strings.pt.json": "a65afe706b78eb5ca0608eb40497959c7f3894262977148310e992cf5b853956",
+    "Localization/strings.it.json": "67714171de1f8c58e9baf66256c40c0f544670b5e4bc7ce9bc3b37e3a1f23599",
+    "Localization/strings.uk.json": "7997101fb9d197f0dbd067cf8d61a5ff17e3ac76605cf0e4c20a494aeff32f0e",
+    "Localization/strings.ru.json": "d831b852695b7d7622dbd6df064d5d0b040c9b2355d1a4e376c02c7295a94b91",
+    "Localization/strings.pl.json": "6d6b829a70f8698d7e0283f8bf55eefca71dc01fb8976eeb0238525b6abb208b",
+    "Localization/strings.de.json": "9107733e524dc65c36c6daf9e6670f424117edfcb5dd4b55afd606103a2f3571",
+    "Localization/strings.hi.json": "616000b393e4f660eaf86709ab6a3389a1f387033b3891d357b32225412e89f1",
+    "Localization/strings.ko.json": "6683df16dbf0132a2d1e703d8d654147fe48a7cac8a60450ba65d4f6652f59da",
+    "Localization/strings.fr.json": "a8a57d79f6cbf88285227018ae0e4a04d362f470542bc383f8eb14ad0f4e8481",
+    "Localization/strings.ar.json": "7f1e3b5a252546ef78e192cbb4506dfe53703400acd22fe72cd32a44f11e2bae",
+    "Localization/strings.es.json": "bf3748871fcf40aac4a8060ead8a0da7d1bf719a2270fbdcb326515fc32f8c74",
+    "Localization/strings.vi.json": "b88ca7dfdea2645ce3bcdbb9f6610e1c2774942f0d899e1562199d62f3822470",
+    "Localization/strings.id.json": "0646f58d78c484f02d0c9dd98c6ba57bbedddb3f7e759041be59b64b72b04ac9"
+  },
+  "localChecks": {
+    "focusedGroup": {
+      "executed": 91,
+      "passed": 90,
+      "failed": 1,
+      "failure": "Culture-sensitive control-character assertion in the fixture; production escaping unchanged"
+    },
+    "finalExactCase": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "commandExit": 0,
+      "filter": "FullyQualifiedName=VaultSync.Core.Tests.LinuxRecoveryLocalConsoleTests.ExactFreshInputFollowsFlushAndLocalizedActualReview"
+    },
+    "localization": {
+      "keys": 1968,
+      "locales": 19,
+      "result": "PASS; catalogs unchanged after audit"
+    },
+    "warnings": "Final exact-case Release build warning-as-error gate exits zero; unrelated local suites were not repeated"
+  },
+  "native": {
+    "kernel": "6.12.113+deb13-amd64",
+    "runtime": ".NET 10.0.13",
+    "image": "Debian13amd64 version20261026-2643; official SHA512SUMS/image-JSON digest verified",
+    "network": "No guest NIC; no shared host directories or host raw devices",
+    "target": "Owned regular-file-backed virtio block device, 65536bytes,512-byte sectors; synthetic GPT fixture only",
+    "operatorInput": "Synthetic QMP keyboard, not observed human consent",
+    "sourceProofDocuments": 9,
+    "expectedDocumentSha256": {
+      "LinuxRecoveryLocalConsole.cs": "6ea0b31f19d5715496f5f9252e2483f45de8ea2c65c6c9e5ed07e4e85218c3d9",
+      "LinuxRecoverySupervisor.cs": "2980f48bbd84a6c21e533413c4fcb221b0747951df56cb2c80c1aadbaf5f6bf6",
+      "LinuxRecoveryWorkerOperation.cs": "d0d7c2c3bcd1c8519d9f5edea6b3e03acc6c4762013d4c4134d75c23698ec6aa",
+      "LinuxRecoveryOperationChannel.cs": "f93353e60420c7cd7b0f9aa120d7207253383c4b491cb63617a7b7928a309691",
+      "LinuxRecoveryProtocol.cs": "5c419bf0efd0f78039dad21b8cf003f858c655506a9c380505ef921bb34f1787",
+      "LinuxRecoveryResponses.cs": "200905263b2c9a32d22b5b9dd7ba1f368bc07c6e78dbf2d80f18dff08d84cb5b",
+      "LinuxRawRestoreOperation.cs": "2b63b682e63b7a2b2dd766e1227561bae4c49bdf3ff26dd20bb7c0eeb6f5297a",
+      "RawImageDeviceRestoreService.cs": "e74f6aa345dbdb45836976872344f775843c003f8e74c960834268fc2d250b25",
+      "LinuxRawImageStagingService.cs": "e857961e238a9d3266e00e4cf90f0207757c8d7ace79f823c988ba925a78de44"
+    },
+    "coreAssemblySha256": "f16bc3d5dfbdecf2c3c805ee85e0482c0a61204c0e17dd985ef3db744219e3d0",
+    "cases": [
+      {
+        "name": "pty",
+        "pass": true,
+        "phase": "Faulted",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "wrong",
+        "pass": true,
+        "phase": "Faulted",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "queued",
+        "pass": true,
+        "phase": "Completed",
+        "acknowledged": 65536,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "valid",
+        "pass": true,
+        "phase": "Completed",
+        "acknowledged": 65536,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "wire-only",
+        "pass": true,
+        "phase": "Faulted",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "console-only",
+        "pass": true,
+        "phase": "Refused",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "cancel",
+        "pass": true,
+        "phase": "Faulted",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      },
+      {
+        "name": "peer-loss",
+        "pass": true,
+        "phase": "Faulted",
+        "acknowledged": 0,
+        "controllerIsolated": true,
+        "controllerExit": 0
+      }
+    ],
+    "successfulWholeTargetSha256": "f86d4a863bf4dced92eaa4290324e71f96a215e9f38c7acd8054a7c1a6c0a663",
+    "attempts": [
+      {
+        "completedCases": 6,
+        "allCasesPassed": true,
+        "probeRunComplete": false,
+        "failure": "QA stdout collector used the work cancellation token and canceled its own artifact drain; not counted as a successful complete run"
+      },
+      {
+        "completedCases": 2,
+        "allCasesPassed": true,
+        "probeRunComplete": true,
+        "fix": "Private QA artifact draining explicitly ignores work cancellation; product sources unchanged",
+        "qemuExit": 0,
+        "elapsedSeconds": 54.447602083
+      }
+    ],
+    "finalShutdown": "Normal guest poweroff, QEMU exit0"
+  },
+  "historicalFailures": [
+    "Native Close call initially shadowed SafeHandle.Close; qualified before execution",
+    "Control-character hardware fixture correctly refused native identity checks; production validation retained",
+    "Optional fixture callbacks skipped counters; increments made unconditional",
+    "Ordinal control assertions and unused callback compiler diagnostic repaired without suppressions",
+    "Private harness TFM negotiation aligned Core binaries; no installation manifest check bypassed",
+    "Firmware-only boot attempt preserved; explicit OS boot index and owned firmware variables repaired"
+  ],
+  "limits": [
+    "Internal console/supervisor component only; existing application recovery panel remains read-only",
+    "Installed supervisor/UI launch/build-role binding and full graphical consent remain open",
+    "Native English rendering only;19translated catalogs do not qualify physical VT CJK/RTL fonts",
+    "No full OS capture/boot/restore, filesystem/profile, crash/power-cut or installed-updater/package qualification",
+    "Retained staging/journal lifecycle remains a separate supervisor/storage gate",
+    "No publisher signing/provenance, release profile promotion, beta assets/tag/publication or merge"
+  ],
+  "qualifiedProfiles": []
+}

@@ -5,6 +5,8 @@ import importlib.util
 import io
 import json
 import os
+import plistlib
+import subprocess
 import tempfile
 import tarfile
 import unittest
@@ -64,20 +66,84 @@ class UpdaterQualificationTests(unittest.TestCase):
 
     def test_prepare_macos_base_detaches_even_after_copy_failure(self):
         with tempfile.TemporaryDirectory() as temporary:
+            failure = subprocess.CalledProcessError(1, "/usr/bin/ditto")
             with mock.patch.object(qualify_updater, "download_base"), \
-                    mock.patch.object(qualify_updater.subprocess, "run") as run, \
-                    mock.patch.object(qualify_updater.shutil, "copytree", side_effect=OSError("copy failed")):
-                with self.assertRaisesRegex(OSError, "copy failed"):
+                    mock.patch.object(qualify_updater.subprocess, "run",
+                                      side_effect=[None, failure, None]) as run:
+                with self.assertRaises(subprocess.CalledProcessError):
                     qualify_updater.prepare_base(Path(temporary), "1.8.8", "Darwin", "macos-intel")
                 self.assertEqual("detach", run.call_args.args[0][1])
 
     def test_prepare_macos_base_returns_canonical_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:
             with mock.patch.object(qualify_updater, "download_base"), \
-                    mock.patch.object(qualify_updater.subprocess, "run"), \
-                    mock.patch.object(qualify_updater.shutil, "copytree"):
+                    mock.patch.object(qualify_updater.subprocess, "run") as run:
                 installed = qualify_updater.prepare_base(Path(temporary), "1.8.8", "Darwin", "macos-intel")
                 self.assertEqual("VaultSync.app", installed.name)
+                mount = run.call_args_list[0].args[0][-1]
+                self.assertEqual(
+                    mock.call(["/usr/bin/ditto", str(Path(mount) / installed.name), str(installed)],
+                              check=True, timeout=120),
+                    run.call_args_list[1],
+                )
+
+    def test_macos_dmg_upgrade_checks_signature_before_replacement(self):
+        for machine, suffix, failure in (("arm64", "macos-apple-silicon", None),
+                                         ("x86_64", "macos-intel", "identity"),
+                                         ("x86_64", "macos-intel", "signature")):
+            with self.subTest(machine=machine, failure=failure), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                assets = root / "assets"
+                assets.mkdir()
+                target = "1.9.0-beta.2"
+                package = assets / f"VaultSync-{target}-{suffix}.dmg"
+                package.write_bytes(b"candidate DMG")
+                installed = root / "released.app"
+                installed.mkdir()
+                (installed / "previous").touch()
+
+                def copy_bundle(source, mount, staged):
+                    self.assertEqual(package, source)
+                    contents = staged / "Contents"
+                    contents.mkdir(parents=True)
+                    version = "1.9.0-beta.1" if failure == "identity" else target
+                    (contents / "Info.plist").write_bytes(plistlib.dumps({"VaultSyncReleaseVersion": version}))
+
+                options = argparse.Namespace(assets=assets, previous="1.9.0-beta.1", target=target,
+                                             evidence=root / "evidence", macos_dmg_only=True)
+                signature_error = subprocess.CalledProcessError(1, "codesign") if failure == "signature" else None
+                with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "GH_TOKEN": "test-token"}), \
+                        mock.patch.object(qualify_updater.platform, "system", return_value="Darwin"), \
+                        mock.patch.object(qualify_updater.platform, "machine", return_value=machine), \
+                        mock.patch.object(qualify_updater, "qualification_workspace",
+                                          return_value=contextlib.nullcontext(root)), \
+                        mock.patch.object(qualify_updater, "prepare_base", return_value=installed), \
+                        mock.patch.object(qualify_updater, "copy_dmg_bundle", side_effect=copy_bundle), \
+                        mock.patch.object(qualify_updater, "smoke_startup") as startup, \
+                        mock.patch.object(qualify_updater.subprocess, "run", side_effect=signature_error) as run, \
+                        mock.patch("builtins.print"):
+                    if failure:
+                        error_type = ValueError if failure == "identity" else subprocess.CalledProcessError
+                        with self.assertRaises(error_type):
+                            qualify_updater.qualify(options)
+                        self.assertTrue((installed / "previous").is_file())
+                        self.assertEqual(1, startup.call_count)
+                    else:
+                        qualify_updater.qualify(options)
+                        self.assertTrue((installed / "Contents" / "Info.plist").is_file())
+                        self.assertTrue((root / "previous.app" / "previous").is_file())
+                        self.assertEqual(2, startup.call_count)
+                        self.assertNotIn("GH_TOKEN", startup.call_args.args[2])
+                        receipt = json.loads((options.evidence / "updater-qualification.json").read_text())
+                        self.assertEqual("dmg", receipt["mode"])
+                        self.assertIn("external user data preserved", receipt["checks"])
+                    if failure == "identity":
+                        run.assert_not_called()
+                    else:
+                        run.assert_called_once_with(
+                            ["codesign", "--verify", "--deep", "--strict", str(root / "VaultSync.app")],
+                            check=True, timeout=60,
+                        )
 
     def test_logged_helper_does_not_inherit_api_token(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -211,7 +277,8 @@ class UpdaterQualificationTests(unittest.TestCase):
                     stack.enter_context(mock.patch.object(qualify_updater.subprocess, "Popen", side_effect=[parent, running]))
                     stack.enter_context(mock.patch.object(qualify_updater.subprocess, "run", return_value=mock.Mock(returncode=0)))
                     stack.enter_context(mock.patch.object(qualify_updater.time, "sleep"))
-                    stack.enter_context(mock.patch.object(qualify_updater.os, "killpg"))
+                    # Windows has no killpg; this fixture also simulates Unix hosts.
+                    stack.enter_context(mock.patch.object(qualify_updater.os, "killpg", create=True))
                     stack.enter_context(mock.patch("builtins.print"))
                     options = argparse.Namespace(assets=assets, previous="1.8.8", target="1.8.9",
                                                  evidence=root / "evidence")

@@ -47,6 +47,7 @@ namespace VaultSync.UI.ViewModels
                 {
                     var snapshotService = new SnapshotService(_repo, new HashService());
                     int hashed = await snapshotService.HashMissingFilesAsync(project, snapshotId, CancellationToken.None);
+                    ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Completed, phase: DiagnosticPhase.Verify, quantity: hashed);
                     Telemetry.Log("backup_post_hash_complete", b => b
                         .WithHashedString("project", project.Name)
                         .WithCount("hashedFiles", hashed));
@@ -57,6 +58,7 @@ namespace VaultSync.UI.ViewModels
                     Telemetry.Log("backup_post_hash_failed", b => b
                         .WithHashedString("project", project.Name)
                         .WithException(ex));
+                    ProductDiagnostics.Record(DiagnosticOperation.Snapshot, DiagnosticOutcome.Failed, ex, DiagnosticPhase.Verify);
                     Console.WriteLine($"[Backup] Post-hash failed: project='{project.Name}', error={ex.Message}");
                 }
                 finally
@@ -68,6 +70,8 @@ namespace VaultSync.UI.ViewModels
 
         private void RecordBackupThroughput(int backupId, TimeSpan elapsed, bool useArchiveMode)
         {
+            ProductDiagnostics.Record(DiagnosticOperation.Backup, DiagnosticOutcome.Completed,
+                phase: DiagnosticPhase.Commit, mode: useArchiveMode ? DiagnosticMode.Zip : DiagnosticMode.Folder, duration: elapsed);
             try
             {
                 if (backupId <= 0)
@@ -137,6 +141,7 @@ namespace VaultSync.UI.ViewModels
                 activityPhase: ProtectionActivityPhase.Verifying);
             _ = Task.Run(async () =>
             {
+                bool integrityMismatch = false;
                 try
                 {
                     Console.WriteLine($"[Backup] Verification start: project='{project.Name}', backupId={latest.Id}, snapshotId={latest.SnapshotId}");
@@ -144,12 +149,33 @@ namespace VaultSync.UI.ViewModels
                     _ = await snapshotService.HashMissingFilesAsync(project, latest.SnapshotId, CancellationToken.None);
 
                     var verifyService = new VerifyService(_repo, new HashService());
-                    string folder = Path.Combine(backupRoot, latest.Path ?? string.Empty);
-                    _ = await verifyService.VerifyAsync(project, folder, 100, full: true, CancellationToken.None);
+                    var clock = System.Diagnostics.Stopwatch.StartNew();
+                    if (ProductDiagnostics.IsBeta && !latest.IsEncrypted)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Started,
+                            phase: DiagnosticPhase.Verify);
+                    VerifyResult? result = await verifyService.VerifyStoredBackupAsync(latest, backupRoot, CancellationToken.None);
+                    if (result is null)
+                    {
+                        Console.WriteLine($"[Backup] Byte verification skipped for encrypted backup {latest.Id}.");
+                        return;
+                    }
+                    if (result.Failures.Count > 0)
+                    {
+                        integrityMismatch = true;
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed,
+                            phase: DiagnosticPhase.Verify, duration: ProductDiagnostics.IsBeta ? clock.Elapsed : default,
+                            quantity: result.Checked, failure: DiagnosticFailure.IntegrityMismatch);
+                        throw new InvalidDataException($"{result.Failures.Count} of {result.Checked} stored files failed verification.");
+                    }
+                    if (ProductDiagnostics.IsBeta)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Completed,
+                            phase: DiagnosticPhase.Verify, duration: clock.Elapsed, quantity: result.Checked);
                     Console.WriteLine($"[Backup] Verification complete: project='{project.Name}', backupId={latest.Id}");
                 }
                 catch (Exception vex)
                 {
+                    if (!integrityMismatch)
+                        ProductDiagnostics.Record(DiagnosticOperation.Verification, DiagnosticOutcome.Failed, vex, DiagnosticPhase.Verify);
                     Telemetry.Log(telemetryEvent, b => b
                         .WithHashedString("project", project.Name)
                         .WithHashedString("projectRoot", project.RootPath)

@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-28",
+  "owner": "BUG-19042",
+  "issue": 824,
+  "releasePr": 736,
+  "sourceBase": "e2fef468615c4add13dc4d5638b9a03c5ae69a1f",
+  "testedSourceSha256": {
+    "src/VaultSync.Core/Services/MetadataSyncService.cs": "3fa5878ce1f0053176dab0845666826591c7eb0d2b4079b8ce29ff461889d8af",
+    "tests/VaultSync.Core.Tests/AutomaticMetadataImportTests.cs": "63c12ca41dcd2fbfe30224912a2de6e2be1e8032d3c54269f58d41d975b7d48f"
+  },
+  "verification": {
+    "focusedPassed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "warningsAsErrors": true,
+    "scope": [
+      "AutomaticMetadataImportTests",
+      "unchanged-source cache",
+      "reviewed/read-only tombstones",
+      "actual-DB and missing-store preview regressions"
+    ],
+    "fullSuite": "not rerun: unrelated to focused copy/preview repair",
+    "nativeMacDefaultTempSingleCase": "prior hosted failing case passed standalone without custom TMPDIR; no root-cause claim",
+    "historicalHostedFailure": "e2fef46 macOS had2291pass/1fail in preservation fixture; diagnostics now report retry, checkpoints and surviving IDs without relaxing assertions"
+  },
+  "sourceCopy": [
+    "All previews and imports with ExportMissingTombstonesOnImport=false require strict private copy",
+    "Local reviewed deletion permission remains independent and unchanged",
+    "Observe DB/WAL/journal presence,length,mtime and bounded headers before/after copying",
+    "Copy only initial observed lengths with bounded pooled buffer cleared on return",
+    "Required sidecar/copy/transition failure refuses before local import mutation; no direct fallback",
+    "SHM excluded; SQLite rebuilds its index inside the private copy",
+    "Owned Unix leaf created0700; unsafe shared parent refused without chmodding unknown directories"
+  ],
+  "deterministicFaults": [
+    "missing required WAL",
+    "required journal replaced by directory",
+    "new WAL after absence",
+    "WAL header changes while length and mtime preserved",
+    "DB grows during copy",
+    "WAL grows during copy"
+  ],
+  "analyzerRefinement": {
+    "rule": "csharpsquid:S8949",
+    "uiSourcesSha256": {
+      "src/VaultSync.UI/ViewModels/AppViewModel.MaintenanceOps.cs": "71bed8fec550593a81e36917d28623db5bc71663eec62a01c946abe64cfc7895",
+      "src/VaultSync.UI/ViewModels/AppViewModel.RuntimeOps.cs": "5ecdf3ed50bdfd19079e8261992b94bd9e1709a9fd06ded21a928cb93129bf4e"
+    },
+    "change": "Explicit CancellationToken.None equals previous Task.Run default; unrelated updater token deliberately not used",
+    "validation": "diff/API review only after focused run; no redundant runtime repeat"
+  },
+  "limits": [
+    "No actual remote SMB/native UI qualification",
+    "No atomic snapshot guarantee against adversarial writers preserving all sampled stamps/headers",
+    "No canonical total metadata size cap found; exact observed lengths and fixed buffer bound reads, not total initial source size",
+    "Windows inherited ACL ownership and hostile same-user/root replacements not attested",
+    "All hosted exact-head and release gates remain separate; prior failure remains unresolved until new analysis"
+  ],
+  "retention": {
+    "privateReviewDate": "2026-11-04"
+  }
+}
