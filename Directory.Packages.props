@@ -8,7 +8,7 @@
     <PackageVersion Include="Dapper" Version="2.1.100" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
-    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.15" />
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="11.0.0" />
 
     <!-- CLI -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
