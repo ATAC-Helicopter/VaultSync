@@ -15,22 +15,22 @@
     <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
 
     <!-- Avalonia UI -->
-    <PackageVersion Include="Avalonia" Version="12.1.6" />
-    <PackageVersion Include="Avalonia.Controls.ColorPicker" Version="12.1.6" />
-    <PackageVersion Include="Avalonia.Desktop" Version="12.1.6" />
-    <PackageVersion Include="Avalonia.Headless" Version="12.1.6" />
-    <PackageVersion Include="Avalonia.Wayland" Version="12.1.6" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <PackageVersion Include="Avalonia" Version="12.2.0" />
+    <PackageVersion Include="Avalonia.Controls.ColorPicker" Version="12.2.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.2.0" />
+    <PackageVersion Include="Avalonia.Headless" Version="12.2.0" />
+    <PackageVersion Include="Avalonia.Wayland" Version="12.2.0" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.2.0" />
 
     <!-- Text and rendering native assets -->
-    <PackageVersion Include="SkiaSharp" Version="4.157.0" />
-    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.157.0" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.157.0" />
+    <PackageVersion Include="SkiaSharp" Version="4.158.0" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="4.158.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.158.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.macOS" Version="4.157.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.157.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="4.157.0" />
-    <PackageVersion Include="HarfBuzzSharp" Version="14.4.0.200" />
-    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.4.0.200" />
+    <PackageVersion Include="HarfBuzzSharp" Version="15.0.0" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="15.0.0" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="14.4.0.200" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.4.0.200" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="14.4.0.200" />
